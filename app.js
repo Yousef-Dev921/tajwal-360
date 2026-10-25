@@ -1,10 +1,171 @@
 const $=id=>document.getElementById(id),PI=Math.PI,R=500,SHELL=$('root').innerHTML;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid=()=>Math.random().toString(36).slice(2,9),EMB=window.__TOUR__,TX={};
+// ───────────── theme, language, strings ─────────────
+// localStorage throws outright in some private-browsing modes, so every access is guarded.
+const lsG=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsS=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const I18N={ar:{
+ 'doc.title':'Tajwal 360 — استوديو الجولات الافتراضية',
+ 'nav.library':'المكتبة',
+ 'theme.auto':'المظهر: تلقائي','theme.light':'المظهر: فاتح','theme.dark':'المظهر: داكن',
+ 'lang.to.ar':'التبديل إلى العربية','lang.to.en':'التبديل إلى الإنجليزية',
+ 'f.tourTitle':'عنوان الجولة','f.shortDesc':'وصف قصير','f.tourDesc':'وصف الجولة','f.descPh':'يظهر في شاشة البداية',
+ 'f.sceneName':'اسم المشهد','f.size':'الحجم','f.tourUrl':'رابط الجولة بعد رفعها على استضافة','f.embedPh':'اكتب الرابط ليظهر كود التضمين',
+ 'f.label':'العنوان','f.target':'الوجهة','f.text':'النص','f.shape':'الشكل','f.color':'اللون',
+ 'act.addImages':'إضافة صور 360','act.undo':'تراجع','act.undoTitle':'تراجع (Ctrl+Z)','act.redo':'إعادة','act.redoTitle':'إعادة (Ctrl+Shift+Z)',
+ 'act.preview':'معاينة','act.export':'تصدير الجولة','act.saveCopy':'حفظ نسخة','act.import':'استيراد',
+ 'act.startAngle':'زاوية البداية','act.startAngleTitle':'تُفتح الجولة على هذه الزاوية',
+ 'act.north':'اتجاه الشمال','act.northTitle':'يحسّن سلاسة الانتقال بين المشاهد',
+ 'act.moveFwd':'تقديم','act.moveBack':'تأخير','act.delScene':'حذف المشهد','act.confirmDel':'تأكيد الحذف؟',
+ 'act.upImage':'رفع صورة','act.upAudio':'رفع ملف صوت','act.upPlan':'رفع مخطط','act.remove':'إزالة',
+ 'act.placeScene':'ضع هذا المشهد على المخطط','act.copyCode':'نسخ الكود',
+ 'act.vr':'وضع VR','act.gyro':'جيروسكوب','act.backEdit':'عودة للتحرير','act.muteAria':'كتم الصوت','act.planBtn':'المخطط',
+ 'act.close':'إغلاق','act.delete':'حذف','act.delHs':'حذف النقطة',
+ 'sec.scenes':'المشاهد','sec.sceneSet':'إعدادات المشهد','sec.hotspots':'النقاط التفاعلية','sec.view':'خيارات العرض',
+ 'sec.nadir':'رقعة النادر','sec.audio':'موسيقى خلفية','sec.plan':'مخطط الموقع','sec.embed':'كود التضمين',
+ 'opt.autorotate':'دوران تلقائي','opt.walk':'انتقال سلس بين المشاهد',
+ 'hint.reorder':'اسحب المشهد لتغيير ترتيبه.',
+ 'hint.nadir':'صورة تغطّي مكان الحامل الثلاثي أسفل البانوراما.',
+ 'hint.audio':'تبدأ بعد أول لمسة من الزائر. الحد الأقصى 8 ميجابايت.',
+ 'hint.plan':'ارفع المخطط، ثم ضع كل مشهد كنقطة عليه.',
+ 'hint.clickPano':'اضغط على البانوراما لتحديد المكان','hint.dragHs':'اسحب النقطة في الصورة لتغيير مكانها',
+ 'hs.link':'انتقال','hs.info':'معلومات',
+ 'shape.arrow':'سهم','shape.ring':'حلقة','shape.dot':'نقطة','shape.pin':'دبوس','shape.star':'نجمة','shape.info':'معلومات',
+ 'lib.title':'مكتبة المشاريع','lib.new':'مشروع جديد','lib.open':'فتح','lib.current':'المفتوح حالياً','lib.dup':'تكرار',
+ 'lib.expFile':'تصدير ملف','lib.empty':'لا توجد مشاريع بعد.','lib.scenes':'{n} مشهد',
+ 'def.title':'جولتي الافتراضية','def.newProj':'مشروع جديد','def.imported':'مشروع مستورد','def.untitled':'بدون عنوان','def.copySuffix':' (نسخة)',
+ 'view.start':'ابدأ الجولة','view.loading':'جارٍ التحميل…',
+ 'empty':'أضف صورة بانوراما 360° للبدء، أو اسحب الصور وأفلتها هنا.',
+ 'aria.loading':'جارٍ التحميل','aria.canvas':'مشهد بانورامي ٣٦٠ — الأسهم للنظر حولك، + و − للتكبير',
+ 'cmp.title':'اضغط للتوجه نحو الشمال','cmp.aria':'البوصلة: اضغط للتوجه نحو الشمال',
+ 'msg.quotaFull':'⚠️ امتلأت مساحة التخزين في المتصفح — لم يُحفظ عملك. اضغط «حفظ نسخة» الآن لتنزيله على جهازك قبل إغلاق الصفحة.',
+ 'msg.noAutosave':'⚠️ تعذّر الحفظ التلقائي في هذا المتصفح (قد يكون وضع تصفّح خاص). اضغط «حفظ نسخة» لتنزيل عملك.',
+ 'msg.quotaWarn':'⚠️ استهلكت {p}% من مساحة المتصفح. صدّر مشاريعك المهمة كملفات على جهازك.',
+ 'msg.autosaveBack':'✅ عاد الحفظ التلقائي للعمل.',
+ 'msg.notPano':'تنبيه: إحدى الصور ليست بانوراما 360°، وُضعت كلوحة مسطحة في وسط المشهد.',
+ 'msg.imgReadFail':'تعذر قراءة إحدى الصور.','msg.imgFail':'تعذر قراءة الصورة.',
+ 'msg.startSaved':'تم حفظ زاوية البداية لهذا المشهد.',
+ 'msg.needTwoScenes':'أضف مشهداً ثانياً قبل إنشاء نقطة انتقال.','msg.needOneScene':'أضف مشهداً واحداً على الأقل قبل التصدير.',
+ 'msg.preparing':'جارٍ تجهيز الملف…','msg.exported':'✅ تم تنزيل الجولة المستقلة ({mb} ميجابايت).',
+ 'msg.exportFail':'تعذّر التصدير. شغّل الموقع عبر https (مثل GitHub Pages) أو خادم محلي — التصدير لا يعمل عند فتح الملف مباشرة بـ file://',
+ 'msg.northSet':'تم تحديد الشمال لهذا المشهد، وتظهر البوصلة في الزاوية.',
+ 'msg.nothingToSave':'لا يوجد ما يُحفظ بعد.','msg.preparingProj':'جارٍ تجهيز ملف المشروع…',
+ 'msg.projSaved':'✅ تم تنزيل ملف المشروع على جهازك. احتفظ به كنسخة احتياطية.','msg.projSaveFail':'تعذّر تجهيز ملف المشروع.',
+ 'msg.importing':'جارٍ الاستيراد…','msg.imported':'✅ تم استيراد المشروع إلى المكتبة وفتحه.',
+ 'msg.newerFile':'هذا الملف من إصدار أحدث من التطبيق. حدّث الصفحة ثم أعد المحاولة.',
+ 'msg.badFile':'ملف المشروع غير صالح أو لا يحتوي على أي مشهد.',
+ 'msg.openFail':'تعذّر فتح المشروع.','msg.openFailStore':'تعذّر فتح المشروع من التخزين.',
+ 'msg.duplicated':'✅ تم تكرار المشروع.','msg.projFileSaved':'✅ تم تنزيل ملف المشروع على جهازك.','msg.projExpFail':'تعذّر تصدير هذا المشروع.',
+ 'msg.gyroDenied':'لم يُمنح الإذن','msg.gyroNA':'الحساس غير متاح','msg.vrFail':'تعذر تشغيل وضع VR.',
+ 'msg.remind':'💡 عملك محفوظ داخل هذا المتصفح فقط. اضغط «حفظ نسخة» لتنزيل نسخة على جهازك.',
+ 'msg.planSet':'تم تحديد مكان المشهد على المخطط.','msg.planFirst':'ارفع صورة المخطط أولاً.','msg.planClick':'اضغط على المخطط لتحديد مكان هذا المشهد.',
+ 'msg.audioBig':'ملف الصوت أكبر من 8 ميجابايت. اختر ملفاً أصغر.','msg.audioAdded':'✅ تمت إضافة الموسيقى.',
+ 'msg.urlFirst':'اكتب رابط الجولة أولاً.','msg.copied':'تم نسخ كود التضمين.',
+ 'msg.noStorage':'⚠️ تعذّر الوصول إلى تخزين المتصفح (قد يكون وضع تصفّح خاص). لن يُحفظ عملك تلقائياً — استخدم «حفظ نسخة» بانتظام.'
+},en:{
+ 'doc.title':'Tajwal 360 — Virtual Tour Studio',
+ 'nav.library':'Library',
+ 'theme.auto':'Theme: auto','theme.light':'Theme: light','theme.dark':'Theme: dark',
+ 'lang.to.ar':'Switch to Arabic','lang.to.en':'Switch to English',
+ 'f.tourTitle':'Tour title','f.shortDesc':'Short description','f.tourDesc':'Tour description','f.descPh':'Shown on the start screen',
+ 'f.sceneName':'Scene name','f.size':'Size','f.tourUrl':'Tour link once it is hosted','f.embedPh':'Enter the link to get the embed code',
+ 'f.label':'Label','f.target':'Destination','f.text':'Text','f.shape':'Shape','f.color':'Colour',
+ 'act.addImages':'Add 360 images','act.undo':'Undo','act.undoTitle':'Undo (Ctrl+Z)','act.redo':'Redo','act.redoTitle':'Redo (Ctrl+Shift+Z)',
+ 'act.preview':'Preview','act.export':'Export tour','act.saveCopy':'Save a copy','act.import':'Import',
+ 'act.startAngle':'Start angle','act.startAngleTitle':'The tour opens at this angle',
+ 'act.north':'North direction','act.northTitle':'Makes transitions between scenes smoother',
+ 'act.moveFwd':'Move earlier','act.moveBack':'Move later','act.delScene':'Delete scene','act.confirmDel':'Confirm delete?',
+ 'act.upImage':'Upload image','act.upAudio':'Upload audio file','act.upPlan':'Upload plan','act.remove':'Remove',
+ 'act.placeScene':'Place this scene on the plan','act.copyCode':'Copy code',
+ 'act.vr':'VR mode','act.gyro':'Gyroscope','act.backEdit':'Back to editing','act.muteAria':'Mute audio','act.planBtn':'Plan',
+ 'act.close':'Close','act.delete':'Delete','act.delHs':'Delete hotspot',
+ 'sec.scenes':'Scenes','sec.sceneSet':'Scene settings','sec.hotspots':'Hotspots','sec.view':'Viewing options',
+ 'sec.nadir':'Nadir patch','sec.audio':'Background music','sec.plan':'Floor plan','sec.embed':'Embed code',
+ 'opt.autorotate':'Auto-rotate','opt.walk':'Smooth transition between scenes',
+ 'hint.reorder':'Drag a scene to reorder it.',
+ 'hint.nadir':'An image that covers the tripod at the bottom of the panorama.',
+ 'hint.audio':'Starts after the visitor’s first touch. 8 MB maximum.',
+ 'hint.plan':'Upload the plan, then place each scene on it as a marker.',
+ 'hint.clickPano':'Click the panorama to pick the spot','hint.dragHs':'Drag the hotspot in the image to move it',
+ 'hs.link':'Link','hs.info':'Info',
+ 'shape.arrow':'Arrow','shape.ring':'Ring','shape.dot':'Dot','shape.pin':'Pin','shape.star':'Star','shape.info':'Info',
+ 'lib.title':'Project library','lib.new':'New project','lib.open':'Open','lib.current':'Currently open','lib.dup':'Duplicate',
+ 'lib.expFile':'Export file','lib.empty':'No projects yet.','lib.scenes':'{n} scenes',
+ 'def.title':'My virtual tour','def.newProj':'New project','def.imported':'Imported project','def.untitled':'Untitled','def.copySuffix':' (copy)',
+ 'view.start':'Start the tour','view.loading':'Loading…',
+ 'empty':'Add a 360° panorama to start, or drag and drop images here.',
+ 'aria.loading':'Loading','aria.canvas':'360° panorama — arrow keys to look around, + and − to zoom',
+ 'cmp.title':'Click to face north','cmp.aria':'Compass: click to face north',
+ 'msg.quotaFull':'⚠️ Browser storage is full — your work was not saved. Use “Save a copy” now to download it to your device before closing the page.',
+ 'msg.noAutosave':'⚠️ Autosave failed in this browser (private browsing, perhaps). Use “Save a copy” to download your work.',
+ 'msg.quotaWarn':'⚠️ You have used {p}% of the browser’s storage. Export the projects that matter as files on your device.',
+ 'msg.autosaveBack':'✅ Autosave is working again.',
+ 'msg.notPano':'Note: one of the images is not a 360° panorama. It was placed as a flat panel in the middle of the scene.',
+ 'msg.imgReadFail':'One of the images could not be read.','msg.imgFail':'The image could not be read.',
+ 'msg.startSaved':'The start angle for this scene was saved.',
+ 'msg.needTwoScenes':'Add a second scene before creating a link hotspot.','msg.needOneScene':'Add at least one scene before exporting.',
+ 'msg.preparing':'Preparing the file…','msg.exported':'✅ The standalone tour was downloaded ({mb} MB).',
+ 'msg.exportFail':'Export failed. Serve the site over https (GitHub Pages, for example) or from a local server — export does not work when the file is opened directly with file://',
+ 'msg.northSet':'North was set for this scene, and the compass now shows in the corner.',
+ 'msg.nothingToSave':'There is nothing to save yet.','msg.preparingProj':'Preparing the project file…',
+ 'msg.projSaved':'✅ The project file was downloaded to your device. Keep it as a backup.','msg.projSaveFail':'The project file could not be prepared.',
+ 'msg.importing':'Importing…','msg.imported':'✅ The project was imported into the library and opened.',
+ 'msg.newerFile':'This file comes from a newer version of the app. Reload the page and try again.',
+ 'msg.badFile':'The project file is invalid, or it contains no scenes.',
+ 'msg.openFail':'The project could not be opened.','msg.openFailStore':'The project could not be opened from storage.',
+ 'msg.duplicated':'✅ The project was duplicated.','msg.projFileSaved':'✅ The project file was downloaded to your device.','msg.projExpFail':'This project could not be exported.',
+ 'msg.gyroDenied':'Permission denied','msg.gyroNA':'Sensor unavailable','msg.vrFail':'VR mode could not be started.',
+ 'msg.remind':'💡 Your work is saved inside this browser only. Use “Save a copy” to download it to your device.',
+ 'msg.planSet':'The scene’s position on the plan was set.','msg.planFirst':'Upload the plan image first.','msg.planClick':'Click the plan to set this scene’s position.',
+ 'msg.audioBig':'The audio file is larger than 8 MB. Choose a smaller one.','msg.audioAdded':'✅ The music was added.',
+ 'msg.urlFirst':'Enter the tour link first.','msg.copied':'The embed code was copied.',
+ 'msg.noStorage':'⚠️ Browser storage is unreachable (private browsing, perhaps). Your work will not be saved automatically — use “Save a copy” regularly.'
+}};
+// An exported tour carries the language its author used; the editor remembers its own.
+let LANG=(EMB&&EMB.lang)||lsG('vrt.lang')||'ar';if(!I18N[LANG])LANG='ar';
+const RTL=()=>LANG=='ar';
+const t=(k,o)=>{const s=I18N[LANG][k]??I18N.ar[k]??k;return o?s.replace(/\{(\w+)\}/g,(m,p)=>p in o?o[p]:m):s};
+// Replaces an element's own text and leaves child elements (the icon <svg>) alone.
+function setTx(e,s){const n=[...e.childNodes].filter(c=>c.nodeType==3);
+  if(!n.length){e.appendChild(document.createTextNode(s));return}
+  n[0].data=s;for(let i=1;i<n.length;i++)n[i].data='';
+}
+const I18A=[['title','data-i18n-title'],['placeholder','data-i18n-placeholder'],['aria-label','data-i18n-aria'],['alt','data-i18n-alt']];
+function applyI18N(){
+  document.querySelectorAll('[data-i18n]').forEach(e=>setTx(e,t(e.getAttribute('data-i18n'))));
+  for(const [a,d] of I18A)document.querySelectorAll('['+d+']').forEach(e=>e.setAttribute(a,t(e.getAttribute(d))));
+}
+function setLang(l){
+  if(!I18N[l]||l==LANG)return;
+  LANG=l;lsS('vrt.lang',l);
+  document.documentElement.lang=l;document.documentElement.dir=RTL()?'rtl':'ltr';
+  applyI18N();dc=0;syncTg();el.setAttribute('aria-label',t('aria.canvas'));
+  ui();if(!$('libm').hidden)renderLib();
+}
+const THS=['auto','light','dark'];
+let THEME=lsG('vrt.theme');if(THS.indexOf(THEME)<0)THEME='auto';
+// boot.js has already applied the stored value; this keeps it in step afterwards.
+function setTheme(v){THEME=v;lsS('vrt.theme',v);
+  const H=document.documentElement;if(v=='auto')H.removeAttribute('data-theme');else H.setAttribute('data-theme',v);
+  syncTg();
+}
+function syncTg(){
+  const b=$('theme');if(!b)return;
+  const l=t('theme.'+THEME);b.title=l;b.setAttribute('aria-label',l);
+  $('themei').setAttribute('href',THEME=='light'?'#i-sun':THEME=='dark'?'#i-moon':'#i-auto');
+  const g=$('lang'),o=RTL()?'en':'ar',gl=t('lang.to.'+o);g.title=gl;g.setAttribute('aria-label',gl);
+  $('langt').textContent=o=='en'?'EN':'ع';
+}
+document.documentElement.lang=LANG;document.documentElement.dir=RTL()?'rtl':'ltr';
+if(EMB)$('tgs').hidden=true;else{
+  $('theme').onclick=()=>setTheme(THS[(THS.indexOf(THEME)+1)%THS.length]);
+  $('lang').onclick=()=>setLang(RTL()?'en':'ar');
+}
+applyI18N();syncTg();
 // Status toast. Defined early because the storage layer calls it on failure.
 let msgT,msgHold=5200;
 function toast(t,ms){msgHold=ms||5200;const m=$('msg');if(m)m.textContent=t}
-let P=EMB||{title:'جولتي الافتراضية',scenes:[]},S=P.scenes,cur=-1,sel=null,placing=null,mode=EMB?'view':'edit',yaw=0,pitch=0,fov=75,drag=null,hov=null,dw=null,dp=0,t0=0,st;
+let P=EMB||{title:t('def.title'),scenes:[]},S=P.scenes,cur=-1,sel=null,placing=null,mode=EMB?'view':'edit',yaw=0,pitch=0,fov=75,drag=null,hov=null,dw=null,dp=0,t0=0,st;
 const SCHEMA=1;
 const idb=()=>new Promise((r,j)=>{const q=indexedDB.open('vrtour',1);
   q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains('k'))q.result.createObjectStore('k')};
@@ -41,8 +202,7 @@ function docOf(Q){
 function saveFailed(e){
   saveErr=true;
   const q=e&&(e.name=='QuotaExceededError'||e.name=='NotEnoughSpace'||/quota|space/i.test(e.message||''));
-  toast(q?'⚠️ امتلأت مساحة التخزين في المتصفح — لم يُحفظ عملك. اضغط «حفظ المشروع» الآن لتنزيله على جهازك قبل إغلاق الصفحة.'
-         :'⚠️ تعذّر الحفظ التلقائي في هذا المتصفح (قد يكون وضع تصفّح خاص). اضغط «حفظ المشروع» لتنزيل عملك.',12000);
+  toast(t(q?'msg.quotaFull':'msg.noAutosave'),12000);
 }
 async function flush(){
   clearTimeout(st);if(EMB||!curId)return;const id=curId,Q=P;
@@ -61,10 +221,10 @@ async function flush(){
     for(const sid of lastSids)if(!live.has(sid))await dbOp('del','b:'+id+':'+sid).catch(()=>{});
     lastSids=live;
     let e=IDX.find(x=>x.id==id);if(!e){e={id};IDX.push(e)}
-    e.title=Q.title||'بدون عنوان';e.n=Q.scenes.length;e.t=Date.now();
+    e.title=Q.title||t('def.untitled');e.n=Q.scenes.length;e.t=Date.now();
     const f=Q.scenes[0];if(!f){e.th=null;e.thid=null}else if(e.thid!=f.id){e.thid=f.id;e.th=f.th||await thumb(f.img)}
     await dbOp('put','idx',IDX);await dbOp('put','last',id);
-    if(saveErr){saveErr=false;toast('✅ عاد الحفظ التلقائي للعمل.')}
+    if(saveErr){saveErr=false;toast(t('msg.autosaveBack'))}
     quotaWatch();remind();
   }catch(x){saveFailed(x)}
 }
@@ -73,7 +233,7 @@ async function quotaWatch(){
   if(warned||!navigator.storage?.estimate)return;
   try{const{usage,quota}=await navigator.storage.estimate();
     if(quota&&usage/quota>.8){warned=true;
-      toast(`⚠️ استهلكت ${Math.round(usage/quota*100)}% من مساحة المتصفح. صدّر مشاريعك المهمة كملفات على جهازك.`,10000)}
+      toast(t('msg.quotaWarn',{p:Math.round(usage/quota*100)}),10000)}
   }catch(e){}
 }
 // Load a project and rehydrate its images as blob: URLs.
@@ -149,12 +309,12 @@ async function addFiles(fs){
   for(const f of fs){
     if(!f.type.startsWith('image/'))continue;
     try{const im=await createImageBitmap(f),flat=Math.abs(im.width/im.height-2)>.15,c=document.createElement('canvas'),x=c.getContext('2d');
-      if(flat){const W=4096,H=2048,s=Math.min(W/4/im.width,H*.7/im.height),w=im.width*s,h=im.height*s;c.width=W;c.height=H;x.fillStyle='#111';x.fillRect(0,0,W,H);x.drawImage(im,(W-w)/2,(H-h)/2,w,h);$('msg').textContent='تنبيه: إحدى الصور ليست بانوراما 360°، وُضعت كلوحة مسطحة في وسط المشهد.'}
+      if(flat){const W=4096,H=2048,s=Math.min(W/4/im.width,H*.7/im.height),w=im.width*s,h=im.height*s;c.width=W;c.height=H;x.fillStyle='#111';x.fillRect(0,0,W,H);x.drawImage(im,(W-w)/2,(H-h)/2,w,h);$('msg').textContent=t('msg.notPano')}
       else{const k=Math.min(1,4096/im.width);c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);x.drawImage(im,0,0,c.width,c.height)}
       const bl=await canvasBlob(c,'image/jpeg',.86),sid=uid();
       S.push({id:sid,name:f.name.replace(/\.[^.]+$/,''),img:objURL(bl),blob:bl,th:mkTh(c),u0:flat?.5:0,p0:0,hs:[]});
       dirty.add(sid);if(first<0)first=S.length-1;
-    }catch(e){$('msg').textContent='تعذر قراءة إحدى الصور.'}
+    }catch(e){$('msg').textContent=t('msg.imgReadFail')}
   }
   save();if(first>=0)go(first);else ui();
 }
@@ -166,21 +326,21 @@ function renderScenes(){
   const sh=$('shint');if(sh)sh.hidden=S.length<2;
 }
 function renderList(){
-  $('hlist').innerHTML=(S[cur]?.hs||[]).map(h=>`<button data-id="${h.id}" class="${h.id==sel?'on':''}">${h.type=='link'?'⇢':'ℹ'} ${esc(h.label||(h.type=='link'?'انتقال':'معلومات'))}</button>`).join('');
+  $('hlist').innerHTML=(S[cur]?.hs||[]).map(h=>`<button data-id="${h.id}" class="${h.id==sel?'on':''}">${h.type=='link'?'⇢':'ℹ'} ${esc(h.label||t(h.type=='link'?'hs.link':'hs.info'))}</button>`).join('');
 }
 const upd=o=>{Object.assign(H(),o);buildHS();renderList();save()};
 const on=(id,ev,f)=>{const e=$(id);if(e)e.addEventListener(ev,f)};
 function renderProps(){
-  const h=H(),p=$('hprops');$('hint2').textContent=placing?'اضغط على البانوراما لتحديد المكان':'';
+  const h=H(),p=$('hprops');$('hint2').textContent=placing?t('hint.clickPano'):'';
   if(!h){p.innerHTML='';return}
-  const shp=[['arrow','سهم'],['ring','حلقة'],['dot','نقطة'],['pin','دبوس'],['star','نجمة'],['info','معلومات']];
-  p.innerHTML=`<label>العنوان<input id="pl" value="${esc(h.label)}"></label>`+
-  (h.type=='link'?`<label>الوجهة<select id="pt">${S.filter(s=>s.id!=S[cur].id).map(s=>`<option value="${s.id}" ${s.id==h.to?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>`
-    :`<label>النص<textarea id="px" rows="3">${esc(h.text)}</textarea></label>`)+
-  `<label>الشكل<select id="ps">${shp.map(([k,n])=>`<option value="${k}" ${k==h.shape?'selected':''}>${n}</option>`).join('')}</select></label>
-  <label>اللون<input id="pc" type="color" value="${h.color}"></label>
-  <label>الحجم<input id="pz" type="range" min=".5" max="2.5" step=".1" value="${h.size}"></label>
-  <p id="hint3">اسحب النقطة في الصورة لتغيير مكانها</p><button id="pd" class="dng">حذف النقطة</button>`;
+  const shp=['arrow','ring','dot','pin','star','info'];
+  p.innerHTML=`<label>${t('f.label')}<input id="pl" value="${esc(h.label)}"></label>`+
+  (h.type=='link'?`<label>${t('f.target')}<select id="pt">${S.filter(s=>s.id!=S[cur].id).map(s=>`<option value="${s.id}" ${s.id==h.to?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>`
+    :`<label>${t('f.text')}<textarea id="px" rows="3">${esc(h.text)}</textarea></label>`)+
+  `<label>${t('f.shape')}<select id="ps">${shp.map(k=>`<option value="${k}" ${k==h.shape?'selected':''}>${esc(t('shape.'+k))}</option>`).join('')}</select></label>
+  <label>${t('f.color')}<input id="pc" type="color" value="${h.color}"></label>
+  <label>${t('f.size')}<input id="pz" type="range" min=".5" max="2.5" step=".1" value="${h.size}"></label>
+  <p id="hint3">${t('hint.dragHs')}</p><button id="pd" class="dng">${t('act.delHs')}</button>`;
   on('pl','input',e=>upd({label:e.target.value}));on('pt','change',e=>upd({to:e.target.value}));on('px','input',e=>upd({text:e.target.value}));
   on('ps','change',e=>upd({shape:e.target.value}));on('pc','input',e=>upd({color:e.target.value}));on('pz','input',e=>upd({size:+e.target.value}));
   on('pm','click',()=>{placing='move';renderProps()});
@@ -198,13 +358,13 @@ $('file').onchange=e=>{addFiles([...e.target.files]);e.target.value=''};
 $('stage').ondragover=e=>e.preventDefault();$('stage').ondrop=e=>{e.preventDefault();addFiles([...e.dataTransfer.files])};
 $('ptitle').oninput=e=>{P.title=e.target.value;save()};$('auto').onchange=e=>{P.auto=e.target.checked;save()};
 $('sname').oninput=e=>{S[cur].name=e.target.value;renderScenes();save()};
-$('sstart').onclick=()=>{const d=new THREE.Vector3();cam.getWorldDirection(d);const r=uv(d);S[cur].u0=r.u;S[cur].p0=PI/2-r.v*PI;save();go(cur);$('msg').textContent='تم حفظ زاوية البداية لهذا المشهد.'};
+$('sstart').onclick=()=>{const d=new THREE.Vector3();cam.getWorldDirection(d);const r=uv(d);S[cur].u0=r.u;S[cur].p0=PI/2-r.v*PI;save();go(cur);$('msg').textContent=t('msg.startSaved')};
 let dc=0;$('sdel').onclick=()=>{
-  if(!dc){dc=1;$('sdel').textContent='تأكيد الحذف؟';setTimeout(()=>{dc=0;$('sdel').textContent='حذف المشهد'},3000);return}
-  dc=0;$('sdel').textContent='حذف المشهد';const id=S[cur].id;delete TX[id];S.splice(cur,1);S.forEach(s=>s.hs=s.hs.filter(h=>h.to!=id));
+  if(!dc){dc=1;$('sdelt').textContent=t('act.confirmDel');setTimeout(()=>{dc=0;$('sdelt').textContent=t('act.delScene')},3000);return}
+  dc=0;$('sdelt').textContent=t('act.delScene');const id=S[cur].id;delete TX[id];S.splice(cur,1);S.forEach(s=>s.hs=s.hs.filter(h=>h.to!=id));
   save();if(S.length)go(Math.min(cur,S.length-1));else{cur=-1;mat.map=null;mat.needsUpdate=true;buildHS();ui()}
 };
-$('addl').onclick=()=>{if(S.length<2)$('msg').textContent='أضف مشهداً ثانياً قبل إنشاء نقطة انتقال.';else{placing='link';sel=null;buildHS();renderList();renderProps()}};
+$('addl').onclick=()=>{if(S.length<2)$('msg').textContent=t('msg.needTwoScenes');else{placing='link';sel=null;buildHS();renderList();renderProps()}};
 $('addi').onclick=()=>{placing='info';sel=null;buildHS();renderList();renderProps()};
 $('prev').onclick=()=>{mode='view';sel=placing=null;buildHS();ui()};
 $('back').onclick=()=>{mode='edit';buildHS();ui()};
@@ -217,18 +377,19 @@ async function portable(Q){
   const out=docOf(Q);out.scenes=[];
   for(const s of Q.scenes){const{blob,...r}=s;out.scenes.push({...r,img:blob?await toDataURL(blob):s.img})}
   if(Q.audio)out.audio={name:Q.audio.name,vol:Q.audio.vol,src:Q.audio.blob?await toDataURL(Q.audio.blob):Q.audio.src};
+  out.lang=LANG;   // an exported tour renders in the language its author was using
   return out;
 }
 const fullJSON=()=>portable(P);
 $('exp').onclick=async()=>{
-  if(!S.length){toast('أضف مشهداً واحداً على الأقل قبل التصدير.');return}
-  toast('جارٍ تجهيز الملف…',60000);
+  if(!S.length){toast(t('msg.needOneScene'));return}
+  toast(t('msg.preparing'),60000);
   try{
     const [css,three,app,data]=await Promise.all([getTxt('style.css'),getTxt('vendor/three.min.js'),getTxt('app.js'),fullJSON()]);
-    const html=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(P.title)}</title><style>${css}</style></head><body><div id="root" class="view">${SHELL}</div><script>${three}<\/script><script>window.__TOUR__=${JSON.stringify(data).replace(/</g,'\\u003c')};${app}<\/script></body></html>`;
+    const html=`<!DOCTYPE html><html lang="${LANG}" dir="${RTL()?'rtl':'ltr'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(P.title)}</title><style>${css}</style></head><body><div id="root" class="view">${SHELL}</div><script>${three}<\/script><script>window.__TOUR__=${JSON.stringify(data).replace(/</g,'\\u003c')};${app}<\/script></body></html>`;
     saveFile(fname('.html'),html,'text/html');edits=0;
-    toast(`✅ تم تنزيل الجولة المستقلة (${(html.length/1048576).toFixed(1)} ميجابايت).`);
-  }catch(e){toast('تعذّر التصدير. شغّل الموقع عبر https (مثل GitHub Pages) أو خادم محلي — التصدير لا يعمل عند فتح الملف مباشرة بـ file://',9000)}
+    toast(t('msg.exported',{mb:(html.length/1048576).toFixed(1)}));
+  }catch(e){toast(t('msg.exportFail'),9000)}
 };
 let dg=-1;
 function mv(a,b){if(a==b||b<0||b>=S.length)return;const id=S[cur].id,[s]=S.splice(a,1);S.splice(b,0,s);cur=S.findIndex(x=>x.id==id);save();ui()}
@@ -236,29 +397,29 @@ $('scenes').ondragstart=e=>{const b=e.target.closest('button');if(b){dg=+b.datas
 $('scenes').ondragover=e=>{if(dg>=0)e.preventDefault()};
 $('scenes').ondrop=e=>{e.preventDefault();const b=e.target.closest('button');if(b&&dg>=0)mv(dg,+b.dataset.i);dg=-1};
 $('mvb').onclick=()=>mv(cur,cur-1);$('mva').onclick=()=>mv(cur,cur+1);
-$('snorth').onclick=()=>{const s=S[cur];s.n=((ub-yaw/(2*PI))%1+1)%1;save();ui();$('msg').textContent='تم تحديد الشمال لهذا المشهد، وتظهر البوصلة في الزاوية.'};
+$('snorth').onclick=()=>{const s=S[cur];s.n=((ub-yaw/(2*PI))%1+1)%1;save();ui();$('msg').textContent=t('msg.northSet')};
 $('cmp').onclick=()=>{const s=S[cur];if(s&&s.n!=null)yaw=2*PI*(ub-s.n)};
 $('psave').onclick=async()=>{
-  if(!S.length){toast('لا يوجد ما يُحفظ بعد.');return}
-  toast('جارٍ تجهيز ملف المشروع…',60000);
+  if(!S.length){toast(t('msg.nothingToSave'));return}
+  toast(t('msg.preparingProj'),60000);
   try{saveFile(fname('.json'),JSON.stringify(await fullJSON()),'application/json');edits=0;
-    toast('✅ تم تنزيل ملف المشروع على جهازك. احتفظ به كنسخة احتياطية.')}
-  catch(x){toast('تعذّر تجهيز ملف المشروع.')}
+    toast(t('msg.projSaved'))}
+  catch(x){toast(t('msg.projSaveFail'))}
 };
 $('pfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
-  toast('جارٍ الاستيراد…',60000);
+  toast(t('msg.importing'),60000);
   try{const d=JSON.parse(await f.text());
     if(d.v&&d.v>SCHEMA)throw new Error('newer');
     d.scenes=(Array.isArray(d.scenes)?d.scenes:[]).filter(s=>typeof s.img=='string'&&s.img.startsWith('data:image/')).map(s=>({...s,hs:Array.isArray(s.hs)?s.hs:[]}));
     if(!d.scenes.length)throw new Error('empty');
     for(const s of d.scenes){s.blob=dataToBlob(s.img);s.img=objURL(s.blob)}
     if(d.audio&&typeof d.audio.src=='string'&&d.audio.src.startsWith('data:')){d.audio.blob=dataToBlob(d.audio.src);d.audio.src=objURL(d.audio.blob)}else delete d.audio;
-    d.title=d.title||'مشروع مستورد';
+    d.title=d.title||t('def.imported');
     await flush();const nid=uid()+uid();
     setProj(nid,d);d.scenes.forEach(s=>dirty.add(s.id));audioDirty=!!d.audio;lastSids=new Set();
     await flush();closeLib();
-    toast('✅ تم استيراد المشروع إلى المكتبة وفتحه.')}
-  catch(x){toast(x.message=='newer'?'هذا الملف من إصدار أحدث من التطبيق. حدّث الصفحة ثم أعد المحاولة.':'ملف المشروع غير صالح أو لا يحتوي على أي مشهد.')}};
+    toast(t('msg.imported'))}
+  catch(x){toast(t(x.message=='newer'?'msg.newerFile':'msg.badFile'))}};
 // ───────────── project library ─────────────
 const safeName=t=>(String(t||'tour').replace(/[\\\/:*?"<>|]+/g,'_').trim()||'tour');
 function closeLib(){const m=$('libm');if(m)m.hidden=true}
@@ -271,19 +432,19 @@ function setProj(id,d){
 }
 async function openProj(id){
   if(id==curId)return;await flush();
-  try{const d=await loadProj(id);if(d){setProj(id,d);await dbOp('put','last',id)}else toast('تعذّر فتح المشروع.')}
-  catch(e){toast('تعذّر فتح المشروع من التخزين.')}
+  try{const d=await loadProj(id);if(d){setProj(id,d);await dbOp('put','last',id)}else toast(t('msg.openFail'))}
+  catch(e){toast(t('msg.openFailStore'))}
 }
-async function newProj(){await flush();setProj(uid()+uid(),{v:SCHEMA,title:'مشروع جديد',scenes:[]});await flush();closeLib()}
+async function newProj(){await flush();setProj(uid()+uid(),{v:SCHEMA,title:t('def.newProj'),scenes:[]});await flush();closeLib()}
 async function dupProj(id){
   await flush();const d=await dbOp('get','p:'+id);if(!d)return;
   const nid=uid()+uid(),e=IDX.find(x=>x.id==id)||{};
   try{
     for(const s of (d.scenes||[])){const b=await dbOp('get','b:'+id+':'+s.id).catch(()=>null);if(b instanceof Blob)await dbOp('put','b:'+nid+':'+s.id,b)}
     const a=await dbOp('get','a:'+id).catch(()=>null);if(a instanceof Blob)await dbOp('put','a:'+nid,a);
-    const n=JSON.parse(JSON.stringify(d));n.title=(d.title||'')+' (نسخة)';
+    const n=JSON.parse(JSON.stringify(d));n.title=(d.title||'')+t('def.copySuffix');
     await dbOp('put','p:'+nid,n);IDX.push({...e,id:nid,title:n.title,t:Date.now()});await dbOp('put','idx',IDX);
-    toast('✅ تم تكرار المشروع.');
+    toast(t('msg.duplicated'));
   }catch(x){saveFailed(x)}
 }
 async function delProj(id){
@@ -298,7 +459,7 @@ async function delProj(id){
 }
 function renderLib(){
   const L=[...IDX].sort((a,b)=>b.t-a.t);
-  $('libg').innerHTML=L.length?L.map(e=>`<div class="pc ${e.id==curId?'on':''}" data-id="${esc(e.id)}">${e.th?`<img src="${esc(e.th)}" alt="">`:'<div class="ph"></div>'}<div class="in"><b>${esc(e.title)}</b><small>${e.n||0} مشهد · ${new Date(e.t).toLocaleDateString('en-GB')}</small><div class="row"><button data-a="open">${e.id==curId?'المفتوح حالياً':'فتح'}</button><button data-a="dup">تكرار</button></div><div class="row"><button data-a="exp">تصدير ملف</button><button data-a="del" class="dng">حذف</button></div></div></div>`).join(''):'<p>لا توجد مشاريع بعد.</p>';
+  $('libg').innerHTML=L.length?L.map(e=>`<div class="pc ${e.id==curId?'on':''}" data-id="${esc(e.id)}">${e.th?`<img src="${esc(e.th)}" alt="">`:'<div class="ph"></div>'}<div class="in"><b>${esc(e.title)}</b><small>${esc(t('lib.scenes',{n:e.n||0}))} · ${new Date(e.t).toLocaleDateString('en-GB')}</small><div class="row"><button data-a="open">${esc(t(e.id==curId?'lib.current':'lib.open'))}</button><button data-a="dup">${esc(t('lib.dup'))}</button></div><div class="row"><button data-a="exp">${esc(t('lib.expFile'))}</button><button data-a="del" class="dng">${esc(t('act.delete'))}</button></div></div></div>`).join(''):`<p>${esc(t('lib.empty'))}</p>`;
 }
 if(!EMB){
   $('lib').onclick=()=>{renderLib();$('libm').hidden=false};
@@ -311,16 +472,16 @@ if(!EMB){
     if(a=='open'){await openProj(id);closeLib();return}
     if(a=='dup')await dupProj(id);
     else if(a=='exp'){
-      await flush();toast('جارٍ تجهيز الملف…',60000);
+      await flush();toast(t('msg.preparing'),60000);
       try{
         let out;
         if(id==curId)out=await fullJSON();
         else{const d=await loadProj(id);if(!d)throw new Error('missing');out=await portable(d);revokeProj(d)}
         saveFile(safeName(out.title)+'.json',JSON.stringify(out),'application/json');
-        toast('✅ تم تنزيل ملف المشروع على جهازك.');
-      }catch(x){toast('تعذّر تصدير هذا المشروع.')}
+        toast(t('msg.projFileSaved'));
+      }catch(x){toast(t('msg.projExpFail'))}
     }
-    else if(a=='del'){if(b.dataset.c!='1'){b.dataset.c='1';b.textContent='تأكيد الحذف؟';setTimeout(()=>{b.dataset.c='';b.textContent='حذف'},3000);return}await delProj(id)}
+    else if(a=='del'){if(b.dataset.c!='1'){b.dataset.c='1';b.textContent=t('act.confirmDel');setTimeout(()=>{b.dataset.c='';b.textContent=t('act.delete')},3000);return}await delProj(id)}
     renderLib();
   };
 }
@@ -355,16 +516,16 @@ const gdir=()=>gf.set(0,0,-1).applyQuaternion(gq);
 function calib(){if(haveG){const f=gdir();yawOff=yaw-Math.atan2(-f.x,-f.z)}}
 function onori(e){if(e.alpha==null)return;const r=THREE.MathUtils.degToRad,o=r(screen.orientation?.angle??window.orientation??0);
   ge.set(r(e.beta),r(e.alpha),-r(e.gamma),'YXZ');gq.setFromEuler(ge).multiply(gq1).multiply(gq0.setFromAxisAngle(gzv,-o));haveG=true;if(calibN){calibN=false;calib()}}
-const gnote=t=>{$('gy').textContent=t;setTimeout(()=>{$('gy').textContent='جيروسكوب'},2500)};
+const gnote=s=>{$('gyt').textContent=s;setTimeout(()=>{$('gyt').textContent=t('act.gyro')},2500)};
 function goff(){gyro=false;removeEventListener('deviceorientation',onori);$('gy').classList.remove('on')}
 if(window.DeviceOrientationEvent&&navigator.maxTouchPoints>0)$('gy').hidden=false;
 $('gy').onclick=async()=>{
   if(gyro){goff();return}
   try{
-    if(typeof DeviceOrientationEvent.requestPermission=='function'&&await DeviceOrientationEvent.requestPermission()!='granted'){gnote('لم يُمنح الإذن');return}
+    if(typeof DeviceOrientationEvent.requestPermission=='function'&&await DeviceOrientationEvent.requestPermission()!='granted'){gnote(t('msg.gyroDenied'));return}
     haveG=false;calibN=true;gyro=true;addEventListener('deviceorientation',onori);$('gy').classList.add('on');
-    setTimeout(()=>{if(gyro&&!haveG){goff();gnote('الحساس غير متاح')}},1500);
-  }catch(e){goff();gnote('الحساس غير متاح')}
+    setTimeout(()=>{if(gyro&&!haveG){goff();gnote(t('msg.gyroNA'))}},1500);
+  }catch(e){goff();gnote(t('msg.gyroNA'))}
 };
 // ───────────── pointer interaction ─────────────
 const rc=new THREE.Raycaster();rc.camera=cam;
@@ -372,7 +533,7 @@ const at=e=>{const r=el.getBoundingClientRect();rc.setFromCamera(new THREE.Vecto
 const pick=(o,d)=>{rc.set(o,d);const x=rc.intersectObjects(vp.visible?[...hs.children,vpp,vpx]:hs.children,false);return x.length?x[0].object:null};
 function act(h){
   if(h.type=='link'){const k=S.findIndex(s=>s.id==h.to);if(k>=0)(P.walk!==false&&!rd.xr.isPresenting?walk(k,h):go(k))}
-  else if(rd.xr.isPresenting)showVP(h);else{const p=$('pop');p.innerHTML=`<b>${esc(h.label)}</b><p>${esc(h.text)}</p><button>إغلاق</button>`;p.hidden=false;p.querySelector('button').onclick=()=>p.hidden=true}
+  else if(rd.xr.isPresenting)showVP(h);else{const p=$('pop');p.innerHTML=`<b>${esc(h.label)}</b><p>${esc(h.text)}</p><button>${esc(t('act.close'))}</button>`;p.hidden=false;p.querySelector('button').onclick=()=>p.hidden=true}
 }
 el.addEventListener('pointerdown',e=>{if(walking)return;
   if(mode=='edit'&&!placing){const h=at(e);if(h){hd={h,sp:hs.children.find(c=>c.userData.h===h),x:e.clientX,y:e.clientY,m:0,moved:false};sel=h.id;el.setPointerCapture(e.pointerId);return}}
@@ -405,7 +566,7 @@ for(let i=0;i<2;i++){
   sc.add(c);
 }
 if(navigator.xr)navigator.xr.isSessionSupported('immersive-vr').then(ok=>{if(ok)$('vr').hidden=false}).catch(()=>{});
-$('vr').onclick=async()=>{try{mode='view';ui();const s=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local','local-floor']});await rd.xr.setSession(s)}catch(e){$('msg').textContent='تعذر تشغيل وضع VR.'}};
+$('vr').onclick=async()=>{try{mode='view';ui();const s=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local','local-floor']});await rd.xr.setSession(s)}catch(e){$('msg').textContent=t('msg.vrFail')}};
 rd.setAnimationLoop(t=>{
   const dt=Math.min((t-t0)/1000,.1);t0=t;const xr=rd.xr.isPresenting;
   sphere.visible=!!mat.map;   // untextured MeshBasicMaterial is white; hide it so the empty state stays readable
@@ -435,10 +596,11 @@ const hideVP=()=>{vp.visible=false};
 function showVP(h){
   const c=document.createElement('canvas');c.width=1024;c.height=640;const x=c.getContext('2d');
   x.fillStyle='rgba(18,20,26,.94)';x.strokeStyle='#f59e0b';x.lineWidth=8;x.beginPath();if(x.roundRect)x.roundRect(8,8,1008,624,40);else x.rect(8,8,1008,624);x.fill();x.stroke();
-  x.direction='rtl';x.textAlign='right';x.fillStyle='#fff';x.font='700 56px system-ui,Tahoma,Arial';x.fillText(h.label||'معلومات',960,110,780);
+  const rtl=RTL(),ax=rtl?960:64;
+  x.direction=rtl?'rtl':'ltr';x.textAlign=rtl?'right':'left';x.fillStyle='#fff';x.font='700 56px system-ui,Tahoma,Arial';x.fillText(h.label||t('hs.info'),ax,110,780);
   x.font='400 40px system-ui,Tahoma,Arial';x.fillStyle='#e5e7eb';
   const lines=[];let l='';for(const w of (h.text||'').split(/\s+/)){const n=l?l+' '+w:w;if(x.measureText(n).width>900&&l){lines.push(l);l=w}else l=n}if(l)lines.push(l);
-  lines.slice(0,8).forEach((s,i)=>x.fillText(i==7&&lines.length>8?s+'…':s,960,190+i*54));
+  lines.slice(0,8).forEach((s,i)=>x.fillText(i==7&&lines.length>8?s+'…':s,ax,190+i*54));
   const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;if(vpp.material.map)vpp.material.map.dispose();vpp.material.map=t;vpp.material.needsUpdate=true;
   const o=new THREE.Vector3(),d=new THREE.Vector3();cam.getWorldPosition(o);cam.getWorldDirection(d);d.y=0;if(d.lengthSq()<1e-4)d.set(0,0,-1);d.normalize();
   vp.position.copy(o).addScaledVector(d,2.2);vp.position.y=o.y-.1;vp.lookAt(o);vp.visible=true;
@@ -508,20 +670,20 @@ $('pbtn').onclick=()=>{planOpen=!planOpen;renderPlan()};
 $('pdots').onclick=e=>{const b=e.target.closest('button');if(b)go(+b.dataset.i)};
 $('pbox').onclick=e=>{
   if(!placingPlan||e.target.closest('button'))return;const r=$('pimg').getBoundingClientRect(),c=v=>Math.min(1,Math.max(0,v));
-  S[cur].pp={x:c((e.clientX-r.left)/r.width),y:c((e.clientY-r.top)/r.height)};placingPlan=false;$('msg').textContent='تم تحديد مكان المشهد على المخطط.';save();renderPlan();
+  S[cur].pp={x:c((e.clientX-r.left)/r.width),y:c((e.clientY-r.top)/r.height)};placingPlan=false;$('msg').textContent=t('msg.planSet');save();renderPlan();
 };
-$('pset').onclick=()=>{if(!P.plan){$('msg').textContent='ارفع صورة المخطط أولاً.';return}if(!S[cur])return;planOpen=true;placingPlan=true;renderPlan();$('msg').textContent='اضغط على المخطط لتحديد مكان هذا المشهد.'};
-$('nfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{P.nadir={img:await shrink(f,512,'image/png'),r:P.nadir?.r||25};save();extras()}catch(x){$('msg').textContent='تعذر قراءة الصورة.'}};
+$('pset').onclick=()=>{if(!P.plan){$('msg').textContent=t('msg.planFirst');return}if(!S[cur])return;planOpen=true;placingPlan=true;renderPlan();$('msg').textContent=t('msg.planClick')};
+$('nfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{P.nadir={img:await shrink(f,512,'image/png'),r:P.nadir?.r||25};save();extras()}catch(x){$('msg').textContent=t('msg.imgFail')}};
 $('nrm').onclick=()=>{delete P.nadir;save();extras()};
 $('nsz').oninput=e=>{if(P.nadir){P.nadir.r=+e.target.value;save();syncNadir()}};
 $('afile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
-  if(f.size>8e6){toast('ملف الصوت أكبر من 8 ميجابايت. اختر ملفاً أصغر.');return}
-  freeURL(P.audio?.src);P.audio={src:objURL(f),blob:f,name:f.name,vol:.6};audioDirty=true;save();extras();toast('✅ تمت إضافة الموسيقى.')};
+  if(f.size>8e6){toast(t('msg.audioBig'));return}
+  freeURL(P.audio?.src);P.audio={src:objURL(f),blob:f,name:f.name,vol:.6};audioDirty=true;save();extras();toast(t('msg.audioAdded'))};
 $('arm').onclick=()=>{freeURL(P.audio?.src);delete P.audio;audioDirty=true;save();extras()};
-$('plfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{P.plan={img:await shrink(f,1600,'image/jpeg')};planOpen=true;save();extras()}catch(x){$('msg').textContent='تعذر قراءة الصورة.'}};
+$('plfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{P.plan={img:await shrink(f,1600,'image/jpeg')};planOpen=true;save();extras()}catch(x){$('msg').textContent=t('msg.imgFail')}};
 $('prm').onclick=()=>{delete P.plan;S.forEach(s=>delete s.pp);planOpen=false;save();extras()};
 $('eurl').oninput=e=>{P.eurl=e.target.value;save();$('ecode').value=embedCode()};
-$('ecopy').onclick=async()=>{const v=$('ecode').value;if(!v){$('msg').textContent='اكتب رابط الجولة أولاً.';return}try{await navigator.clipboard.writeText(v)}catch(x){$('ecode').select();document.execCommand('copy')}$('msg').textContent='تم نسخ كود التضمين.'};
+$('ecopy').onclick=async()=>{const v=$('ecode').value;if(!v){$('msg').textContent=t('msg.urlFirst');return}try{await navigator.clipboard.writeText(v)}catch(x){$('ecode').select();document.execCommand('copy')}$('msg').textContent=t('msg.copied')};
 // ───────────── toasts, pinch zoom, keyboard control, backup reminder ─────────────
 
 // Auto-dismiss. Observing #msg also covers code that writes to it directly.
@@ -535,7 +697,7 @@ $('ecopy').onclick=async()=>{const v=$('ecode').value;if(!v){$('msg').textConten
 let remindAt=40;
 function remind(){
   if(EMB||edits<remindAt)return;remindAt=edits+80;
-  toast('💡 عملك محفوظ داخل هذا المتصفح فقط. اضغط «حفظ المشروع» لتنزيل نسخة على جهازك.',9000);
+  toast(t('msg.remind'),9000);
 }
 
 // Only warn on unload when autosave is known to be broken.
@@ -560,7 +722,7 @@ el.addEventListener('pointerup',endPt);el.addEventListener('pointercancel',endPt
 // Keyboard control: the scene was previously unusable without a pointer.
 el.tabIndex=0;
 el.setAttribute('role','application');
-el.setAttribute('aria-label','مشهد بانورامي ٣٦٠ — الأسهم للنظر حولك، + و − للتكبير');
+el.setAttribute('aria-label',t('aria.canvas'));
 el.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey)return;
   const stp=.09;
@@ -611,9 +773,9 @@ if(!EMB){const scn=$('scenes');
       if(d){curId=id;P=d;S=P.scenes;lastSids=new Set(S.map(s=>s.id))}
     }
     if(!curId){curId=uid()+uid();await flush()}
-  }catch(e){curId=curId||uid()+uid();toast('⚠️ تعذّر الوصول إلى تخزين المتصفح (قد يكون وضع تصفّح خاص). لن يُحفظ عملك تلقائياً — استخدم «حفظ المشروع» بانتظام.',14000)}}
+  }catch(e){curId=curId||uid()+uid();toast(t('msg.noStorage'),14000)}}
   $('ptitle').value=P.title;$('pdesc').value=P.desc||'';$('auto').checked=!!P.auto;$('wk').checked=P.walk!==false;resetHist();
-  if(EMB&&S.length){$('stt').textContent=P.title||'';$('std').textContent=P.desc||'';$('start').style.backgroundImage=`linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.7)),url("${S[0].img}")`;$('sgo').disabled=true;$('sgo').textContent='جارٍ التحميل…';$('start').hidden=false}
+  if(EMB&&S.length){$('stt').textContent=P.title||'';$('std').textContent=P.desc||'';$('start').style.backgroundImage=`linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.7)),url("${S[0].img}")`;$('sgo').disabled=true;$('sgo').textContent=t('view.loading');$('start').hidden=false}
   ui();fit();
-  if(S.length)go(0).then(()=>{$('sgo').disabled=false;$('sgo').textContent='ابدأ الجولة'});
+  if(S.length)go(0).then(()=>{$('sgo').disabled=false;$('sgo').textContent=t('view.start')});
 })();

@@ -8,7 +8,9 @@ browser, and finished tours are downloaded as a single self-contained HTML file.
 
 ![Tajwal 360](docs/screenshot.png)
 
-The interface is Arabic (RTL).
+The interface is available in Arabic (RTL) and English (LTR), with a light/dark/auto
+theme switch. Both choices are remembered in `localStorage` and applied before the
+first paint, so there is no flash of the wrong theme or direction on a return visit.
 
 ## Why there is no backend
 
@@ -32,6 +34,13 @@ colour and size; drag hotspots directly in the panorama; 60 steps of undo/redo; 
 thumbnails with drag reordering; nadir patch to cover the tripod; background audio;
 a floor plan with a scene marker per position; generated iframe embed code; per-scene
 start angle and north direction.
+
+**Interface** — Arabic and English, switched from the panel header; every string lives in
+one dictionary in `app.js` and the static markup is translated through `data-i18n`
+attributes. Switching language sets `lang` and `dir` on the document and re-renders the
+dynamic parts. A three-state theme control (auto, light, dark) sets `data-theme` on the
+document; auto follows the operating system. An exported tour is rendered in the language
+its author was using and carries no switcher.
 
 **Viewing** — walkthrough transitions that turn toward the hotspot, push in, and cross-fade
 while preserving heading; a start screen built from the first scene; neighbouring scenes
@@ -66,6 +75,7 @@ Projects written by older builds are migrated automatically on first load.
 ```json
 {
   "v": 1,
+  "lang": "ar",
   "title": "Tour title",
   "desc": "Short description",
   "nadir": { "img": "data:image/png;base64,...", "r": 25 },
@@ -90,7 +100,8 @@ Projects written by older builds are migrated automatically on first load.
 }
 ```
 
-`u` and `v` are equirectangular coordinates from 0 to 1 — `u` horizontally from the left
+`lang` is the interface language an exported tour opens in (`ar` or `en`); the editor
+ignores it on import and keeps its own choice. `u` and `v` are equirectangular coordinates from 0 to 1 — `u` horizontally from the left
 edge, `v` vertically from the top. `u0` and `p0` are the starting yaw and pitch, `n` is
 the north offset, and `v` at the root is the schema version.
 
@@ -107,13 +118,14 @@ Opening `index.html` directly shows the editor, but export will not work: it rea
 
 ```
 index.html          markup, icon sprite, content security policy
-style.css           design tokens, light and dark themes, RTL layout
-app.js              editor, viewer and storage
+boot.js             applies the stored theme and language before the first paint
+style.css           design tokens, light and dark themes, RTL and LTR layout
+app.js              editor, viewer, storage and the Arabic/English dictionary
 vendor/three.min.js Three.js r128 (MIT)
 ```
 
-When changing `app.js` or `style.css`, bump the `?v=` query in `index.html`. Without it,
-returning visitors keep the cached copy.
+When changing `app.js`, `boot.js` or `style.css`, bump the `?v=` query in `index.html`.
+Without it, returning visitors keep the cached copy.
 
 ## Deployment
 
@@ -143,7 +155,7 @@ are announced through `aria-live`, and `prefers-reduced-motion` is respected.
 
 ZIP export with binary images to cut tour size, a trimmed viewer bundle that omits editor
 code, direct-to-disk saving via the File System Access API, per-scene audio, a view cone
-on the floor plan, and interface localisation.
+on the floor plan, and more interface languages.
 
 ## Licence
 
