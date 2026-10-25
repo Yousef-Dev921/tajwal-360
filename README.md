@@ -8,6 +8,10 @@ file you can put on any host.
 
 ![The editor with a panorama loaded, a navigation hotspot, and the scene list](docs/screenshot.png)
 
+The interface comes in Arabic (RTL) and English (LTR), with an auto/light/dark theme
+switch. Both choices persist in `localStorage` and are applied before the first paint,
+so a return visit never flashes the wrong theme or direction.
+
 ## Trade-offs
 
 Everything is served as static files, which keeps hosting free and removes CDN
@@ -32,6 +36,14 @@ prompts for a backup download.
   per scene.
 - Per-scene start angle and north direction.
 - Generated `<iframe>` embed code.
+
+### Interface
+- Arabic and English, switched from the panel header. Every string lives in one
+  dictionary in `app.js`; static markup is translated through `data-i18n` attributes.
+- Switching language sets `lang` and `dir` on the document and re-renders the dynamic
+  parts.
+- A three-state theme control: auto (follows the operating system), light, dark.
+- An exported tour opens in the language its author used, and carries no switcher.
 
 ### Viewing
 - Walkthrough transitions: the camera turns toward the hotspot, pushes in, then
@@ -76,6 +88,7 @@ Projects written by older builds are migrated on first load.
 ```json
 {
   "v": 1,
+  "lang": "ar",
   "title": "Tour title",
   "desc": "Short description",
   "nadir": { "img": "data:image/png;base64,...", "r": 25 },
@@ -102,6 +115,8 @@ Projects written by older builds are migrated on first load.
 
 - Root `v` is the schema version. Inside a hotspot, `v` is a coordinate — the two are
   unrelated.
+- `lang` is the language an exported tour opens in (`ar` or `en`). The editor ignores it
+  on import and keeps its own setting.
 - Hotspot `u` and `v` are equirectangular coordinates from 0 to 1: `u` horizontally
   from the left edge, `v` vertically from the top.
 - `u0` and `p0` are the scene's starting yaw and pitch; `n` is its north offset.
@@ -120,14 +135,15 @@ Opening `index.html` directly shows the editor, but export will not work: it rea
 
 ```
 index.html          markup, icon sprite, content security policy
-style.css           design tokens, light and dark themes, RTL layout
-app.js              editor, viewer and storage
+boot.js             applies the stored theme and language before the first paint
+style.css           design tokens, light and dark themes, RTL and LTR layout
+app.js              editor, viewer, storage and the Arabic/English dictionary
 vendor/three.min.js Three.js r128 (MIT)
 samples/            CC0 panoramas for testing
 ```
 
-After changing `app.js` or `style.css`, bump the `?v=` query in `index.html`. Without
-it, returning visitors keep the cached copy.
+When changing `app.js`, `boot.js` or `style.css`, bump the `?v=` query in `index.html`.
+Without it, returning visitors keep the cached copy.
 
 ## Deployment
 
@@ -160,7 +176,7 @@ are announced through `aria-live`, and `prefers-reduced-motion` is respected.
 - A trimmed viewer bundle that leaves out editor code.
 - Direct-to-disk saving through the File System Access API.
 - Per-scene audio and a view cone on the floor plan.
-- Interface localisation.
+- More interface languages.
 
 ## Credits
 

@@ -132,18 +132,28 @@ html,body{
 
 .hd{
   position:sticky; top:0; z-index:3;
-  display:flex; align-items:center; gap:var(--s2);
+  display:flex; align-items:center; gap:var(--s2); flex-wrap:wrap;
   padding:var(--s3) var(--s4);
   padding-top:calc(env(safe-area-inset-top,0px) + var(--s3));
   background:color-mix(in srgb,var(--pn) 86%,transparent);
   -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
   border-bottom:1px solid var(--bd);
 }
-.bn{display:flex; align-items:center; gap:var(--s2); flex:1; min-width:0;
+/* basis:auto so the brand keeps its width and the toggles wrap to a second
+   line on a narrow panel instead of squeezing the wordmark */
+.bn{display:flex; align-items:center; gap:var(--s2); flex:1 1 auto; min-width:0;
     text-decoration:none; color:var(--fg)}
 .mk{width:30px; height:30px; flex:none}
 .wm{font-size:var(--tLg); font-weight:650; letter-spacing:-.015em; white-space:nowrap}
-.wm b{font-weight:650; color:var(--acT); margin-left:.3em}
+/* .wm is dir="ltr" in the markup, so inline-start is its left edge either way */
+.wm b{font-weight:650; color:var(--acT); margin-inline-start:.3em}
+
+/* theme and language toggles */
+#tgs{display:flex; gap:var(--s1); flex:none; margin-inline-start:auto}
+.tg{min-width:var(--ctl); padding:0 var(--s2); flex:none;
+    border-radius:var(--rp); font-size:var(--tSm); font-weight:650}
+.tg .ic{width:1.3em; height:1.3em}
+#langt{font-size:var(--tMd); line-height:1}
 
 .gp{display:flex; flex-direction:column; gap:var(--s2); padding:var(--s3) var(--s4)}
 .gp + .gp{border-top:1px solid var(--bd)}
@@ -157,14 +167,17 @@ details.gp > summary{
   transition:background var(--mo1) var(--ez), color var(--mo1) var(--ez);
 }
 details.gp > summary::-webkit-details-marker{display:none}
-/* chevron: points inline-forward when closed, down when open */
+/* chevron: points inline-forward when closed, down when open.
+   The glyph is two physical borders, so the closed angle is per direction. */
 details.gp > summary::after{
   content:""; margin-inline-start:auto; flex:none; width:7px; height:7px;
   border-right:2px solid currentColor; border-bottom:2px solid currentColor;
   transform:rotate(135deg);
   transition:transform var(--mo2) var(--ez);
 }
-details.gp[open] > summary::after{transform:rotate(45deg)}
+:root[dir="ltr"] details.gp > summary::after{transform:rotate(-45deg)}
+details.gp[open] > summary::after,
+:root[dir="ltr"] details.gp[open] > summary::after{transform:rotate(45deg)}
 details.gp > summary:hover{background:var(--pn2); color:var(--fg)}
 details.gp[open] > summary{color:var(--fg)}
 details.gp .bd{display:flex; flex-direction:column; gap:var(--s2); padding:0 var(--s4) var(--s4)}
@@ -192,11 +205,14 @@ input:focus,select:focus,textarea:focus{
   box-shadow:0 0 0 3px color-mix(in srgb,var(--acT) 24%,transparent);
 }
 input::placeholder,textarea::placeholder{color:var(--mu); opacity:.85}
+/* caret: two triangles that meet at the bottom, parked on the inline end.
+   background-position has no logical keywords, so it is set per direction. */
 select{appearance:none; padding-inline-end:var(--s5);
   background-image:linear-gradient(45deg,transparent 50%,var(--mu) 50%),linear-gradient(135deg,var(--mu) 50%,transparent 50%);
-  background-position:left 14px top 50%,left 9px top 50%;
+  background-position:left 9px top 50%,left 14px top 50%;
   background-size:5px 5px,5px 5px; background-repeat:no-repeat;
 }
+:root[dir="ltr"] select{background-position:right 14px top 50%,right 9px top 50%}
 input[type=color]{padding:3px; height:var(--ctl); cursor:pointer}
 input[type=range]{
   -webkit-appearance:none; appearance:none; border:0; background:transparent;

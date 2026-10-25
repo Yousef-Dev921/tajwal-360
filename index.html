@@ -13,9 +13,10 @@
 <meta property="og:title" content="Tajwal 360">
 <meta property="og:description" content="أنشئ جولات افتراضية 360° داخل متصفحك. بلا خادم، وبلا رفع صورك لأي مكان.">
 <meta property="og:type" content="website">
-<title>Tajwal 360 — استوديو الجولات الافتراضية</title>
+<title data-i18n="doc.title">Tajwal 360 — استوديو الجولات الافتراضية</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='4' y1='4' x2='28' y2='28' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%23818cf8'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='12.4' fill='none' stroke='url(%23g)' stroke-width='2.6'/%3E%3Cellipse cx='16' cy='16' rx='12.4' ry='4.9' fill='none' stroke='url(%23g)' stroke-width='1.8' opacity='.45'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='url(%23g)'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=3.1">
+<link rel="stylesheet" href="style.css?v=3.2">
+<script src="boot.js?v=3.2"></script>
 </head>
 <body>
 <div id="root">
@@ -54,6 +55,10 @@
  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 15 4-4 4 4 3-3 7 6"/><circle cx="8.5" cy="9.5" r="1.4"/></symbol>
  <symbol id="i-north" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m12 7 2.5 7L12 12.6 9.5 14z"/></symbol>
  <symbol id="i-start" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></symbol>
+ <symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></symbol>
+ <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.4v2.3M12 19.3v2.3M2.4 12h2.3M19.3 12h2.3M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6"/></symbol>
+ <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 15.2A8.6 8.6 0 0 1 9.4 3.9a8.6 8.6 0 1 0 11.1 11.3z"/></symbol>
+ <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.2 9.5h17.6M3.2 14.5h17.6"/><path d="M12 3c2.6 2.8 2.6 15.2 0 18-2.6-2.8-2.6-15.2 0-18z"/></symbol>
 </defs></svg>
 
 <aside id="panel">
@@ -63,60 +68,64 @@
       <svg class="mk" viewBox="0 0 32 32" aria-hidden="true"><use href="#i-mark"/></svg>
       <span class="wm" dir="ltr">Tajwal<b>360</b></span>
     </a>
-    <button id="lib" class="pri"><svg class="ic"><use href="#i-library"/></svg>المكتبة</button>
+    <button id="lib" class="pri"><svg class="ic"><use href="#i-library"/></svg><span data-i18n="nav.library">المكتبة</span></button>
+    <div id="tgs">
+      <button id="theme" class="tg"><svg class="ic"><use id="themei" href="#i-auto"/></svg></button>
+      <button id="lang" class="tg"><svg class="ic"><use href="#i-globe"/></svg><span id="langt">EN</span></button>
+    </div>
   </header>
 
   <div class="gp">
-    <label>عنوان الجولة<input id="ptitle" aria-label="عنوان الجولة"></label>
-    <label>وصف قصير<input id="pdesc" aria-label="وصف الجولة" placeholder="يظهر في شاشة البداية"></label>
+    <label data-i18n="f.tourTitle">عنوان الجولة<input id="ptitle" data-i18n-aria="f.tourTitle" aria-label="عنوان الجولة"></label>
+    <label data-i18n="f.shortDesc">وصف قصير<input id="pdesc" data-i18n-aria="f.tourDesc" aria-label="وصف الجولة" data-i18n-placeholder="f.descPh" placeholder="يظهر في شاشة البداية"></label>
   </div>
 
   <div class="gp">
-    <label class="btn pri big" for="file"><svg class="ic"><use href="#i-plus"/></svg>إضافة صور 360</label>
+    <label class="btn pri big" for="file"><svg class="ic"><use href="#i-plus"/></svg><span data-i18n="act.addImages">إضافة صور 360</span></label>
     <input id="file" type="file" accept="image/*" multiple hidden>
     <div class="row">
-      <button id="undo" disabled title="تراجع (Ctrl+Z)"><svg class="ic"><use href="#i-undo"/></svg>تراجع</button>
-      <button id="redo" disabled title="إعادة (Ctrl+Shift+Z)"><svg class="ic"><use href="#i-redo"/></svg>إعادة</button>
+      <button id="undo" disabled data-i18n-title="act.undoTitle" title="تراجع (Ctrl+Z)"><svg class="ic"><use href="#i-undo"/></svg><span data-i18n="act.undo">تراجع</span></button>
+      <button id="redo" disabled data-i18n-title="act.redoTitle" title="إعادة (Ctrl+Shift+Z)"><svg class="ic"><use href="#i-redo"/></svg><span data-i18n="act.redo">إعادة</span></button>
     </div>
     <div class="row">
-      <button id="prev"><svg class="ic"><use href="#i-eye"/></svg>معاينة</button>
-      <button id="exp" class="pri"><svg class="ic"><use href="#i-download"/></svg>تصدير الجولة</button>
+      <button id="prev"><svg class="ic"><use href="#i-eye"/></svg><span data-i18n="act.preview">معاينة</span></button>
+      <button id="exp" class="pri"><svg class="ic"><use href="#i-download"/></svg><span data-i18n="act.export">تصدير الجولة</span></button>
     </div>
     <div class="row">
-      <button id="psave"><svg class="ic"><use href="#i-save"/></svg>حفظ نسخة</button>
-      <label class="btn" for="pfile"><svg class="ic"><use href="#i-import"/></svg>استيراد</label>
+      <button id="psave"><svg class="ic"><use href="#i-save"/></svg><span data-i18n="act.saveCopy">حفظ نسخة</span></button>
+      <label class="btn" for="pfile"><svg class="ic"><use href="#i-import"/></svg><span data-i18n="act.import">استيراد</span></label>
     </div>
     <input id="pfile" type="file" accept=".json,application/json" hidden>
   </div>
 
   <div class="gp">
-    <p class="lb">المشاهد</p>
+    <p class="lb" data-i18n="sec.scenes">المشاهد</p>
     <div id="scenes"></div>
-    <p class="hint" id="shint">اسحب المشهد لتغيير ترتيبه.</p>
+    <p class="hint" id="shint" data-i18n="hint.reorder">اسحب المشهد لتغيير ترتيبه.</p>
   </div>
 
   <details class="gp" id="sset" open hidden>
-    <summary>إعدادات المشهد</summary>
+    <summary data-i18n="sec.sceneSet">إعدادات المشهد</summary>
     <div class="bd">
-      <label>اسم المشهد<input id="sname" aria-label="اسم المشهد"></label>
+      <label data-i18n="f.sceneName">اسم المشهد<input id="sname" data-i18n-aria="f.sceneName" aria-label="اسم المشهد"></label>
       <div class="row">
-        <button id="sstart" title="تُفتح الجولة على هذه الزاوية"><svg class="ic"><use href="#i-start"/></svg>زاوية البداية</button>
-        <button id="snorth" title="يحسّن سلاسة الانتقال بين المشاهد"><svg class="ic"><use href="#i-north"/></svg>اتجاه الشمال</button>
+        <button id="sstart" data-i18n-title="act.startAngleTitle" title="تُفتح الجولة على هذه الزاوية"><svg class="ic"><use href="#i-start"/></svg><span data-i18n="act.startAngle">زاوية البداية</span></button>
+        <button id="snorth" data-i18n-title="act.northTitle" title="يحسّن سلاسة الانتقال بين المشاهد"><svg class="ic"><use href="#i-north"/></svg><span data-i18n="act.north">اتجاه الشمال</span></button>
       </div>
       <div class="row">
-        <button id="mvb"><svg class="ic"><use href="#i-prev"/></svg>تقديم</button>
-        <button id="mva">تأخير<svg class="ic"><use href="#i-next"/></svg></button>
+        <button id="mvb"><svg class="ic"><use href="#i-prev"/></svg><span data-i18n="act.moveFwd">تقديم</span></button>
+        <button id="mva"><span data-i18n="act.moveBack">تأخير</span><svg class="ic"><use href="#i-next"/></svg></button>
       </div>
-      <button id="sdel" class="dng"><svg class="ic"><use href="#i-trash"/></svg>حذف المشهد</button>
+      <button id="sdel" class="dng"><svg class="ic"><use href="#i-trash"/></svg><span id="sdelt" data-i18n="act.delScene">حذف المشهد</span></button>
     </div>
   </details>
 
   <details class="gp" id="hsec" open hidden>
-    <summary>النقاط التفاعلية</summary>
+    <summary data-i18n="sec.hotspots">النقاط التفاعلية</summary>
     <div class="bd">
       <div class="row">
-        <button id="addl"><svg class="ic"><use href="#i-link"/></svg>انتقال</button>
-        <button id="addi"><svg class="ic"><use href="#i-info"/></svg>معلومات</button>
+        <button id="addl"><svg class="ic"><use href="#i-link"/></svg><span data-i18n="hs.link">انتقال</span></button>
+        <button id="addi"><svg class="ic"><use href="#i-info"/></svg><span data-i18n="hs.info">معلومات</span></button>
       </div>
       <p id="hint2"></p>
       <div id="hlist"></div>
@@ -125,59 +134,57 @@
   </details>
 
   <details class="gp">
-    <summary>خيارات العرض</summary>
+    <summary data-i18n="sec.view">خيارات العرض</summary>
     <div class="bd">
-      <label class="opt"><input type="checkbox" id="auto"> دوران تلقائي</label>
-      <label class="opt"><input type="checkbox" id="wk" checked> انتقال سلس بين المشاهد</label>
+      <label class="opt"><input type="checkbox" id="auto"><span data-i18n="opt.autorotate">دوران تلقائي</span></label>
+      <label class="opt"><input type="checkbox" id="wk" checked><span data-i18n="opt.walk">انتقال سلس بين المشاهد</span></label>
     </div>
   </details>
 
   <details class="gp">
-    <summary>رقعة النادر</summary>
+    <summary data-i18n="sec.nadir">رقعة النادر</summary>
     <div class="bd">
-      <p class="hint">صورة تغطّي مكان الحامل الثلاثي أسفل البانوراما.</p>
+      <p class="hint" data-i18n="hint.nadir">صورة تغطّي مكان الحامل الثلاثي أسفل البانوراما.</p>
       <div class="row">
-        <label class="btn" for="nfile">رفع صورة</label>
-        <button id="nrm">إزالة</button>
+        <label class="btn" for="nfile" data-i18n="act.upImage">رفع صورة</label>
+        <button id="nrm" data-i18n="act.remove">إزالة</button>
       </div>
       <input id="nfile" type="file" accept="image/*" hidden>
-      <label>الحجم<input id="nsz" type="range" min="8" max="50" value="25"></label>
+      <label data-i18n="f.size">الحجم<input id="nsz" type="range" min="8" max="50" value="25" data-i18n-aria="f.size" aria-label="الحجم"></label>
     </div>
   </details>
 
   <details class="gp">
-    <summary>موسيقى خلفية</summary>
+    <summary data-i18n="sec.audio">موسيقى خلفية</summary>
     <div class="bd">
-      <p class="hint">تبدأ بعد أول لمسة من الزائر. الحد الأقصى 8 ميجابايت.</p>
+      <p class="hint" data-i18n="hint.audio">تبدأ بعد أول لمسة من الزائر. الحد الأقصى 8 ميجابايت.</p>
       <div class="row">
-        <label class="btn" for="afile">رفع ملف صوت</label>
-        <button id="arm">إزالة</button>
+        <label class="btn" for="afile" data-i18n="act.upAudio">رفع ملف صوت</label>
+        <button id="arm" data-i18n="act.remove">إزالة</button>
       </div>
       <input id="afile" type="file" accept="audio/*" hidden>
     </div>
   </details>
 
   <details class="gp">
-    <summary>مخطط الموقع</summary>
+    <summary data-i18n="sec.plan">مخطط الموقع</summary>
     <div class="bd">
-      <p class="hint">ارفع المخطط، ثم ضع كل مشهد كنقطة عليه.</p>
+      <p class="hint" data-i18n="hint.plan">ارفع المخطط، ثم ضع كل مشهد كنقطة عليه.</p>
       <div class="row">
-        <label class="btn" for="plfile">رفع مخطط</label>
-        <button id="prm">إزالة</button>
+        <label class="btn" for="plfile" data-i18n="act.upPlan">رفع مخطط</label>
+        <button id="prm" data-i18n="act.remove">إزالة</button>
       </div>
       <input id="plfile" type="file" accept="image/*" hidden>
-      <button id="pset"><svg class="ic"><use href="#i-pin"/></svg>ضع هذا المشهد على المخطط</button>
+      <button id="pset"><svg class="ic"><use href="#i-pin"/></svg><span data-i18n="act.placeScene">ضع هذا المشهد على المخطط</span></button>
     </div>
   </details>
 
   <details class="gp">
-    <summary>كود التضمين</summary>
+    <summary data-i18n="sec.embed">كود التضمين</summary>
     <div class="bd">
-      <label>رابط الجولة بعد رفعها على استضافة
-        <input id="eurl" type="url" placeholder="https://..." inputmode="url">
-      </label>
-      <textarea id="ecode" rows="4" readonly placeholder="اكتب الرابط ليظهر كود التضمين"></textarea>
-      <button id="ecopy"><svg class="ic"><use href="#i-copy"/></svg>نسخ الكود</button>
+      <label data-i18n="f.tourUrl">رابط الجولة بعد رفعها على استضافة<input id="eurl" type="url" placeholder="https://..." inputmode="url" data-i18n-aria="f.tourUrl" aria-label="رابط الجولة بعد رفعها على استضافة"></label>
+      <textarea id="ecode" rows="4" readonly data-i18n-placeholder="f.embedPh" placeholder="اكتب الرابط ليظهر كود التضمين" data-i18n-aria="sec.embed" aria-label="كود التضمين"></textarea>
+      <button id="ecopy"><svg class="ic"><use href="#i-copy"/></svg><span data-i18n="act.copyCode">نسخ الكود</span></button>
     </div>
   </details>
 
@@ -186,14 +193,14 @@
 <main id="stage">
   <div id="top">
     <span class="chip" id="title"></span>
-    <button id="vr" hidden><svg class="ic"><use href="#i-vr"/></svg>وضع VR</button>
-    <button id="gy" hidden><svg class="ic"><use href="#i-gyro"/></svg>جيروسكوب</button>
-    <button id="back" hidden><svg class="ic"><use href="#i-edit"/></svg>عودة للتحرير</button>
-    <button id="mute" hidden aria-label="كتم الصوت"><svg class="ic"><use href="#i-volume"/></svg></button>
-    <button id="pbtn" hidden><svg class="ic"><use href="#i-map"/></svg>المخطط</button>
+    <button id="vr" hidden><svg class="ic"><use href="#i-vr"/></svg><span data-i18n="act.vr">وضع VR</span></button>
+    <button id="gy" hidden><svg class="ic"><use href="#i-gyro"/></svg><span id="gyt" data-i18n="act.gyro">جيروسكوب</span></button>
+    <button id="back" hidden><svg class="ic"><use href="#i-edit"/></svg><span data-i18n="act.backEdit">عودة للتحرير</span></button>
+    <button id="mute" hidden data-i18n-aria="act.muteAria" aria-label="كتم الصوت"><svg class="ic"><use href="#i-volume"/></svg></button>
+    <button id="pbtn" hidden><svg class="ic"><use href="#i-map"/></svg><span data-i18n="act.planBtn">المخطط</span></button>
   </div>
 
-  <div id="cmp" hidden title="اضغط للتوجه نحو الشمال" role="button" tabindex="0" aria-label="البوصلة: اضغط للتوجه نحو الشمال">
+  <div id="cmp" hidden data-i18n-title="cmp.title" title="اضغط للتوجه نحو الشمال" role="button" tabindex="0" data-i18n-aria="cmp.aria" aria-label="البوصلة: اضغط للتوجه نحو الشمال">
     <svg viewBox="-30 -30 60 60" width="54" height="54" aria-hidden="true"><g id="cg">
       <circle r="27" fill="rgba(10,10,17,.6)" stroke="#fff" stroke-width="1.6"/>
       <path d="M0 -20L5.5 1H-5.5Z" fill="#f87171"/>
@@ -203,23 +210,23 @@
   </div>
 
   <div id="plan" hidden>
-    <div id="pbox"><img id="pimg" alt="مخطط الموقع"><div id="pdots"></div></div>
+    <div id="pbox"><img id="pimg" data-i18n-alt="sec.plan" alt="مخطط الموقع"><div id="pdots"></div></div>
   </div>
 
   <div id="pop" hidden></div>
-  <div id="bar" hidden role="progressbar" aria-label="جارٍ التحميل"></div>
+  <div id="bar" hidden role="progressbar" data-i18n-aria="aria.loading" aria-label="جارٍ التحميل"></div>
 
   <div id="start" hidden>
-    <div class="sc"><h1 id="stt"></h1><p id="std"></p><button id="sgo">ابدأ الجولة</button></div>
+    <div class="sc"><h1 id="stt"></h1><p id="std"></p><button id="sgo" data-i18n="view.start">ابدأ الجولة</button></div>
   </div>
 
   <div id="sb"></div>
 
-  <noscript><div class="nojs"><span>هذه الصفحة تحتاج تشغيل JavaScript. افتحها في متصفح مثل Safari أو Chrome.</span></div></noscript>
+  <noscript><div class="nojs"><span>هذه الصفحة تحتاج تشغيل JavaScript. افتحها في متصفح مثل Safari أو Chrome.</span><span dir="ltr">This page needs JavaScript. Open it in a browser such as Safari or Chrome.</span></div></noscript>
 
   <div id="empty" hidden>
     <svg class="eic" aria-hidden="true"><use href="#i-image"/></svg>
-    <span>أضف صورة بانوراما 360° للبدء، أو اسحب الصور وأفلتها هنا.</span>
+    <span data-i18n="empty">أضف صورة بانوراما 360° للبدء، أو اسحب الصور وأفلتها هنا.</span>
   </div>
 </main>
 
@@ -228,18 +235,18 @@
 </div>
 
 <div id="libm" hidden>
-  <div id="libb" role="dialog" aria-modal="true" aria-label="مكتبة المشاريع">
+  <div id="libb" role="dialog" aria-modal="true" data-i18n-aria="lib.title" aria-label="مكتبة المشاريع">
     <header>
-      <b>مكتبة المشاريع</b>
-      <button id="libn" class="pri"><svg class="ic"><use href="#i-plus"/></svg>مشروع جديد</button>
-      <label class="btn" for="pfile">استيراد</label>
-      <button id="libx" aria-label="إغلاق"><svg class="ic"><use href="#i-close"/></svg></button>
+      <b data-i18n="lib.title">مكتبة المشاريع</b>
+      <button id="libn" class="pri"><svg class="ic"><use href="#i-plus"/></svg><span data-i18n="lib.new">مشروع جديد</span></button>
+      <label class="btn" for="pfile" data-i18n="act.import">استيراد</label>
+      <button id="libx" data-i18n-aria="act.close" aria-label="إغلاق"><svg class="ic"><use href="#i-close"/></svg></button>
     </header>
     <div id="libg"></div>
   </div>
 </div>
 
 <script src="vendor/three.min.js?v=2.0"></script>
-<script src="app.js?v=3.1"></script>
+<script src="app.js?v=3.2"></script>
 </body>
 </html>
