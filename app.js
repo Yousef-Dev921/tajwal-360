@@ -200,6 +200,8 @@ const I18N = {
     'msg.gyroNA': 'المستشعر غير متاح',
     'msg.vrFail': 'تعذّر تشغيل وضع VR.',
     'msg.remind': 'عملك محفوظ في هذا المتصفح فقط. اضغط «حفظ نسخة» لتنزيل نسخة على جهازك.',
+    'msg.notPersisted':
+      'تنبيه: قد يحذف هذا المتصفح المشاريع المحفوظة فيه، ويحذفها سفاري إذا مرّت 7 أيام من استخدامه دون فتح هذا الموقع. اضغط «حفظ نسخة» لتحتفظ بملف المشروع على جهازك.',
     'msg.planSet': 'حُدّد موقع المشهد على المخطط.',
     'msg.planFirst': 'ارفع صورة المخطط أولاً.',
     'msg.planClick':
@@ -375,6 +377,8 @@ const I18N = {
     'msg.vrFail': 'VR mode could not be started.',
     'msg.remind':
       'Your work is only stored in this browser. Use “Save a copy” to keep a copy on your device.',
+    'msg.notPersisted':
+      'Note: this browser may clear the projects stored in it, and Safari does after 7 days of use without opening this site. Use “Save a copy” to keep the project file on your device.',
     'msg.planSet': 'Scene placed on the plan.',
     'msg.planFirst': 'Upload a floor plan first.',
     'msg.planClick': 'Click the plan to place this scene. Zoom and pan first for a precise spot.',
@@ -1125,12 +1129,29 @@ async function readCapture(f) {
   } catch (e) {}
   return out;
 }
+// Browsers can clear a site's storage: under disk pressure, and Safari after seven days of
+// browsing without a visit. Persistent storage protects against the first where the browser
+// grants it; when it isn't granted, or the browser can't be asked, the author is told once per
+// session to keep a copy. Firefox asks the user, so this runs after images are added, not on
+// page load.
+let storageChecked = false;
+async function storageKept() {
+  if (storageChecked || EMBED) return true;
+  storageChecked = true;
+  try {
+    return (await navigator.storage.persisted()) || (await navigator.storage.persist());
+  } catch (e) {
+    return false;
+  }
+}
 async function addFiles(files) {
   let first = -1;
   const flatNames = [],
     failedNames = [];
   for (const f of files) {
-    if (!f.type.startsWith('image/')) {
+    // Some sources (a zip viewer, some Android apps) hand over a file with no type at all, so
+    // an empty type is decoded like an image; anything that isn't one fails below.
+    if (f.type && !f.type.startsWith('image/')) {
       failedNames.push(f.name);
       continue;
     }
@@ -1184,6 +1205,8 @@ async function addFiles(files) {
   save();
   if (first >= 0) showScene(first);
   else ui();
+  if (first >= 0 && !(await storageKept()))
+    toast([...notes, t('msg.notPersisted')].join(' '), 14000);
 }
 // ───────────── ui ─────────────
 const selHotspot = () => scenes[current]?.hs.find(h => h.id == selId);
@@ -1310,7 +1333,11 @@ function syncMeta() {
     $('scap').textContent =
       t('f.captured') +
       ' ' +
-      [s.taken && fmtTaken(s.taken), s.gps && fmtGps(s.gps)].filter(Boolean).join(' · ');
+      // The pair sits in a left-to-right isolate: in the Arabic interface the bidi algorithm
+      // would otherwise show it as "lon, lat".
+      [s.taken && fmtTaken(s.taken), s.gps && '⁦' + fmtGps(s.gps) + '⁩']
+        .filter(Boolean)
+        .join(' · ');
 }
 function ui() {
   $('root').classList.toggle('view', mode == 'view');
@@ -1656,6 +1683,7 @@ $('pfile').onchange = async e => {
     await flush();
     closeLib();
     toast(t('msg.imported'));
+    if (!(await storageKept())) toast(t('msg.imported') + ' ' + t('msg.notPersisted'), 14000);
   } catch (x) {
     toast(t(x.message == 'newer' ? 'msg.newerFile' : 'msg.badFile'));
   }
@@ -2378,16 +2406,20 @@ function showVrPanel(h) {
   ctx.fillText(h.label || t('hs.info'), ax, 110, 780);
   ctx.font = '400 40px system-ui,Tahoma,Arial';
   ctx.fillStyle = '#e5e7eb';
+  // Each line the author typed starts a new line here too, and long ones wrap.
   const lines = [];
-  let l = '';
-  for (const w of (h.text || '').split(/\s+/)) {
-    const n = l ? l + ' ' + w : w;
-    if (ctx.measureText(n).width > 900 && l) {
-      lines.push(l);
-      l = w;
-    } else l = n;
+  for (const para of (h.text || '').split('\n')) {
+    let l = '';
+    for (const w of para.split(/\s+/).filter(Boolean)) {
+      const n = l ? l + ' ' + w : w;
+      if (ctx.measureText(n).width > 900 && l) {
+        lines.push(l);
+        l = w;
+      } else l = n;
+    }
+    lines.push(l);
   }
-  if (l) lines.push(l);
+  while (lines.length && !lines[lines.length - 1]) lines.pop();
   lines
     .slice(0, 8)
     .forEach((s, i) => ctx.fillText(i == 7 && lines.length > 8 ? s + '…' : s, ax, 190 + i * 54));
@@ -2973,7 +3005,22 @@ $('plfile').onchange = async e => {
   }
   busy(-1);
 };
+// Removing the plan also drops every scene's place on it, and undo brings back only the places,
+// so it takes a second click like deleting a scene.
 $('prm').onclick = () => {
+  const b = $('prm');
+  if (!project.plan) return;
+  if (b.dataset.c != '1') {
+    b.dataset.c = '1';
+    b.textContent = t('act.confirmDel');
+    setTimeout(() => {
+      b.dataset.c = '';
+      b.textContent = t('act.remove');
+    }, 3000);
+    return;
+  }
+  b.dataset.c = '';
+  b.textContent = t('act.remove');
   freeURL(project.plan?.img);
   delete project.plan;
   scenes.forEach(s => delete s.pp);

@@ -24,9 +24,11 @@ Everything is served as static files, which keeps hosting free and removes CDN
 dependencies. Three.js is vendored locally, so the editor works offline.
 
 The cost is that a project lives in one browser profile. Clearing site data, private
-browsing, or moving to another machine loses it. The editor is explicit about this: it
-reports when storage is unavailable, warns before the quota fills, and periodically
-prompts for a backup download.
+browsing, or moving to another machine loses it, and Safari deletes a site's storage after
+seven days of browsing without a visit. The editor is explicit about this: it reports when
+storage is unavailable, warns before the quota fills, and periodically prompts for a backup
+download. When images are first added it asks the browser for persistent storage, and if
+that isn't granted it says once per session that the browser may clear the work.
 
 ## Features
 
