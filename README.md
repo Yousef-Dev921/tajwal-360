@@ -6,16 +6,22 @@ file you can put on any host.
 
 **[Open the studio →](https://yousef-dev921.github.io/tajwal-360/)**
 
-![The editor with a panorama loaded, a navigation hotspot, and the scene list](docs/screenshot.png)
+![The editor in Arabic, with a panorama open, two hotspots and the scene list](docs/screenshot.jpg)
 
 The interface comes in Arabic (RTL) and English (LTR), with an auto/light/dark theme
 switch. Both choices persist in `localStorage` and are applied before the first paint,
 so a return visit never flashes the wrong theme or direction.
 
+<p dir="rtl" lang="ar">
+<b>بالعربية:</b> Tajwal 360 استوديو لبناء جولات افتراضية بصور &#x2066;360°&#x2069; يعمل بالكامل
+داخل المتصفح. تبقى الصور على جهازك ولا تُرفع إلى أي خادم، وتُصدَّر الجولة في ملف HTML واحد
+يمكن نشره على أي استضافة. الواجهة متاحة بالعربية والإنجليزية، مع مظهر فاتح وداكن.
+</p>
+
 ## Trade-offs
 
 Everything is served as static files, which keeps hosting free and removes CDN
-dependencies — Three.js is vendored locally, so the editor works offline.
+dependencies. Three.js is vendored locally, so the editor works offline.
 
 The cost is that a project lives in one browser profile. Clearing site data, private
 browsing, or moving to another machine loses it. The editor is explicit about this: it
@@ -40,6 +46,10 @@ prompts for a backup download.
 ### Interface
 - Arabic and English, switched from the panel header. Every string lives in one
   dictionary in `app.js`; static markup is translated through `data-i18n` attributes.
+- Counts go through `Intl.PluralRules`, so Arabic gets its singular, dual and plural
+  forms right ("مشهد واحد", "مشهدان", "5 مشاهد", "12 مشهداً").
+- User content such as scene names and hotspot labels uses `dir="auto"`, so a Latin
+  file name reads correctly inside the Arabic interface and the other way round.
 - Switching language sets `lang` and `dir` on the document and re-renders the dynamic
   parts.
 - A three-state theme control: auto (follows the operating system), light, dark.
@@ -77,7 +87,7 @@ IndexedDB database `vrtour`, object store `k`:
 
 Keeping images out of the document is what makes autosave cheap. Autosave runs on
 every edit, including each keystroke in the title field. With images inline, the whole
-project was rewritten each time — roughly 180 KB per keystroke for two scenes. The
+project was rewritten each time, roughly 180 KB per keystroke for two scenes. The
 document is now about 4 KB, and only images that actually changed are written. Storing
 them as `Blob`s rather than base64 also drops the 33% encoding overhead.
 
@@ -113,7 +123,7 @@ Projects written by older builds are migrated on first load.
 }
 ```
 
-- Root `v` is the schema version. Inside a hotspot, `v` is a coordinate — the two are
+- Root `v` is the schema version. Inside a hotspot, `v` is a coordinate; the two are
   unrelated.
 - `lang` is the language an exported tour opens in (`ar` or `en`). The editor ignores it
   on import and keeps its own setting.
@@ -145,11 +155,28 @@ samples/            CC0 panoramas for testing
 When changing `app.js`, `boot.js` or `style.css`, bump the `?v=` query in `index.html`.
 Without it, returning visitors keep the cached copy.
 
+JavaScript and CSS are formatted with [Prettier](https://prettier.io), configured in
+`.prettierrc.json`:
+
+```bash
+npx prettier --write app.js boot.js style.css
+```
+
 ## Deployment
 
 Static files at the root of any host. This repository deploys to GitHub Pages from
-`main`. HTTPS is required — the gyroscope and WebXR will not start without it — and
+`main`. HTTPS is required, since the gyroscope and WebXR will not start without it, and
 GitHub Pages, Cloudflare Pages and Netlify all provide it on free tiers.
+
+## Security
+
+- The editor page carries a strict content security policy: scripts load only from the
+  site itself, and nothing can be sent to another server.
+- An exported tour gets its own policy that blocks every network request. It works
+  offline and cannot report anything back to anyone.
+- An imported `.json` file is treated as untrusted. Only well-formed fields are kept,
+  images must be `data:` URLs, and every value is escaped before it reaches the page.
+- The embed code generator accepts only `http` and `https` addresses.
 
 ## Accessibility
 
@@ -160,7 +187,7 @@ are announced through `aria-live`, and `prefers-reduced-motion` is respected.
 
 ## Limitations
 
-- An exported tour carries about 633 KB of fixed code, mostly Three.js, before any
+- An exported tour carries about 730 KB of fixed code, mostly Three.js, before any
   imagery, and embeds panoramas as base64. A 15-scene tour reaches tens of megabytes.
 - Autosave does not work in private browsing. The editor says so rather than failing
   quietly.

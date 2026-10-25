@@ -10,16 +10,21 @@
 <meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta property="og:title" content="Tajwal 360">
-<meta property="og:image" content="https://yousef-dev921.github.io/tajwal-360/docs/screenshot.png">
+<meta property="og:title" content="Tajwal 360 — استوديو الجولات الافتراضية">
+<meta property="og:image" content="https://yousef-dev921.github.io/tajwal-360/docs/social.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta property="og:url" content="https://yousef-dev921.github.io/tajwal-360/">
 <meta name="twitter:card" content="summary_large_image">
 <meta property="og:description" content="أنشئ جولات افتراضية 360° داخل متصفحك، وصدّرها كملف واحد يعمل على أي استضافة.">
 <meta property="og:type" content="website">
+<meta property="og:locale" content="ar_AR">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:image:alt" content="محرر Tajwal 360 وفيه بانوراما مفتوحة وقائمة المشاهد">
 <title data-i18n="doc.title">Tajwal 360 — استوديو الجولات الافتراضية</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='4' y1='4' x2='28' y2='28' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%23818cf8'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='12.4' fill='none' stroke='url(%23g)' stroke-width='2.6'/%3E%3Cellipse cx='16' cy='16' rx='12.4' ry='4.9' fill='none' stroke='url(%23g)' stroke-width='1.8' opacity='.45'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='url(%23g)'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=4.1">
-<script src="boot.js?v=4.1"></script>
+<link rel="stylesheet" href="style.css?v=4.2">
+<script src="boot.js?v=4.2"></script>
 </head>
 <body>
 <div id="root">
@@ -79,12 +84,12 @@
   </header>
 
   <div class="gp">
-    <label data-i18n="f.tourTitle">عنوان الجولة<input id="ptitle" data-i18n-aria="f.tourTitle" aria-label="عنوان الجولة"></label>
-    <label data-i18n="f.shortDesc">وصف قصير<input id="pdesc" data-i18n-aria="f.tourDesc" aria-label="وصف الجولة" data-i18n-placeholder="f.descPh" placeholder="يظهر في شاشة البداية"></label>
+    <label data-i18n="f.tourTitle">عنوان الجولة<input id="ptitle" dir="auto" data-i18n-aria="f.tourTitle" aria-label="عنوان الجولة"></label>
+    <label data-i18n="f.shortDesc">وصف قصير<input id="pdesc" dir="auto" data-i18n-aria="f.tourDesc" aria-label="وصف الجولة" data-i18n-placeholder="f.descPh" placeholder="يظهر في شاشة البداية"></label>
   </div>
 
   <div class="gp">
-    <label class="btn pri big" for="file"><svg class="ic"><use href="#i-plus"/></svg><span data-i18n="act.addImages">إضافة صور 360</span></label>
+    <label class="btn pri big" for="file"><svg class="ic"><use href="#i-plus"/></svg><span data-i18n="act.addImages">إضافة صور &#x2066;360°&#x2069;</span></label>
     <input id="file" type="file" accept="image/*" multiple hidden>
     <div class="row">
       <button id="undo" disabled data-i18n-title="act.undoTitle" title="تراجع (Ctrl+Z)"><svg class="ic"><use href="#i-undo"/></svg><span data-i18n="act.undo">تراجع</span></button>
@@ -110,14 +115,14 @@
   <details class="gp" id="sset" open hidden>
     <summary data-i18n="sec.sceneSet">إعدادات المشهد</summary>
     <div class="bd">
-      <label data-i18n="f.sceneName">اسم المشهد<input id="sname" data-i18n-aria="f.sceneName" aria-label="اسم المشهد"></label>
+      <label data-i18n="f.sceneName">اسم المشهد<input id="sname" dir="auto" data-i18n-aria="f.sceneName" aria-label="اسم المشهد"></label>
       <div class="row">
-        <button id="sstart" data-i18n-title="act.startAngleTitle" title="تُفتح الجولة على هذه الزاوية"><svg class="ic"><use href="#i-start"/></svg><span data-i18n="act.startAngle">زاوية البداية</span></button>
-        <button id="snorth" data-i18n-title="act.northTitle" title="يحسّن سلاسة الانتقال بين المشاهد"><svg class="ic"><use href="#i-north"/></svg><span data-i18n="act.north">اتجاه الشمال</span></button>
+        <button id="sstart" data-i18n-title="act.startAngleTitle" title="اجعل الزاوية الحالية نقطة بداية هذا المشهد"><svg class="ic"><use href="#i-start"/></svg><span data-i18n="act.startAngle">زاوية البداية</span></button>
+        <button id="snorth" data-i18n-title="act.northTitle" title="اجعل الاتجاه الحالي هو الشمال، ليبقى الاتجاه ثابتاً عند الانتقال بين المشاهد"><svg class="ic"><use href="#i-north"/></svg><span data-i18n="act.north">اتجاه الشمال</span></button>
       </div>
       <div class="row">
-        <button id="mvb"><svg class="ic"><use href="#i-prev"/></svg><span data-i18n="act.moveFwd">تقديم</span></button>
-        <button id="mva"><span data-i18n="act.moveBack">تأخير</span><svg class="ic"><use href="#i-next"/></svg></button>
+        <button id="mvb"><svg class="ic flip"><use href="#i-prev"/></svg><span data-i18n="act.moveFwd">تقديم</span></button>
+        <button id="mva"><span data-i18n="act.moveBack">تأخير</span><svg class="ic flip"><use href="#i-next"/></svg></button>
       </div>
       <button id="sdel" class="dng"><svg class="ic"><use href="#i-trash"/></svg><span id="sdelt" data-i18n="act.delScene">حذف المشهد</span></button>
     </div>
@@ -127,7 +132,7 @@
     <summary data-i18n="sec.hotspots">النقاط التفاعلية</summary>
     <div class="bd">
       <div class="row">
-        <button id="addl"><svg class="ic"><use href="#i-link"/></svg><span data-i18n="hs.link">انتقال</span></button>
+        <button id="addl"><svg class="ic flip"><use href="#i-link"/></svg><span data-i18n="hs.link">انتقال</span></button>
         <button id="addi"><svg class="ic"><use href="#i-info"/></svg><span data-i18n="hs.info">معلومات</span></button>
       </div>
       <p id="hint2"></p>
@@ -145,9 +150,9 @@
   </details>
 
   <details class="gp">
-    <summary data-i18n="sec.nadir">رقعة النادر</summary>
+    <summary data-i18n="sec.nadir">غطاء الحامل</summary>
     <div class="bd">
-      <p class="hint" data-i18n="hint.nadir">صورة تغطّي مكان الحامل الثلاثي أسفل البانوراما.</p>
+      <p class="hint" data-i18n="hint.nadir">صورة تغطّي الحامل الثلاثي في أسفل البانوراما.</p>
       <div class="row">
         <label class="btn" for="nfile" data-i18n="act.upImage">رفع صورة</label>
         <button id="nrm" data-i18n="act.remove">إزالة</button>
@@ -160,9 +165,9 @@
   <details class="gp">
     <summary data-i18n="sec.audio">موسيقى خلفية</summary>
     <div class="bd">
-      <p class="hint" data-i18n="hint.audio">تبدأ بعد أول لمسة من الزائر. الحد الأقصى 8 ميجابايت.</p>
+      <p class="hint" data-i18n="hint.audio">يبدأ التشغيل بعد أول لمسة من الزائر. الحد الأقصى 8 ميجابايت.</p>
       <div class="row">
-        <label class="btn" for="afile" data-i18n="act.upAudio">رفع ملف صوت</label>
+        <label class="btn" for="afile" data-i18n="act.upAudio">رفع ملف صوتي</label>
         <button id="arm" data-i18n="act.remove">إزالة</button>
       </div>
       <input id="afile" type="file" accept="audio/*" hidden>
@@ -172,21 +177,21 @@
   <details class="gp">
     <summary data-i18n="sec.plan">مخطط الموقع</summary>
     <div class="bd">
-      <p class="hint" data-i18n="hint.plan">ارفع المخطط، ثم ضع كل مشهد كنقطة عليه.</p>
+      <p class="hint" data-i18n="hint.plan">ارفع صورة المخطط، ثم حدّد موقع كل مشهد عليه.</p>
       <div class="row">
         <label class="btn" for="plfile" data-i18n="act.upPlan">رفع مخطط</label>
         <button id="prm" data-i18n="act.remove">إزالة</button>
       </div>
       <input id="plfile" type="file" accept="image/*" hidden>
-      <button id="pset"><svg class="ic"><use href="#i-pin"/></svg><span data-i18n="act.placeScene">ضع هذا المشهد على المخطط</span></button>
+      <button id="pset"><svg class="ic"><use href="#i-pin"/></svg><span data-i18n="act.placeScene">حدّد موقع المشهد على المخطط</span></button>
     </div>
   </details>
 
   <details class="gp">
     <summary data-i18n="sec.embed">كود التضمين</summary>
     <div class="bd">
-      <label data-i18n="f.tourUrl">رابط الجولة بعد رفعها على استضافة<input id="eurl" type="url" placeholder="https://..." inputmode="url" data-i18n-aria="f.tourUrl" aria-label="رابط الجولة بعد رفعها على استضافة"></label>
-      <textarea id="ecode" rows="4" readonly data-i18n-placeholder="f.embedPh" placeholder="اكتب الرابط ليظهر كود التضمين" data-i18n-aria="sec.embed" aria-label="كود التضمين"></textarea>
+      <label data-i18n="f.tourUrl">رابط الجولة بعد نشرها<input id="eurl" type="url" dir="ltr" placeholder="https://..." inputmode="url" data-i18n-aria="f.tourUrl" aria-label="رابط الجولة بعد نشرها"></label>
+      <textarea id="ecode" rows="4" readonly dir="ltr" data-i18n-placeholder="f.embedPh" placeholder="أدخل رابط الجولة ليظهر كود التضمين" data-i18n-aria="sec.embed" aria-label="كود التضمين"></textarea>
       <button id="ecopy"><svg class="ic"><use href="#i-copy"/></svg><span data-i18n="act.copyCode">نسخ الكود</span></button>
     </div>
   </details>
@@ -195,15 +200,15 @@
 
 <main id="stage">
   <div id="top">
-    <span class="chip" id="title"></span>
+    <span class="chip" id="title" dir="auto"></span>
     <button id="vr" hidden><svg class="ic"><use href="#i-vr"/></svg><span data-i18n="act.vr">وضع VR</span></button>
     <button id="gy" hidden><svg class="ic"><use href="#i-gyro"/></svg><span id="gyt" data-i18n="act.gyro">جيروسكوب</span></button>
-    <button id="back" hidden><svg class="ic"><use href="#i-edit"/></svg><span data-i18n="act.backEdit">عودة للتحرير</span></button>
-    <button id="mute" hidden data-i18n-aria="act.muteAria" aria-label="كتم الصوت"><svg class="ic"><use href="#i-volume"/></svg></button>
+    <button id="back" hidden><svg class="ic"><use href="#i-edit"/></svg><span data-i18n="act.backEdit">العودة إلى التحرير</span></button>
+    <button id="mute" hidden data-i18n-aria="act.muteAria" aria-label="كتم الصوت"><svg class="ic"><use id="mutei" href="#i-volume"/></svg></button>
     <button id="pbtn" hidden><svg class="ic"><use href="#i-map"/></svg><span data-i18n="act.planBtn">المخطط</span></button>
   </div>
 
-  <div id="cmp" hidden data-i18n-title="cmp.title" title="اضغط للتوجه نحو الشمال" role="button" tabindex="0" data-i18n-aria="cmp.aria" aria-label="البوصلة: اضغط للتوجه نحو الشمال">
+  <div id="cmp" hidden data-i18n-title="cmp.title" title="اضغط للتوجّه نحو الشمال" role="button" tabindex="0" data-i18n-aria="cmp.aria" aria-label="البوصلة: اضغط للتوجّه نحو الشمال">
     <svg viewBox="-30 -30 60 60" width="54" height="54" aria-hidden="true"><g id="cg">
       <circle r="27" fill="rgba(10,10,17,.6)" stroke="#fff" stroke-width="1.6"/>
       <path d="M0 -20L5.5 1H-5.5Z" fill="#f87171"/>
@@ -220,16 +225,16 @@
   <div id="bar" hidden role="progressbar" data-i18n-aria="aria.loading" aria-label="جارٍ التحميل"></div>
 
   <div id="start" hidden>
-    <div class="sc"><h1 id="stt"></h1><p id="std"></p><button id="sgo" data-i18n="view.start">ابدأ الجولة</button></div>
+    <div class="sc"><h1 id="stt" dir="auto"></h1><p id="std" dir="auto"></p><button id="sgo" data-i18n="view.start">ابدأ الجولة</button></div>
   </div>
 
   <div id="sb"></div>
 
-  <noscript><div class="nojs"><span>هذه الصفحة تحتاج تشغيل JavaScript. افتحها في متصفح مثل Safari أو Chrome.</span><span dir="ltr">This page needs JavaScript. Open it in a browser such as Safari or Chrome.</span></div></noscript>
+  <noscript><div class="nojs"><span>تحتاج هذه الصفحة إلى JavaScript. فعّله، أو افتح الصفحة في متصفح حديث مثل Safari أو Chrome.</span><span dir="ltr" lang="en">This page needs JavaScript. Turn it on, or open the page in a current browser such as Safari or Chrome.</span></div></noscript>
 
   <div id="empty" hidden>
     <svg class="eic" aria-hidden="true"><use href="#i-image"/></svg>
-    <span data-i18n="empty">أضف صورة بانوراما 360° للبدء، أو اسحب الصور وأفلتها هنا.</span>
+    <span data-i18n="empty">أضف صورة بانوراما &#x2066;360°&#x2069; للبدء، أو اسحب الصور وأفلتها هنا.</span>
   </div>
 </main>
 
@@ -250,6 +255,6 @@
 </div>
 
 <script src="vendor/three.min.js?v=2.0"></script>
-<script src="app.js?v=4.1"></script>
+<script src="app.js?v=4.2"></script>
 </body>
 </html>
