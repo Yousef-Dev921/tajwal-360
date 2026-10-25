@@ -184,6 +184,11 @@ body {
   border-radius: var(--r1);
 }
 
+/* directional icons point the other way in a right-to-left layout */
+[dir='rtl'] .flip {
+  transform: scaleX(-1);
+}
+
 /* icons inherit text colour and size */
 .ic {
   width: 1.15em;
@@ -675,6 +680,11 @@ label.pri {
   flex-direction: column;
   gap: var(--s1);
 }
+#hlist button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 #hlist button {
   justify-content: flex-start;
   font-weight: 500;
@@ -785,20 +795,35 @@ canvas {
   padding: 0 var(--s3);
 }
 
+/* one row that scrolls sideways, so a long tour never covers the panorama */
 #sb {
   position: absolute;
   bottom: calc(env(safe-area-inset-bottom, 0px) + var(--s4));
-  inset-inline: var(--s3);
+  inset-inline: 0;
   z-index: 4;
   display: none;
   gap: var(--s2);
-  justify-content: center;
-  flex-wrap: wrap;
+  padding: var(--s1) var(--s3);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  scroll-padding-inline: var(--s3);
+}
+#sb::-webkit-scrollbar {
+  display: none;
 }
 .view #sb {
   display: flex;
 }
+/* auto margins centre the row when it fits and keep its start reachable when it overflows.
+   They sit on pseudo-elements because each button has dir="auto" for its own label. */
+#sb::before,
+#sb::after {
+  content: '';
+  margin: auto;
+}
 #sb button {
+  flex: none;
   border-radius: var(--rp);
   background: var(--gl);
   color: #fff;
