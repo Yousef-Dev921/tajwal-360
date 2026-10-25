@@ -107,6 +107,15 @@ const I18N = {
     'sec.embed': 'كود التضمين',
     'opt.autorotate': 'دوران تلقائي',
     'opt.walk': 'انتقال سلس بين المشاهد',
+    'opt.meta': 'إظهار تاريخ التصوير وموقعه',
+    'hint.meta':
+      'يُقرأ التاريخ والموقع من بيانات الكاميرا داخل الصورة، ولا تتضمّنهما الجولة المصدَّرة إلا عند تفعيل هذا الخيار.',
+    'f.captured': 'التُقطت:',
+    'act.openMap': 'فتح الموقع على الخريطة',
+    'act.planBig': 'تكبير المخطط',
+    'act.planSmall': 'تصغير المخطط',
+    'act.zoomIn': 'تكبير',
+    'act.zoomOut': 'تصغير',
     'hint.reorder': 'اسحب المشهد لتغيير ترتيبه.',
     'hint.nadir': 'صورة تغطّي الحامل الثلاثي في أسفل البانوراما.',
     'hint.audio': 'يبدأ التشغيل بعد أول لمسة من الزائر. الحد الأقصى 8 ميجابايت.',
@@ -193,7 +202,8 @@ const I18N = {
     'msg.remind': 'عملك محفوظ في هذا المتصفح فقط. اضغط «حفظ نسخة» لتنزيل نسخة على جهازك.',
     'msg.planSet': 'حُدّد موقع المشهد على المخطط.',
     'msg.planFirst': 'ارفع صورة المخطط أولاً.',
-    'msg.planClick': 'اضغط على المخطط لتحديد موقع هذا المشهد.',
+    'msg.planClick':
+      'اضغط على المخطط لتحديد موقع هذا المشهد. كبّر المخطط وحرّكه أولاً لتحديد أدق.',
     'msg.audioBig': 'حجم الملف الصوتي أكبر من 8 ميجابايت. اختر ملفاً أصغر.',
     'msg.audioAdded': 'أُضيفت الموسيقى.',
     'msg.logoAdded': 'أُضيف الشعار. اسحبه داخل البانوراما إلى الزاوية التي تريدها.',
@@ -282,6 +292,15 @@ const I18N = {
     'sec.embed': 'Embed code',
     'opt.autorotate': 'Auto-rotate',
     'opt.walk': 'Smooth transitions between scenes',
+    'opt.meta': 'Show capture date and location',
+    'hint.meta':
+      'Both are read from the camera data in each photo. An exported tour includes them only while this is on.',
+    'f.captured': 'Captured:',
+    'act.openMap': 'Open this location on a map',
+    'act.planBig': 'Enlarge plan',
+    'act.planSmall': 'Shrink plan',
+    'act.zoomIn': 'Zoom in',
+    'act.zoomOut': 'Zoom out',
     'hint.reorder': 'Drag a scene to reorder it.',
     'hint.nadir': 'An image that covers the tripod at the bottom of the panorama.',
     'hint.audio': 'Starts playing after the visitor’s first tap. 8 MB maximum.',
@@ -358,7 +377,7 @@ const I18N = {
       'Your work is only stored in this browser. Use “Save a copy” to keep a copy on your device.',
     'msg.planSet': 'Scene placed on the plan.',
     'msg.planFirst': 'Upload a floor plan first.',
-    'msg.planClick': 'Click the plan to place this scene.',
+    'msg.planClick': 'Click the plan to place this scene. Zoom and pan first for a precise spot.',
     'msg.audioBig': 'The audio file is over 8 MB. Choose a smaller one.',
     'msg.audioAdded': 'Music added.',
     'msg.logoAdded': 'Logo added. Drag it on the panorama to the corner you want.',
@@ -448,6 +467,9 @@ function syncToggles() {
 }
 document.documentElement.lang = LANG;
 document.documentElement.dir = isRTL() ? 'rtl' : 'ltr';
+// In an exported tour the script runs once the whole file has arrived, so the loading note
+// shown during the download can go.
+$('xload')?.remove();
 if (EMBED) $('tgs').hidden = true;
 else {
   $('theme').onclick = () => setTheme(THEMES[(THEMES.indexOf(THEME) + 1) % THEMES.length]);
@@ -538,6 +560,7 @@ let library = [],
   dirtyScenes = new Set(),
   storedSceneIds = new Set(),
   audioDirty = false,
+  planDirty = false,
   saveBroken = false,
   editCount = 0,
   quotaWarned = false;
@@ -581,6 +604,58 @@ const makeTexture = im => {
   tex.needsUpdate = true;
   return tex;
 };
+// A panorama takes width × height × 4 bytes of GPU memory, 32 MB at 4096 × 2048, and Safari
+// on iOS reloads a page that holds much more than about 600 MB. Only the scenes most recently
+// shown or preloaded stay resident; older ones are released and decoded again if revisited.
+const TEXTURE_CACHE = navigator.maxTouchPoints > 0 ? 4 : 8;
+let texOrder = [], // scene ids, least recently used first
+  walkTarget = null;
+const texLoads = {};
+// Marks a scene's texture as just used, then releases the oldest ones over the limit. The
+// current scene, a walk in progress and anything on screen are never released.
+function useTexture(id) {
+  texOrder = texOrder.filter(x => x != id);
+  texOrder.push(id);
+  for (let i = 0; texOrder.length > TEXTURE_CACHE && i < texOrder.length; ) {
+    const k = texOrder[i],
+      tex = textures[k];
+    if (
+      k == id ||
+      k == scenes[current]?.id ||
+      k == walkTarget ||
+      tex === sphereMat.map ||
+      tex === fadeMesh.material.map
+    ) {
+      i++;
+      continue;
+    }
+    texOrder.splice(i, 1);
+    tex?.dispose();
+    delete textures[k];
+  }
+}
+// One decode per scene, however many callers ask for it at once.
+function loadTexture(s) {
+  if (textures[s.id]) {
+    useTexture(s.id);
+    return Promise.resolve(textures[s.id]);
+  }
+  if (!texLoads[s.id])
+    texLoads[s.id] = loadImg(s.img)
+      .then(im => {
+        textures[s.id] = makeTexture(im);
+        useTexture(s.id);
+        return textures[s.id];
+      })
+      .finally(() => delete texLoads[s.id]);
+  return texLoads[s.id];
+}
+function dropTexture(id) {
+  if (sphereMat.map == textures[id]) sphereMat.map = null;
+  textures[id]?.dispose();
+  delete textures[id];
+  texOrder = texOrder.filter(x => x != id);
+}
 async function libraryThumb(src) {
   try {
     const im = await loadImg(src, false);
@@ -598,6 +673,8 @@ function toDoc(Q) {
   const d = { ...Q, v: SCHEMA, scenes: (Q.scenes || []).map(({ img, blob, ...r }) => r) };
   if (Q.audio) d.audio = { name: Q.audio.name, vol: Q.audio.vol };
   else delete d.audio;
+  // The plan image is stored on its own; the document only records that there is one.
+  if (Q.plan) d.plan = {};
   return d;
 }
 function saveFailed(e) {
@@ -620,10 +697,27 @@ async function flush() {
       if (s && s.blob) await dbOp('put', 'b:' + id + ':' + sid, s.blob);
       dirtyScenes.delete(sid);
     }
-    if (audioDirty) {
-      if (Q.audio && Q.audio.blob) await dbOp('put', 'a:' + id, Q.audio.blob);
-      else await dbOp('del', 'a:' + id).catch(() => {});
-      audioDirty = false;
+    // Taken now rather than cleared after the write: opening another project during the
+    // await sets the flags for that project, and clearing them afterwards would lose them.
+    const audio = audioDirty,
+      plan = planDirty;
+    audioDirty = planDirty = false;
+    try {
+      if (audio) {
+        if (Q.audio && Q.audio.blob) await dbOp('put', 'a:' + id, Q.audio.blob);
+        else await dbOp('del', 'a:' + id).catch(() => {});
+      }
+      if (plan) {
+        if (Q.plan && Q.plan.blob) await dbOp('put', 'pl:' + id, Q.plan.blob);
+        else await dbOp('del', 'pl:' + id).catch(() => {});
+      }
+    } catch (x) {
+      // Not written: try again on the next save, if this is still the open project.
+      if (id == projectId) {
+        if (audio) audioDirty = true;
+        if (plan) planDirty = true;
+      }
+      throw x;
     }
     await dbOp('put', 'p:' + id, toDoc(Q));
     const live = new Set(Q.scenes.map(s => s.id));
@@ -669,11 +763,24 @@ async function quotaWatch() {
     }
   } catch (e) {}
 }
+// What loadProject() moved out of a legacy document and still has to write to storage.
+// It is kept beside the document rather than in the dirty flags, because opening a project
+// resets those flags, and a migration lost that way would drop the images on the next save.
+const migrated = new WeakMap();
+// Marks what a freshly loaded project still needs written, and starts tracking it.
+function applyMigration(d) {
+  const m = migrated.get(d);
+  dirtyScenes = new Set(m?.scenes);
+  audioDirty = !!m?.audio;
+  planDirty = !!m?.plan;
+}
 // Load a project and rehydrate its images as blob: URLs.
 // Projects stored in the pre-Blob format are migrated on read.
 async function loadProject(id) {
   const doc = await dbOp('get', 'p:' + id);
   if (!doc) return null;
+  const m = { scenes: [], audio: false, plan: false };
+  migrated.set(doc, m);
   doc.scenes = Array.isArray(doc.scenes) ? doc.scenes : [];
   for (const s of doc.scenes) {
     if (typeof s.img == 'string' && s.img.startsWith('data:')) {
@@ -681,7 +788,7 @@ async function loadProject(id) {
       try {
         s.blob = dataToBlob(s.img);
         s.img = objURL(s.blob);
-        dirtyScenes.add(s.id);
+        m.scenes.push(s.id);
       } catch (e) {
         s.blob = null;
         s.img = '';
@@ -704,7 +811,7 @@ async function loadProject(id) {
       try {
         doc.audio.blob = dataToBlob(doc.audio.src);
         doc.audio.src = objURL(doc.audio.blob);
-        audioDirty = true;
+        m.audio = true;
       } catch (e) {
         delete doc.audio;
       }
@@ -716,11 +823,28 @@ async function loadProject(id) {
       } else delete doc.audio;
     }
   }
+  // Plans used to sit in the document as a data: URL, rewritten on every autosave.
+  if (doc.plan) {
+    if (isDataImage(doc.plan.img)) {
+      try {
+        doc.plan = { blob: dataToBlob(doc.plan.img) };
+        doc.plan.img = objURL(doc.plan.blob);
+        m.plan = true;
+      } catch (e) {
+        delete doc.plan;
+      }
+    } else {
+      const b = await dbOp('get', 'pl:' + id).catch(() => null);
+      if (b instanceof Blob) doc.plan = { img: objURL(b), blob: b };
+      else delete doc.plan;
+    }
+  }
   return doc;
 }
 function revokeProject(Q) {
   (Q?.scenes || []).forEach(s => freeURL(s.img));
   freeURL(Q?.audio?.src);
+  freeURL(Q?.plan?.img);
 }
 // ───────────── renderer ─────────────
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -894,7 +1018,7 @@ async function showScene(i) {
   if (!textures[s.id]) {
     busy(1);
     try {
-      textures[s.id] = makeTexture(await loadImg(s.img));
+      await loadTexture(s);
     } catch (e) {
       busy(-1);
       toast(t('msg.sceneFail'));
@@ -903,6 +1027,7 @@ async function showScene(i) {
     busy(-1);
   }
   if (current != i) return;
+  useTexture(s.id);
   sphereMat.map = textures[s.id];
   sphereMat.needsUpdate = true;
   worldTurn = s.u0 || 0;
@@ -912,6 +1037,93 @@ async function showScene(i) {
   if (gyro) calibrateGyro();
   buildHotspots();
   ui();
+}
+// ───────────── capture date and position ─────────────
+// Panoramas are re-encoded on the way in, which drops their Exif block, so the capture
+// date and GPS position are read from the original file first. Only JPEG carries them
+// here; anything unreadable just yields nothing. Altitude is left out on purpose: camera
+// GPS heights are rough and their datum varies, which would mislead anyone who relies on
+// a level.
+const EXIF_DATE = /^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d)(?::(\d\d))?/,
+  TAKEN = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/;
+async function readCapture(f) {
+  const out = {};
+  let v, tiff;
+  try {
+    // Exif sits in an APP1 segment near the start; 1 MB covers the larger maker blocks.
+    v = new DataView(await f.slice(0, 1 << 20).arrayBuffer());
+    if (v.getUint16(0) != 0xffd8) return out;
+    for (let p = 2; p + 10 <= v.byteLength; ) {
+      const m = v.getUint16(p);
+      if (m >> 8 != 0xff || m == 0xffda) break; // start of image data: no Exif
+      if (m == 0xffe1 && v.getUint32(p + 4) == 0x45786966 && v.getUint16(p + 8) == 0) {
+        tiff = p + 10;
+        break;
+      }
+      p += 2 + v.getUint16(p + 2);
+    }
+  } catch (e) {}
+  if (tiff == null || tiff + 8 > v.byteLength) return out;
+  // Offsets inside the block are relative to its TIFF header, in its own byte order.
+  const le = v.getUint16(tiff) == 0x4949,
+    u16 = o => v.getUint16(tiff + o, le),
+    u32 = o => v.getUint32(tiff + o, le),
+    ifd = o => {
+      const tags = new Map(),
+        n = u16(o);
+      for (let i = 0; i < n; i++) tags.set(u16(o + 2 + i * 12), o + 2 + i * 12);
+      return tags;
+    },
+    // ASCII values of four bytes or fewer sit in the entry itself.
+    ascii = e => {
+      const n = Math.min(u32(e + 4), 64), // a damaged count must not run on
+        at = n > 4 ? u32(e + 8) : e + 8;
+      let s = '';
+      for (let i = 0; i < n; i++) s += String.fromCharCode(v.getUint8(tiff + at + i));
+      return s.replace(/\0[\s\S]*$/, '').trim();
+    },
+    rationals = e => {
+      const at = u32(e + 8),
+        r = [];
+      for (let i = 0; i < Math.min(u32(e + 4), 3); i++)
+        r.push(u32(at + i * 8) / u32(at + i * 8 + 4));
+      return r;
+    };
+  let ifd0;
+  try {
+    ifd0 = ifd(u32(4));
+  } catch (e) {
+    return out;
+  }
+  try {
+    const ex = ifd0.has(0x8769) ? ifd(u32(ifd0.get(0x8769) + 8)) : new Map(),
+      e = ex.get(0x9003) ?? ifd0.get(0x0132), // DateTimeOriginal, else DateTime
+      d = e != null && ascii(e).match(EXIF_DATE);
+    if (d && +d[1] > 1990 && +d[2] >= 1 && +d[2] <= 12 && +d[3] >= 1 && +d[3] <= 31)
+      out.taken = `${d[1]}-${d[2]}-${d[3]}T${d[4]}:${d[5]}:${d[6] || '00'}`;
+  } catch (e) {}
+  try {
+    if (!ifd0.has(0x8825)) return out;
+    const g = ifd(u32(ifd0.get(0x8825) + 8));
+    if (![1, 2, 3, 4].every(k => g.has(k))) return out;
+    const dms = (tag, ref, neg) => {
+      const [a, b = 0, c = 0] = rationals(g.get(tag));
+      return (a + b / 60 + c / 3600) * (ascii(g.get(ref)).toUpperCase() == neg ? -1 : 1);
+    };
+    // A void fix (status V) or the 0,0 that cameras write without a fix is not a position.
+    if (g.has(9) && ascii(g.get(9)).toUpperCase() == 'V') return out;
+    const lat = dms(2, 1, 'S'),
+      lon = dms(4, 3, 'W');
+    if (
+      Number.isFinite(lat) &&
+      Number.isFinite(lon) &&
+      Math.abs(lat) <= 90 &&
+      Math.abs(lon) <= 180 &&
+      (lat || lon)
+    )
+      out.gps = { lat: +lat.toFixed(7), lon: +lon.toFixed(7) };
+  } catch (e) {}
+  return out;
 }
 async function addFiles(files) {
   let first = -1;
@@ -956,6 +1168,7 @@ async function addFiles(files) {
         u0: flat ? 0.5 : 0,
         p0: 0,
         hs: [],
+        ...(await readCapture(f)),
       });
       dirtyScenes.add(sid);
       if (first < 0) first = scenes.length - 1;
@@ -1055,6 +1268,50 @@ function renderHotspotProps() {
     save();
   });
 }
+// The capture time is the camera's local clock with no zone, so it is formatted as UTC to
+// show exactly what the camera recorded.
+function fmtTaken(s) {
+  const [y, mo, d, h, mi] = s.split(/[-T:]/).map(Number);
+  return new Date(Date.UTC(y, mo - 1, d, h, mi)).toLocaleString(
+    LANG == 'ar' ? 'ar-u-nu-latn' : 'en-GB',
+    {
+      timeZone: 'UTC',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }
+  );
+}
+const fmtGps = g => g.lat.toFixed(5) + ', ' + g.lon.toFixed(5);
+const mapUrl = g => 'https://www.google.com/maps/search/?api=1&query=' + g.lat + ',' + g.lon;
+// Capture date and position: under the title on the stage when the author shows them, and
+// always as a note in the scene settings so the author knows what the photo carries.
+function syncMeta() {
+  const s = scenes[current],
+    has = !!(s && (s.taken || s.gps));
+  $('meta').hidden = !(project.meta && has);
+  if (has) {
+    $('mdate').textContent = s.taken ? fmtTaken(s.taken) : '';
+    $('mdate').hidden = !s.taken;
+    const a = $('mgps');
+    a.hidden = !s.gps;
+    if (s.gps) {
+      a.textContent = fmtGps(s.gps);
+      a.href = mapUrl(s.gps);
+      a.title = t('act.openMap');
+    } else a.removeAttribute('href');
+  }
+  if (EMBED) return;
+  $('metaon').checked = !!project.meta;
+  $('scap').hidden = !has;
+  if (has)
+    $('scap').textContent =
+      t('f.captured') +
+      ' ' +
+      [s.taken && fmtTaken(s.taken), s.gps && fmtGps(s.gps)].filter(Boolean).join(' · ');
+}
 function ui() {
   $('root').classList.toggle('view', mode == 'view');
   $('empty').hidden = scenes.length > 0;
@@ -1066,6 +1323,7 @@ function ui() {
   renderScenes();
   renderHotspotList();
   renderHotspotProps();
+  syncMeta();
   syncExtras();
   setTimeout(resize, 0);
 }
@@ -1102,6 +1360,11 @@ $('auto').onchange = e => {
   project.auto = e.target.checked;
   save();
 };
+$('metaon').onchange = e => {
+  project.meta = e.target.checked;
+  save();
+  syncMeta();
+};
 $('sname').oninput = e => {
   scenes[current].name = e.target.value;
   renderScenes();
@@ -1131,9 +1394,7 @@ $('sdel').onclick = () => {
   delConfirm = 0;
   $('sdelt').textContent = t('act.delScene');
   const id = scenes[current].id;
-  if (sphereMat.map == textures[id]) sphereMat.map = null;
-  textures[id]?.dispose();
-  delete textures[id];
+  dropTexture(id);
   scenes.splice(current, 1);
   scenes.forEach(s => (s.hs = s.hs.filter(h => h.type != 'link' || h.to != id)));
   save();
@@ -1201,12 +1462,17 @@ const EXPORT_CSP =
 const fileName = ext =>
   ((project.title || 'tour').replace(/[\\\/:*?"<>|]+/g, '_').trim() || 'tour') + ext;
 // Portable form of a project: images become base64 here only, for export and
-// for saving a .json file. Never for storage.
-async function toPortable(Q) {
+// for saving a .json file. Never for storage. A published tour leaves out the capture date
+// and position unless the author chose to show them, so they don't travel unseen.
+async function toPortable(Q, forTour) {
   const out = toDoc(Q);
   out.scenes = [];
   for (const s of Q.scenes) {
     const { blob, ...r } = s;
+    if (forTour && !Q.meta) {
+      delete r.taken;
+      delete r.gps;
+    }
     out.scenes.push({ ...r, img: blob ? await toDataURL(blob) : s.img });
   }
   if (Q.audio)
@@ -1215,6 +1481,7 @@ async function toPortable(Q) {
       vol: Q.audio.vol,
       src: Q.audio.blob ? await toDataURL(Q.audio.blob) : Q.audio.src,
     };
+  if (Q.plan) out.plan = { img: Q.plan.blob ? await toDataURL(Q.plan.blob) : Q.plan.img };
   out.lang = LANG; // an exported tour renders in the language its author was using
   return out;
 }
@@ -1230,9 +1497,9 @@ $('exp').onclick = async () => {
       fetchText('style.css'),
       fetchText('vendor/three.min.js'),
       fetchText('app.js'),
-      portableProject(),
+      toPortable(project, true),
     ]);
-    const html = `<!DOCTYPE html><html lang="${LANG}" dir="${isRTL() ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${EXPORT_CSP}"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(project.title)}</title><style>${css}</style></head><body><div id="root" class="view">${SHELL}</div><script>${three}<\/script><script>window.__TOUR__=${JSON.stringify(data).replace(/</g, '\\u003c')};${app}<\/script></body></html>`;
+    const html = `<!DOCTYPE html><html lang="${LANG}" dir="${isRTL() ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${EXPORT_CSP}"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(project.title)}</title><style>${css}</style><noscript><style>#xload{display:none}</style></noscript></head><body><div id="xload" role="status"><b dir="auto">${esc(project.title)}</b><i></i><span>${esc(t('view.loading'))}</span></div><div id="root" class="view">${SHELL}</div><script>${three}<\/script><script>window.__TOUR__=${JSON.stringify(data).replace(/</g, '\\u003c')};${app}<\/script></body></html>`;
     const bytes = saveFile(fileName('.html'), html, 'text/html');
     editCount = 0;
     toast(t('msg.exported', { mb: (bytes / 1048576).toFixed(1) }));
@@ -1325,6 +1592,12 @@ const cleanScene = s => {
   if (s.n != null && Number.isFinite(+s.n)) out.n = +s.n;
   if (s.pp && typeof s.pp == 'object')
     out.pp = { x: clamp01(num(s.pp.x, 0.5)), y: clamp01(num(s.pp.y, 0.5)) };
+  if (typeof s.taken == 'string' && TAKEN.test(s.taken)) out.taken = s.taken;
+  if (s.gps && typeof s.gps == 'object') {
+    const lat = num(s.gps.lat, NaN),
+      lon = num(s.gps.lon, NaN);
+    if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) out.gps = { lat, lon };
+  }
   return out;
 };
 $('pfile').onchange = async e => {
@@ -1342,6 +1615,7 @@ $('pfile').onchange = async e => {
       desc: String(raw.desc ?? ''),
       auto: !!raw.auto,
       walk: raw.walk !== false,
+      meta: !!raw.meta,
       eurl: typeof raw.eurl == 'string' ? raw.eurl : '',
       scenes: (Array.isArray(raw.scenes) ? raw.scenes : [])
         .filter(s => s && isDataImage(s.img))
@@ -1367,12 +1641,17 @@ $('pfile').onchange = async e => {
       d.audio.blob = dataToBlob(d.audio.src);
       d.audio.src = objURL(d.audio.blob);
     }
+    if (d.plan) {
+      d.plan.blob = dataToBlob(d.plan.img);
+      d.plan.img = objURL(d.plan.blob);
+    }
     d.title = d.title || t('def.imported');
     await flush();
     const nid = uid() + uid();
     setProject(nid, d);
     d.scenes.forEach(s => dirtyScenes.add(s.id));
     audioDirty = !!d.audio;
+    planDirty = !!d.plan;
     storedSceneIds = new Set();
     await flush();
     closeLib();
@@ -1398,17 +1677,15 @@ function setProject(id, d) {
   project = d;
   scenes = project.scenes;
   sphereMat.map = fadeMesh.material.map = null;
-  for (const k in textures) {
-    textures[k].dispose();
-    delete textures[k];
-  }
+  for (const k in textures) dropTexture(k);
   resetHist();
   $('pdesc').value = project.desc || '';
   current = -1;
   selId = placing = null;
+  placingPlan = false;
+  setPlanBig(false);
   mode = 'edit';
-  dirtyScenes = new Set();
-  audioDirty = false;
+  applyMigration(d);
   storedSceneIds = new Set(scenes.map(s => s.id));
   editCount = 0;
   $('ptitle').value = project.title || '';
@@ -1455,6 +1732,8 @@ async function duplicateProject(id) {
     }
     const a = await dbOp('get', 'a:' + id).catch(() => null);
     if (a instanceof Blob) await dbOp('put', 'a:' + nid, a);
+    const pl = await dbOp('get', 'pl:' + id).catch(() => null);
+    if (pl instanceof Blob) await dbOp('put', 'pl:' + nid, pl);
     const n = JSON.parse(JSON.stringify(d));
     n.title = (d.title || '') + t('def.copySuffix');
     await dbOp('put', 'p:' + nid, n);
@@ -1470,6 +1749,7 @@ async function deleteProject(id) {
     const d = await dbOp('get', 'p:' + id).catch(() => null);
     for (const s of d?.scenes || []) await dbOp('del', 'b:' + id + ':' + s.id).catch(() => {});
     await dbOp('del', 'a:' + id).catch(() => {});
+    await dbOp('del', 'pl:' + id).catch(() => {});
     await dbOp('del', 'p:' + id);
     library = library.filter(x => x.id != id);
     await dbOp('put', 'idx', library);
@@ -1593,20 +1873,19 @@ const animate = (ms, f) =>
     requestAnimationFrame(step);
   });
 async function ensureTexture(s) {
-  if (!textures[s.id]) {
-    try {
-      textures[s.id] = makeTexture(await loadImg(s.img));
-    } catch (e) {
-      return false;
-    }
+  try {
+    await loadTexture(s);
+    return true;
+  } catch (e) {
+    return false;
   }
-  return true;
 }
 async function walkTo(i, h) {
   if (walking || i == current) return;
   const s = scenes[i],
     from = scenes[current];
   walking = true;
+  walkTarget = s.id;
   $('pop').hidden = true;
   try {
     if (!(await ensureTexture(s))) {
@@ -1656,8 +1935,10 @@ async function walkTo(i, h) {
   } finally {
     setFov(fov);
     fadeMesh.visible = false;
+    fadeMesh.material.map = null;
     hotspotGroup.visible = true;
     walking = false;
+    walkTarget = null;
   }
 }
 $('wk').onchange = e => {
@@ -2136,10 +2417,13 @@ const busy = d => {
 function preload() {
   const s = scenes[current];
   if (!s) return;
-  new Set((s.hs || []).filter(h => h.type == 'link').map(h => h.to)).forEach(id => {
-    const target = scenes.find(x => x.id == id);
-    if (target && !textures[target.id]) ensureTexture(target);
-  });
+  // As many neighbours as the cache holds next to the current scene, so preloading one
+  // never pushes out another.
+  [...new Set((s.hs || []).filter(h => h.type == 'link').map(h => h.to))]
+    .map(id => scenes.find(x => x.id == id))
+    .filter(Boolean)
+    .slice(0, TEXTURE_CACHE - 1)
+    .forEach(ensureTexture);
 }
 let undoStack = [],
   undoPos = -1,
@@ -2242,14 +2526,36 @@ $('sgo').onclick = () => {
   startAudio();
 };
 // ───────────── nadir patch, audio, floor plan, embed code ─────────────
-async function shrinkImage(f, max, type) {
+async function shrinkCanvas(f, max, bg) {
   const im = await createImageBitmap(f),
     k = Math.min(1, max / Math.max(im.width, im.height)),
-    canvas = document.createElement('canvas');
+    canvas = document.createElement('canvas'),
+    ctx = canvas.getContext('2d');
   canvas.width = Math.round(im.width * k);
   canvas.height = Math.round(im.height * k);
-  canvas.getContext('2d').drawImage(im, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL(type, 0.88);
+  if (bg) {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  ctx.drawImage(im, 0, 0, canvas.width, canvas.height);
+  im.close();
+  return canvas;
+}
+async function shrinkImage(f, max, type) {
+  return (await shrinkCanvas(f, max)).toDataURL(type, 0.88);
+}
+// A plan is mostly thin lines and small text, which JPEG smears and PNG keeps sharp at a
+// modest size. A scanned or photographic plan makes a large PNG, so it falls back to JPEG.
+// Transparent areas become white, as they would on paper.
+const PLAN_MAX_PX = 4096,
+  PLAN_PNG_MAX_BYTES = 3e6;
+async function readPlan(f) {
+  const c = await shrinkCanvas(f, PLAN_MAX_PX, '#fff'),
+    png = await canvasBlob(c, 'image/png');
+  if (png && png.size <= PLAN_PNG_MAX_BYTES) return png;
+  const jpg = await canvasBlob(c, 'image/jpeg', 0.9);
+  if (!jpg) throw new Error('encode');
+  return jpg;
 }
 let nadirMesh = null,
   nadirSrc = '',
@@ -2330,20 +2636,193 @@ function startAudio() {
 }
 function renderPlan() {
   const pl = project.plan;
+  if (!(pl && planOpen) && planBig) return setPlanBig(false);
   $('plan').hidden = !(pl && planOpen);
+  $('plan').classList.toggle('big', planBig);
+  $('plan').classList.toggle('placing', placingPlan);
+  const k = planBig ? 'act.planSmall' : 'act.planBig';
+  $('pexp').title = t(k);
+  $('pexp').setAttribute('aria-label', t(k));
+  $('pexpi').setAttribute('href', planBig ? '#i-shrink' : '#i-expand');
   if (!pl) return;
   if (planSrc != pl.img) {
     planSrc = pl.img;
     $('pimg').src = pl.img;
   }
+  // The enlarged plan names the current scene beside its marker; the others show their
+  // name on hover.
   $('pdots').innerHTML = scenes
     .map((s, i) =>
       s.pp
-        ? `<button class="pd ${i == current ? 'on' : ''}" data-i="${i}" style="left:${s.pp.x * 100}%;top:${s.pp.y * 100}%" title="${esc(s.name)}"></button>`
+        ? `<button class="pd ${i == current ? 'on' : ''}" data-i="${i}" style="left:${s.pp.x * 100}%;top:${s.pp.y * 100}%" title="${esc(s.name)}" aria-label="${esc(s.name)}">${i == current ? `<span dir="auto">${esc(s.name)}</span>` : ''}</button>`
         : ''
     )
     .join('');
+  if (planBig) planFit(false);
 }
+// ── enlarged plan: zoom and pan ──
+// The plan fills the stage and #pbox is moved with a transform: x and y in pixels from the
+// top-left of #plan, z the zoom over the size that fits. Markers are scaled by 1/z in CSS,
+// so they stay the same size on screen while the drawing grows.
+let planBig = false,
+  planView = { x: 0, y: 0, z: 1 },
+  planFitW = 0,
+  planMoved = false;
+const planPointers = new Map();
+let planPinch = null,
+  planPan = null;
+function planZMax() {
+  const w = $('pimg').naturalWidth || PLAN_MAX_PX;
+  // Up to two screen pixels per plan pixel, and never less than 4×.
+  return Math.max(4, ((w / (planFitW || 1)) * 2) / (devicePixelRatio || 1));
+}
+function planApply() {
+  const p = $('plan'),
+    b = $('pbox'),
+    W = p.clientWidth,
+    H = p.clientHeight,
+    w = planFitW * planView.z,
+    h = b.offsetHeight * planView.z;
+  // Centred at the fitted size. Zoomed in, the drawing can move as long as it still covers
+  // the middle of the stage: a marker near the edge of the sheet can be brought to the
+  // centre, and the point under the cursor or between two fingers stays put while zooming.
+  if (planView.z <= 1) {
+    planView.x = (W - w) / 2;
+    planView.y = (H - h) / 2;
+  } else {
+    planView.x = Math.min(W / 2, Math.max(W / 2 - w, planView.x));
+    planView.y = Math.min(H / 2, Math.max(H / 2 - h, planView.y));
+  }
+  b.style.transform = `translate(${planView.x}px, ${planView.y}px) scale(${planView.z})`;
+  b.style.setProperty('--pz', planView.z);
+}
+// Sizes the plan to fit the stage. reset returns to the whole drawing; otherwise the
+// current zoom is kept and only re-clamped.
+function planFit(reset) {
+  const p = $('plan'),
+    im = $('pimg'),
+    W = p.clientWidth,
+    H = p.clientHeight,
+    ar = im.naturalWidth && im.naturalHeight ? im.naturalWidth / im.naturalHeight : 1.4;
+  if (!W || !H) return;
+  planFitW = Math.min(W, H * ar);
+  $('pbox').style.width = planFitW + 'px';
+  if (reset) planView = { x: 0, y: 0, z: 1 };
+  planView.z = Math.min(planZMax(), Math.max(1, planView.z));
+  planApply();
+}
+// Zooms to z around a point given in pixels from the top-left of #plan.
+function planZoomAt(z, cx, cy) {
+  z = Math.min(planZMax(), Math.max(1, z));
+  const k = z / planView.z;
+  planView.x = cx - (cx - planView.x) * k;
+  planView.y = cy - (cy - planView.y) * k;
+  planView.z = z;
+  planApply();
+}
+function planZoomBy(f) {
+  const p = $('plan');
+  planZoomAt(planView.z * f, p.clientWidth / 2, p.clientHeight / 2);
+}
+function setPlanBig(on) {
+  if (on == planBig) return;
+  planBig = on;
+  planMoved = false;
+  // Placing happens on the enlarged plan only, so closing it ends a placement too.
+  if (!on) placingPlan = false;
+  planPointers.clear();
+  planPinch = planPan = null;
+  const b = $('pbox');
+  if (!on) {
+    b.style.transform = b.style.width = '';
+    b.style.removeProperty('--pz');
+  }
+  renderPlan();
+  if (on) {
+    planFit(true);
+    $('pexp').focus({ preventScroll: true });
+  }
+}
+$('pimg').addEventListener('load', () => planBig && planFit(true));
+new ResizeObserver(() => planBig && planFit(false)).observe($('plan'));
+$('pexp').onclick = () => setPlanBig(!planBig);
+$('pzi').onclick = () => planZoomBy(1.6);
+$('pzo').onclick = () => planZoomBy(1 / 1.6);
+addEventListener('keydown', e => {
+  if (e.key == 'Escape' && planBig) setPlanBig(false);
+});
+// Pixels from the inside of the border, where the transform of #pbox starts.
+const planPoint = e => {
+  const p = $('plan'),
+    r = p.getBoundingClientRect();
+  return { x: e.clientX - r.left - p.clientLeft, y: e.clientY - r.top - p.clientTop };
+};
+$('plan').addEventListener('pointerdown', e => {
+  planMoved = false;
+  if (!planBig || e.target.closest('#pctl')) return;
+  planPointers.set(e.pointerId, planPoint(e));
+  if (planPointers.size == 2) {
+    const [a, b] = [...planPointers.values()];
+    planPan = null;
+    planPinch = {
+      d: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+      z: planView.z,
+      m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+    };
+  } else planPan = { ...planPoint(e), id: e.pointerId };
+});
+$('plan').addEventListener('pointermove', e => {
+  if (!planPointers.has(e.pointerId)) return;
+  const q = planPoint(e);
+  planPointers.set(e.pointerId, q);
+  if (planPinch && planPointers.size == 2) {
+    const [a, b] = [...planPointers.values()],
+      m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    planView.x += m.x - planPinch.m.x;
+    planView.y += m.y - planPinch.m.y;
+    planPinch.m = m;
+    planZoomAt((planPinch.z * Math.hypot(a.x - b.x, a.y - b.y)) / planPinch.d, m.x, m.y);
+    planMoved = true;
+  } else if (planPan && planPan.id == e.pointerId) {
+    const dx = q.x - planPan.x,
+      dy = q.y - planPan.y;
+    // A press that wanders a few pixels is still a click on a marker or a placement.
+    if (!planMoved && Math.hypot(dx, dy) < 6) return;
+    if (!planMoved) {
+      planMoved = true;
+      try {
+        $('plan').setPointerCapture(e.pointerId);
+      } catch (x) {}
+    }
+    planView.x += dx;
+    planView.y += dy;
+    planPan.x = q.x;
+    planPan.y = q.y;
+    planApply();
+  }
+});
+const endPlanPointer = e => {
+  planPointers.delete(e.pointerId);
+  if (planPointers.size < 2) planPinch = null;
+  if (planPan?.id == e.pointerId) planPan = null;
+};
+$('plan').addEventListener('pointerup', endPlanPointer);
+$('plan').addEventListener('pointercancel', endPlanPointer);
+$('plan').addEventListener(
+  'wheel',
+  e => {
+    if (!planBig) return;
+    e.preventDefault();
+    const q = planPoint(e);
+    planZoomAt(planView.z * Math.exp(-e.deltaY * 0.0022), q.x, q.y);
+  },
+  { passive: false }
+);
+$('plan').addEventListener('dblclick', e => {
+  if (!planBig || e.target.closest('button')) return;
+  const q = planPoint(e);
+  planView.z > 1.01 ? planFit(true) : planZoomAt(3, q.x, q.y);
+});
 // Accepts only absolute http(s) URLs, so the snippet cannot carry a javascript: link.
 const embedUrl = () => {
   try {
@@ -2384,14 +2863,25 @@ $('mute').onclick = () => {
 };
 $('pbtn').onclick = () => {
   planOpen = !planOpen;
+  if (!planOpen) placingPlan = false;
   renderPlan();
 };
 $('pdots').onclick = e => {
   const b = e.target.closest('button');
-  if (b) showScene(+b.dataset.i);
+  if (!b || planMoved || placingPlan) return;
+  e.stopPropagation();
+  setPlanBig(false);
+  showScene(+b.dataset.i);
 };
+// Placing a scene works on the enlarged plan, where a marker can be put down precisely.
+// On the small plan a click enlarges it.
 $('pbox').onclick = e => {
-  if (!placingPlan || e.target.closest('button')) return;
+  if (planMoved) return;
+  if (!placingPlan) {
+    if (!planBig && !e.target.closest('button')) setPlanBig(true);
+    return;
+  }
+  if (!scenes[current]) return;
   const r = $('pimg').getBoundingClientRect(),
     c = v => Math.min(1, Math.max(0, v));
   scenes[current].pp = {
@@ -2401,6 +2891,7 @@ $('pbox').onclick = e => {
   placingPlan = false;
   toast(t('msg.planSet'));
   save();
+  setPlanBig(false);
   renderPlan();
 };
 $('pset').onclick = () => {
@@ -2411,7 +2902,8 @@ $('pset').onclick = () => {
   if (!scenes[current]) return;
   planOpen = true;
   placingPlan = true;
-  renderPlan();
+  if (planBig) renderPlan();
+  else setPlanBig(true);
   toast(t('msg.planClick'));
 };
 $('nfile').onchange = async e => {
@@ -2464,19 +2956,29 @@ $('plfile').onchange = async e => {
   const f = e.target.files[0];
   e.target.value = '';
   if (!f) return;
+  busy(1); // encoding a large plan takes a moment, longest on a phone
+  const pid = projectId;
   try {
-    project.plan = { img: await shrinkImage(f, 1600, 'image/jpeg') };
+    const blob = await readPlan(f);
+    // The user may have opened another project while it was encoding.
+    if (pid != projectId) throw new Error('moved');
+    freeURL(project.plan?.img);
+    project.plan = { img: objURL(blob), blob };
+    planDirty = true;
     planOpen = true;
     save();
     syncExtras();
   } catch (x) {
-    toast(t('msg.imgFail'));
+    if (x.message != 'moved') toast(t('msg.imgFail'));
   }
+  busy(-1);
 };
 $('prm').onclick = () => {
+  freeURL(project.plan?.img);
   delete project.plan;
   scenes.forEach(s => delete s.pp);
-  planOpen = false;
+  planOpen = placingPlan = false;
+  planDirty = true;
   save();
   syncExtras();
 };
@@ -2920,6 +3422,15 @@ if (!EMBED) {
               delete old.audio;
             }
           }
+          if (old.plan) {
+            try {
+              old.plan = { blob: dataToBlob(old.plan.img) };
+              old.plan.img = objURL(old.plan.blob);
+              planDirty = true;
+            } catch (e) {
+              delete old.plan;
+            }
+          }
           project = old;
           scenes = project.scenes;
           await flush();
@@ -2933,6 +3444,7 @@ if (!EMBED) {
           projectId = id;
           project = d;
           scenes = project.scenes;
+          applyMigration(d);
           storedSceneIds = new Set(scenes.map(s => s.id));
         }
       }
