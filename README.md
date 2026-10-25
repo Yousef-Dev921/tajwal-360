@@ -38,6 +38,10 @@ prompts for a backup download.
   Drag a hotspot in the panorama to move it.
 - 60 steps of undo and redo.
 - Scene thumbnails, drag-to-reorder, rename and delete.
+- A company logo in any corner of the tour, over every scene, with adjustable size and
+  opacity. Drag it on the panorama and it snaps to the nearest corner; it moves the title
+  row, the compass and the scene bar out of its way. PNG, WebP and SVG keep their
+  transparency, and a logo with a solid background gets a warning.
 - Nadir patch to cover the tripod, background audio, and a floor plan with one marker
   per scene.
 - Per-scene start angle and north direction.
@@ -104,6 +108,7 @@ Projects written by older builds are migrated on first load.
   "nadir": { "img": "data:image/png;base64,...", "r": 25 },
   "audio": { "src": "data:audio/mpeg;base64,...", "name": "track.mp3", "vol": 0.6 },
   "plan":  { "img": "data:image/jpeg;base64,..." },
+  "logo":  { "img": "data:image/png;base64,...", "pos": "tr", "size": 14, "op": 1, "ar": 4 },
   "eurl": "https://...",
   "auto": false,
   "walk": true,
@@ -131,6 +136,9 @@ Projects written by older builds are migrated on first load.
   from the left edge, `v` vertically from the top.
 - `u0` and `p0` are the scene's starting yaw and pitch; `n` is its north offset.
 - `pp` is the scene's position on the floor plan, also 0 to 1.
+- `logo.pos` is a physical corner (`tl`, `tr`, `bl` or `br`), so the logo stays put when
+  the language changes. `size` runs from 5 to 40 and scales the logo's area against the
+  screen, `op` is its opacity, and `ar` its width-to-height ratio.
 
 ## Development
 
@@ -187,13 +195,14 @@ are announced through `aria-live`, and `prefers-reduced-motion` is respected.
 
 ## Limitations
 
-- An exported tour carries about 730 KB of fixed code, mostly Three.js, before any
+- An exported tour carries about 750 KB of fixed code, mostly Three.js, before any
   imagery, and embeds panoramas as base64. A 15-scene tour reaches tens of megabytes.
 - Autosave does not work in private browsing. The editor says so rather than failing
   quietly.
 - Safari may evict site storage after a period without visits. Keep `.json` backups.
 - Renaming a scene or changing its north direction does not update tours you already
   exported. Export again.
+- The logo is a screen overlay, so it does not appear inside a VR headset.
 - **VR mode and the gyroscope have not been tested on real hardware.** Verify both
   before relying on them.
 
