@@ -44,6 +44,7 @@ const I18N={ar:{
  'msg.autosaveBack':'✅ عاد الحفظ التلقائي للعمل.',
  'msg.notPano':'تنبيه: إحدى الصور ليست بانوراما 360°، وُضعت كلوحة مسطحة في وسط المشهد.',
  'msg.imgReadFail':'تعذر قراءة إحدى الصور.','msg.imgFail':'تعذر قراءة الصورة.',
+ 'msg.sceneFail':'تعذّر تحميل هذا المشهد.',
  'msg.startSaved':'تم حفظ زاوية البداية لهذا المشهد.',
  'msg.needTwoScenes':'أضف مشهداً ثانياً قبل إنشاء نقطة انتقال.','msg.needOneScene':'أضف مشهداً واحداً على الأقل قبل التصدير.',
  'msg.preparing':'جارٍ تجهيز الملف…','msg.exported':'✅ تم تنزيل الجولة المستقلة ({mb} ميجابايت).',
@@ -102,6 +103,7 @@ const I18N={ar:{
  'msg.autosaveBack':'✅ Autosave is working again.',
  'msg.notPano':'Note: one of the images is not a 360° panorama. It was placed as a flat panel in the middle of the scene.',
  'msg.imgReadFail':'One of the images could not be read.','msg.imgFail':'The image could not be read.',
+ 'msg.sceneFail':'This scene could not be loaded.',
  'msg.startSaved':'The start angle for this scene was saved.',
  'msg.needTwoScenes':'Add a second scene before creating a link hotspot.','msg.needOneScene':'Add at least one scene before exporting.',
  'msg.preparing':'Preparing the file…','msg.exported':'✅ The standalone tour was downloaded ({mb} MB).',
@@ -192,7 +194,24 @@ const freeURL=u=>{if(typeof u=='string'&&u.startsWith('blob:'))URL.revokeObjectU
 
 let IDX=[],curId=null,dirty=new Set(),lastSids=new Set(),audioDirty=false,saveErr=false,edits=0,warned=false;
 const save=()=>{if(EMB||!curId)return;clearTimeout(st);st=setTimeout(flush,400);snap();edits++};
-async function thumb(src){try{const im=new Image();im.src=src;await im.decode();const c=document.createElement('canvas');c.width=320;c.height=160;c.getContext('2d').drawImage(im,0,0,320,160);return c.toDataURL('image/jpeg',.7)}catch(e){return null}}
+// decode() can stall indefinitely when the page is not compositing, which would leave
+// the loading bar up for good. Wait for load, which is reliable, then cap decode.
+const DEC_MS=6000;
+function loadImg(src){
+  return new Promise((res,rej)=>{
+    const im=new Image();let started=false;
+    const ready=()=>{
+      if(started)return;started=true;
+      const k=setTimeout(()=>res(im),DEC_MS),fin=()=>{clearTimeout(k);res(im)};
+      (im.decode?im.decode():Promise.resolve()).then(fin,fin);
+    };
+    im.onload=ready;im.onerror=()=>rej(new Error('image'));
+    im.src=src;
+    if(im.complete&&im.naturalWidth)ready();
+  });
+}
+const mkTex=im=>{const t=new THREE.Texture(im);t.encoding=THREE.sRGBEncoding;t.generateMipmaps=false;t.minFilter=THREE.LinearFilter;t.needsUpdate=true;return t};
+async function thumb(src){try{const im=await loadImg(src);const c=document.createElement('canvas');c.width=320;c.height=160;c.getContext('2d').drawImage(im,0,0,320,160);return c.toDataURL('image/jpeg',.7)}catch(e){return null}}
 // Project document without image bytes, so autosave stays a few KB per write.
 function docOf(Q){
   const d={...Q,v:SCHEMA,scenes:(Q.scenes||[]).map(({img,blob,...r})=>r)};
@@ -300,7 +319,7 @@ function buildHS(){
 // ───────────── scene loading ─────────────
 async function go(i){
   const s=S[i];if(!s)return;cur=i;sel=null;placing=null;$('pop').hidden=true;hideVP();
-  if(!TX[s.id]){busy(1);try{const im=new Image();im.src=s.img;await im.decode();const t=new THREE.Texture(im);t.encoding=THREE.sRGBEncoding;t.generateMipmaps=false;t.minFilter=THREE.LinearFilter;t.needsUpdate=true;TX[s.id]=t}catch(e){busy(-1);return}busy(-1)}
+  if(!TX[s.id]){busy(1);try{TX[s.id]=mkTex(await loadImg(s.img))}catch(e){busy(-1);toast(t('msg.sceneFail'));return}busy(-1)}
   if(cur!=i)return;
   mat.map=TX[s.id];mat.needsUpdate=true;ub=s.u0||0;world.rotation.y=2*PI*ub+PI/2;yaw=0;pitch=s.p0||0;if(gyro)calib();buildHS();ui();
 }
@@ -492,7 +511,7 @@ const m2=new THREE.Mesh(gm,new THREE.MeshBasicMaterial({transparent:true,opacity
 const w2=new THREE.Group();w2.add(m2);sc.add(w2);
 const setFov=v=>{cam.fov=Math.max(25,v);cam.updateProjectionMatrix()};
 const anim=(ms,f)=>new Promise(r=>{const t=performance.now(),s=n=>{const k=Math.min(1,(n-t)/ms);f(k);k<1?requestAnimationFrame(s):r()};requestAnimationFrame(s)});
-async function tex(s){if(!TX[s.id]){try{const im=new Image();im.src=s.img;await im.decode();const t=new THREE.Texture(im);t.encoding=THREE.sRGBEncoding;t.generateMipmaps=false;t.minFilter=THREE.LinearFilter;t.needsUpdate=true;TX[s.id]=t}catch(e){return false}}return true}
+async function tex(s){if(!TX[s.id]){try{TX[s.id]=mkTex(await loadImg(s.img))}catch(e){return false}}return true}
 async function walk(i,h){
   if(walking||i==cur)return;const s=S[i],o=S[cur];walking=true;$('pop').hidden=true;
   try{
@@ -583,7 +602,7 @@ el.addEventListener('pointercancel',()=>{hd=null;drag=null});
 function mkTh(c){const t=document.createElement('canvas');t.width=160;t.height=80;t.getContext('2d').drawImage(c,0,0,160,80);return t.toDataURL('image/jpeg',.6)}
 async function fillTh(){
   if(thBusy||EMB)return;thBusy=true;let any=false;
-  try{for(const s of S){if(s.th)continue;const im=new Image();im.src=s.img;await im.decode();s.th=mkTh(im);any=true;renderScenes()}}catch(e){}
+  try{for(const s of S){if(s.th)continue;s.th=mkTh(await loadImg(s.img));any=true;renderScenes()}}catch(e){}
   thBusy=false;if(any){clearTimeout(st);st=setTimeout(flush,400)}
 }
 // ───────────── vr info panel, preload, undo/redo, start screen ─────────────
