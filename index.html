@@ -3,88 +3,120 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- سياسة أمان المحتوى: التطبيق لا يتصل بأي خادم خارجي إطلاقاً.
-     'unsafe-inline' للأنماط فقط لأن نقاط المخطط تُرسم بخاصية style مباشرة. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self'; connect-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
-<meta name="description" content="Tajwal 360 — استوديو جولات افتراضية 360° يعمل بالكامل داخل متصفحك. صورك لا تغادر جهازك أبداً.">
-<meta name="theme-color" content="#b45309" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+<meta name="description" content="استوديو جولات افتراضية 360° يعمل بالكامل داخل المتصفح. صورك لا تغادر جهازك.">
+<meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a0a11" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta property="og:title" content="Tajwal 360 — استوديو الجولات الافتراضية">
+<meta property="og:title" content="Tajwal 360">
 <meta property="og:description" content="أنشئ جولات افتراضية 360° داخل متصفحك. بلا خادم، وبلا رفع صورك لأي مكان.">
 <meta property="og:type" content="website">
 <title>Tajwal 360 — استوديو الجولات الافتراضية</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🥽%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=2.1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='4' y1='4' x2='28' y2='28' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%23818cf8'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='12.4' fill='none' stroke='url(%23g)' stroke-width='2.6'/%3E%3Cellipse cx='16' cy='16' rx='12.4' ry='4.9' fill='none' stroke='url(%23g)' stroke-width='1.8' opacity='.45'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='url(%23g)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css?v=3.1">
 </head>
 <body>
 <div id="root">
 
+<svg id="spr" aria-hidden="true" focusable="false"><defs>
+ <linearGradient id="brandG" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+  <stop stop-color="#818cf8"/><stop offset="1" stop-color="#22d3ee"/>
+ </linearGradient>
+ <symbol id="i-mark" viewBox="0 0 32 32">
+  <circle cx="16" cy="16" r="12.4" fill="none" stroke="url(#brandG)" stroke-width="2.6"/>
+  <ellipse cx="16" cy="16" rx="12.4" ry="4.9" fill="none" stroke="url(#brandG)" stroke-width="1.9" opacity=".62"/>
+  <circle cx="16" cy="16" r="3.2" fill="url(#brandG)" stroke="none"/>
+ </symbol>
+ <symbol id="i-library" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></symbol>
+ <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+ <symbol id="i-undo" viewBox="0 0 24 24"><path d="M7 5 3 9l4 4"/><path d="M3 9h11a5 5 0 0 1 0 10h-3"/></symbol>
+ <symbol id="i-redo" viewBox="0 0 24 24"><path d="m17 5 4 4-4 4"/><path d="M21 9H10a5 5 0 0 0 0 10h3"/></symbol>
+ <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+ <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 11l5 5 5-5M4 20h16"/></symbol>
+ <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
+ <symbol id="i-import" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+ <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+ <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></symbol>
+ <symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h10v10H9z"/><path d="M5 15V5h10"/></symbol>
+ <symbol id="i-link" viewBox="0 0 24 24"><path d="M5 12h12M13 6l6 6-6 6"/></symbol>
+ <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11.5V16"/><circle cx="12" cy="8.2" r=".2" fill="currentColor"/></symbol>
+ <symbol id="i-map" viewBox="0 0 24 24"><path d="m9 4-6 3v13l6-3 6 3 6-3V4l-6 3z"/><path d="M9 4v13M15 7v13"/></symbol>
+ <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 9.5a4 4 0 0 1 0 5M18.5 7a8 8 0 0 1 0 10"/></symbol>
+ <symbol id="i-mute" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 10 5 4M21 10l-5 4"/></symbol>
+ <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m14 5 4 4"/></symbol>
+ <symbol id="i-gyro" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M10.5 18.5h3"/></symbol>
+ <symbol id="i-vr" viewBox="0 0 24 24"><path d="M4 8h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-3.2a2 2 0 0 1-1.6-.8L14 14h-4l-1.2 1.2a2 2 0 0 1-1.6.8H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2z"/></symbol>
+ <symbol id="i-prev" viewBox="0 0 24 24"><path d="M15 6 9 12l6 6"/></symbol>
+ <symbol id="i-next" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+ <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+ <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 15 4-4 4 4 3-3 7 6"/><circle cx="8.5" cy="9.5" r="1.4"/></symbol>
+ <symbol id="i-north" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m12 7 2.5 7L12 12.6 9.5 14z"/></symbol>
+ <symbol id="i-start" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></symbol>
+</defs></svg>
+
 <aside id="panel">
 
   <header class="hd">
-    <div class="bn"><i aria-hidden="true">🥽</i><span>Tajwal 360</span></div>
-    <button id="lib" class="pri">📚 المكتبة</button>
+    <a class="bn" href="." aria-label="Tajwal 360">
+      <svg class="mk" viewBox="0 0 32 32" aria-hidden="true"><use href="#i-mark"/></svg>
+      <span class="wm" dir="ltr">Tajwal<b>360</b></span>
+    </a>
+    <button id="lib" class="pri"><svg class="ic"><use href="#i-library"/></svg>المكتبة</button>
   </header>
 
-  <!-- ——— هوية الجولة ——— -->
   <div class="gp">
     <label>عنوان الجولة<input id="ptitle" aria-label="عنوان الجولة"></label>
     <label>وصف قصير<input id="pdesc" aria-label="وصف الجولة" placeholder="يظهر في شاشة البداية"></label>
   </div>
 
-  <!-- ——— الإجراءات الأساسية ——— -->
   <div class="gp">
-    <label class="btn pri big" for="file">＋ إضافة صور 360</label>
+    <label class="btn pri big" for="file"><svg class="ic"><use href="#i-plus"/></svg>إضافة صور 360</label>
     <input id="file" type="file" accept="image/*" multiple hidden>
     <div class="row">
-      <button id="undo" disabled title="تراجع (Ctrl+Z)">↶ تراجع</button>
-      <button id="redo" disabled title="إعادة (Ctrl+Shift+Z)">↷ إعادة</button>
+      <button id="undo" disabled title="تراجع (Ctrl+Z)"><svg class="ic"><use href="#i-undo"/></svg>تراجع</button>
+      <button id="redo" disabled title="إعادة (Ctrl+Shift+Z)"><svg class="ic"><use href="#i-redo"/></svg>إعادة</button>
     </div>
     <div class="row">
-      <button id="prev">👁 معاينة</button>
-      <button id="exp" class="pri">⬇ تصدير HTML</button>
+      <button id="prev"><svg class="ic"><use href="#i-eye"/></svg>معاينة</button>
+      <button id="exp" class="pri"><svg class="ic"><use href="#i-download"/></svg>تصدير الجولة</button>
     </div>
     <div class="row">
-      <button id="psave">💾 حفظ المشروع</button>
-      <label class="btn" for="pfile">📂 استيراد</label>
+      <button id="psave"><svg class="ic"><use href="#i-save"/></svg>حفظ نسخة</button>
+      <label class="btn" for="pfile"><svg class="ic"><use href="#i-import"/></svg>استيراد</label>
     </div>
     <input id="pfile" type="file" accept=".json,application/json" hidden>
   </div>
 
-  <!-- ——— المشاهد ——— -->
   <div class="gp">
     <p class="lb">المشاهد</p>
     <div id="scenes"></div>
     <p class="hint" id="shint">اسحب المشهد لتغيير ترتيبه.</p>
   </div>
 
-  <!-- ——— إعدادات المشهد الحالي ——— -->
   <details class="gp" id="sset" open hidden>
-    <summary>إعدادات المشهد الحالي</summary>
+    <summary>إعدادات المشهد</summary>
     <div class="bd">
       <label>اسم المشهد<input id="sname" aria-label="اسم المشهد"></label>
       <div class="row">
-        <button id="sstart" title="تُفتح الجولة على هذه الزاوية">تعيين زاوية البداية</button>
-        <button id="snorth" title="يحسّن سلاسة الانتقال بين المشاهد">تعيين اتجاه الشمال</button>
+        <button id="sstart" title="تُفتح الجولة على هذه الزاوية"><svg class="ic"><use href="#i-start"/></svg>زاوية البداية</button>
+        <button id="snorth" title="يحسّن سلاسة الانتقال بين المشاهد"><svg class="ic"><use href="#i-north"/></svg>اتجاه الشمال</button>
       </div>
       <div class="row">
-        <button id="mvb">◀ تقديم</button>
-        <button id="mva">تأخير ▶</button>
+        <button id="mvb"><svg class="ic"><use href="#i-prev"/></svg>تقديم</button>
+        <button id="mva">تأخير<svg class="ic"><use href="#i-next"/></svg></button>
       </div>
-      <button id="sdel" class="dng">🗑 حذف المشهد</button>
+      <button id="sdel" class="dng"><svg class="ic"><use href="#i-trash"/></svg>حذف المشهد</button>
     </div>
   </details>
 
-  <!-- ——— النقاط التفاعلية ——— -->
   <details class="gp" id="hsec" open hidden>
     <summary>النقاط التفاعلية</summary>
     <div class="bd">
       <div class="row">
-        <button id="addl">⇢ انتقال</button>
-        <button id="addi">ℹ معلومات</button>
+        <button id="addl"><svg class="ic"><use href="#i-link"/></svg>انتقال</button>
+        <button id="addi"><svg class="ic"><use href="#i-info"/></svg>معلومات</button>
       </div>
       <p id="hint2"></p>
       <div id="hlist"></div>
@@ -92,7 +124,6 @@
     </div>
   </details>
 
-  <!-- ——— خيارات العرض ——— -->
   <details class="gp">
     <summary>خيارات العرض</summary>
     <div class="bd">
@@ -101,11 +132,10 @@
     </div>
   </details>
 
-  <!-- ——— رقعة النادر ——— -->
   <details class="gp">
-    <summary>رقعة النادر (شعار أسفل الصورة)</summary>
+    <summary>رقعة النادر</summary>
     <div class="bd">
-      <p class="hint">تغطّي مكان الحامل الثلاثي أسفل البانوراما بشعارك.</p>
+      <p class="hint">صورة تغطّي مكان الحامل الثلاثي أسفل البانوراما.</p>
       <div class="row">
         <label class="btn" for="nfile">رفع صورة</label>
         <button id="nrm">إزالة</button>
@@ -115,11 +145,10 @@
     </div>
   </details>
 
-  <!-- ——— الموسيقى ——— -->
   <details class="gp">
     <summary>موسيقى خلفية</summary>
     <div class="bd">
-      <p class="hint">تبدأ بعد أول لمسة من الزائر (سياسة المتصفحات). الحد 8 ميجابايت.</p>
+      <p class="hint">تبدأ بعد أول لمسة من الزائر. الحد الأقصى 8 ميجابايت.</p>
       <div class="row">
         <label class="btn" for="afile">رفع ملف صوت</label>
         <button id="arm">إزالة</button>
@@ -128,7 +157,6 @@
     </div>
   </details>
 
-  <!-- ——— مخطط الموقع ——— -->
   <details class="gp">
     <summary>مخطط الموقع</summary>
     <div class="bd">
@@ -138,11 +166,10 @@
         <button id="prm">إزالة</button>
       </div>
       <input id="plfile" type="file" accept="image/*" hidden>
-      <button id="pset">📍 ضع المشهد الحالي على المخطط</button>
+      <button id="pset"><svg class="ic"><use href="#i-pin"/></svg>ضع هذا المشهد على المخطط</button>
     </div>
   </details>
 
-  <!-- ——— كود التضمين ——— -->
   <details class="gp">
     <summary>كود التضمين</summary>
     <div class="bd">
@@ -150,7 +177,7 @@
         <input id="eurl" type="url" placeholder="https://..." inputmode="url">
       </label>
       <textarea id="ecode" rows="4" readonly placeholder="اكتب الرابط ليظهر كود التضمين"></textarea>
-      <button id="ecopy">📋 نسخ الكود</button>
+      <button id="ecopy"><svg class="ic"><use href="#i-copy"/></svg>نسخ الكود</button>
     </div>
   </details>
 
@@ -159,19 +186,19 @@
 <main id="stage">
   <div id="top">
     <span class="chip" id="title"></span>
-    <button id="vr" hidden>🥽 وضع VR</button>
-    <button id="gy" hidden>📱 جيروسكوب</button>
-    <button id="back" hidden>✎ العودة للتحرير</button>
-    <button id="mute" hidden aria-label="كتم الصوت">🔊</button>
-    <button id="pbtn" hidden>🗺 المخطط</button>
+    <button id="vr" hidden><svg class="ic"><use href="#i-vr"/></svg>وضع VR</button>
+    <button id="gy" hidden><svg class="ic"><use href="#i-gyro"/></svg>جيروسكوب</button>
+    <button id="back" hidden><svg class="ic"><use href="#i-edit"/></svg>عودة للتحرير</button>
+    <button id="mute" hidden aria-label="كتم الصوت"><svg class="ic"><use href="#i-volume"/></svg></button>
+    <button id="pbtn" hidden><svg class="ic"><use href="#i-map"/></svg>المخطط</button>
   </div>
 
   <div id="cmp" hidden title="اضغط للتوجه نحو الشمال" role="button" tabindex="0" aria-label="البوصلة: اضغط للتوجه نحو الشمال">
-    <svg viewBox="-30 -30 60 60" width="56" height="56" aria-hidden="true"><g id="cg">
-      <circle r="28" fill="rgba(0,0,0,.55)" stroke="#fff" stroke-width="2"/>
-      <path d="M0 -22L6 0H-6Z" fill="#ef4444"/>
-      <path d="M0 22L6 0H-6Z" fill="#fff"/>
-      <text x="0" y="-6" font-size="8" font-weight="700" text-anchor="middle" fill="#fff">N</text>
+    <svg viewBox="-30 -30 60 60" width="54" height="54" aria-hidden="true"><g id="cg">
+      <circle r="27" fill="rgba(10,10,17,.6)" stroke="#fff" stroke-width="1.6"/>
+      <path d="M0 -20L5.5 1H-5.5Z" fill="#f87171"/>
+      <path d="M0 20L5.5 1H-5.5Z" fill="#fff"/>
+      <text x="0" y="-7" font-size="8" font-weight="700" text-anchor="middle" fill="#fff">N</text>
     </g></svg>
   </div>
 
@@ -188,9 +215,12 @@
 
   <div id="sb"></div>
 
-  <noscript><div class="nojs"><span>هذه الصفحة تحتاج تشغيل JavaScript. افتحها في متصفح مثل Safari أو Chrome بدل معاينة الملفات.</span></div></noscript>
+  <noscript><div class="nojs"><span>هذه الصفحة تحتاج تشغيل JavaScript. افتحها في متصفح مثل Safari أو Chrome.</span></div></noscript>
 
-  <div id="empty" hidden><span>أضف صورة بانوراما 360° من اللوحة للبدء، أو اسحب الصور وأفلتها هنا.</span></div>
+  <div id="empty" hidden>
+    <svg class="eic" aria-hidden="true"><use href="#i-image"/></svg>
+    <span>أضف صورة بانوراما 360° للبدء، أو اسحب الصور وأفلتها هنا.</span>
+  </div>
 </main>
 
 <p id="msg" role="status" aria-live="polite"></p>
@@ -201,15 +231,15 @@
   <div id="libb" role="dialog" aria-modal="true" aria-label="مكتبة المشاريع">
     <header>
       <b>مكتبة المشاريع</b>
-      <button id="libn" class="pri">＋ مشروع جديد</button>
-      <label class="btn" for="pfile">استيراد ملف</label>
-      <button id="libx" aria-label="إغلاق">✕</button>
+      <button id="libn" class="pri"><svg class="ic"><use href="#i-plus"/></svg>مشروع جديد</button>
+      <label class="btn" for="pfile">استيراد</label>
+      <button id="libx" aria-label="إغلاق"><svg class="ic"><use href="#i-close"/></svg></button>
     </header>
     <div id="libg"></div>
   </div>
 </div>
 
 <script src="vendor/three.min.js?v=2.0"></script>
-<script src="app.js?v=2.1"></script>
+<script src="app.js?v=3.1"></script>
 </body>
 </html>
