@@ -794,6 +794,31 @@ canvas {
 #mute {
   padding: 0 var(--s3);
 }
+/* capture date and position: a quieter row of its own under the title and buttons */
+#top > #meta {
+  order: 1;
+  flex-basis: 100%;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+#meta .chip {
+  pointer-events: auto;
+  gap: var(--s3);
+  min-height: 28px;
+  padding: 0 var(--s3);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+#meta a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.45);
+  text-underline-offset: 3px;
+}
+#meta a:hover {
+  text-decoration-color: #fff;
+}
 
 /* one row that scrolls sideways, so a long tour never covers the panorama */
 #sb {
@@ -1119,6 +1144,43 @@ canvas {
   gap: var(--s2);
 }
 
+/* An exported tour is one large file, and nothing runs until all of it has arrived. This
+   note is plain markup ahead of the scripts, so it shows while the rest downloads. */
+#xload {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s3);
+  padding: var(--s5);
+  background: #07070d;
+  color: #fff;
+  text-align: center;
+}
+#xload b {
+  font-size: clamp(22px, 5vw, 34px);
+  font-weight: 700;
+}
+#xload i {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  animation: spin 0.9s linear infinite;
+}
+#xload span {
+  opacity: 0.75;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* ───────────────────────── start screen ───────────────────────── */
 #start {
   position: absolute;
@@ -1194,20 +1256,24 @@ canvas {
 }
 #pbox {
   position: relative;
+  cursor: zoom-in;
 }
 #pbox img {
   display: block;
   width: 100%;
   border-radius: var(--r2);
+  user-select: none;
+  -webkit-user-drag: none;
 }
 #pdots {
   position: absolute;
   inset: 0;
 }
+/* markers stay small so a plan with many scenes still shows the drawing */
 .pd {
   position: absolute;
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   min-height: 0;
   padding: 0;
   border-radius: 50%;
@@ -1221,9 +1287,93 @@ canvas {
     height var(--mo2) var(--ez);
 }
 .pd.on {
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
+  z-index: 1;
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--ac) 40%, transparent);
+}
+.pd span {
+  display: none;
+}
+#pctl {
+  position: absolute;
+  top: var(--s2);
+  inset-inline-end: var(--s2);
+  z-index: 2;
+  display: flex;
+  gap: var(--s1);
+}
+#pctl button {
+  width: 32px;
+  min-height: 32px;
+  height: 32px;
+  padding: 0;
+  justify-content: center;
+  border-radius: var(--r2);
+  background: var(--gl);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--sh1);
+}
+#pctl button:hover {
+  background: rgba(10, 10, 17, 0.8);
+}
+#pzi,
+#pzo {
+  display: none;
+}
+/* enlarged: the plan covers the stage and #pbox is zoomed and moved by app.js */
+#plan.big {
+  inset: calc(env(safe-area-inset-top, 0px) + var(--s3)) calc(env(safe-area-inset-right, 0px) + var(--s3))
+    calc(env(safe-area-inset-bottom, 0px) + var(--s3)) calc(env(safe-area-inset-left, 0px) + var(--s3));
+  width: auto;
+  z-index: 8;
+  padding: 0;
+  overflow: hidden;
+  touch-action: none;
+  background: color-mix(in srgb, var(--pn) 96%, transparent);
+}
+#plan.big #pbox {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  cursor: grab;
+}
+#plan.big.placing #pbox {
+  cursor: crosshair;
+}
+#plan.big #pbox img {
+  border-radius: 0;
+}
+#plan.big #pzi,
+#plan.big #pzo {
+  display: inline-flex;
+}
+/* markers keep their size on screen at any zoom */
+#plan.big .pd {
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%) scale(calc(1 / var(--pz, 1)));
+}
+#plan.big .pd.on {
+  width: 24px;
+  height: 24px;
+}
+#plan.big .pd span {
+  display: block;
+  position: absolute;
+  top: 50%;
+  inset-inline-start: calc(100% + 8px);
+  transform: translateY(-50%);
+  padding: 2px var(--s2);
+  border-radius: var(--rp);
+  background: var(--gl);
+  color: #fff;
+  font-size: var(--tSm);
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 /* ───────────────────────── project library ───────────────────────── */
