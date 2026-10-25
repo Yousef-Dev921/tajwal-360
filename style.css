@@ -893,6 +893,8 @@ canvas {
   margin: 0 0 var(--s3);
   color: var(--mu);
   line-height: 1.6;
+  /* notes are often written line by line: a level, then coordinates, then a date */
+  white-space: pre-line;
 }
 #pop button {
   width: 100%;
