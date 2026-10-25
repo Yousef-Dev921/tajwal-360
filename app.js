@@ -24,6 +24,12 @@ const lsGet = k => {
       localStorage.setItem(k, v);
     } catch (e) {}
   };
+// Every interface string, in Arabic and English. Static markup refers to these keys through
+// data-i18n attributes; a value can be an object of plural forms (see t() below).
+// In Arabic, "360°" sits between U+2066 and U+2069 (left-to-right isolate). Without them the
+// bidi algorithm puts the degree sign on the wrong side of the number; percentages get the
+// same treatment, and file names sit in a first-strong isolate (U+2068) so Latin names keep
+// their own order.
 const I18N = {
   ar: {
     'doc.title': 'Tajwal 360 — استوديو الجولات الافتراضية',
@@ -39,14 +45,14 @@ const I18N = {
     'f.descPh': 'يظهر في شاشة البداية',
     'f.sceneName': 'اسم المشهد',
     'f.size': 'الحجم',
-    'f.tourUrl': 'رابط الجولة بعد رفعها على استضافة',
-    'f.embedPh': 'اكتب الرابط ليظهر كود التضمين',
+    'f.tourUrl': 'رابط الجولة بعد نشرها',
+    'f.embedPh': 'أدخل رابط الجولة ليظهر كود التضمين',
     'f.label': 'العنوان',
     'f.target': 'الوجهة',
     'f.text': 'النص',
     'f.shape': 'الشكل',
     'f.color': 'اللون',
-    'act.addImages': 'إضافة صور 360',
+    'act.addImages': 'إضافة صور \u2066360°\u2069',
     'act.undo': 'تراجع',
     'act.undoTitle': 'تراجع (Ctrl+Z)',
     'act.redo': 'إعادة',
@@ -56,23 +62,25 @@ const I18N = {
     'act.saveCopy': 'حفظ نسخة',
     'act.import': 'استيراد',
     'act.startAngle': 'زاوية البداية',
-    'act.startAngleTitle': 'تُفتح الجولة على هذه الزاوية',
+    'act.startAngleTitle': 'اجعل الزاوية الحالية نقطة بداية هذا المشهد',
     'act.north': 'اتجاه الشمال',
-    'act.northTitle': 'يحسّن سلاسة الانتقال بين المشاهد',
+    'act.northTitle':
+      'اجعل الاتجاه الحالي هو الشمال، ليبقى الاتجاه ثابتاً عند الانتقال بين المشاهد',
     'act.moveFwd': 'تقديم',
     'act.moveBack': 'تأخير',
     'act.delScene': 'حذف المشهد',
-    'act.confirmDel': 'تأكيد الحذف؟',
+    'act.confirmDel': 'اضغط مجدداً للتأكيد',
     'act.upImage': 'رفع صورة',
-    'act.upAudio': 'رفع ملف صوت',
+    'act.upAudio': 'رفع ملف صوتي',
     'act.upPlan': 'رفع مخطط',
     'act.remove': 'إزالة',
-    'act.placeScene': 'ضع هذا المشهد على المخطط',
+    'act.placeScene': 'حدّد موقع المشهد على المخطط',
     'act.copyCode': 'نسخ الكود',
     'act.vr': 'وضع VR',
     'act.gyro': 'جيروسكوب',
-    'act.backEdit': 'عودة للتحرير',
+    'act.backEdit': 'العودة إلى التحرير',
     'act.muteAria': 'كتم الصوت',
+    'act.unmuteAria': 'تشغيل الصوت',
     'act.planBtn': 'المخطط',
     'act.close': 'إغلاق',
     'act.delete': 'حذف',
@@ -81,18 +89,18 @@ const I18N = {
     'sec.sceneSet': 'إعدادات المشهد',
     'sec.hotspots': 'النقاط التفاعلية',
     'sec.view': 'خيارات العرض',
-    'sec.nadir': 'رقعة النادر',
+    'sec.nadir': 'غطاء الحامل',
     'sec.audio': 'موسيقى خلفية',
     'sec.plan': 'مخطط الموقع',
     'sec.embed': 'كود التضمين',
     'opt.autorotate': 'دوران تلقائي',
     'opt.walk': 'انتقال سلس بين المشاهد',
     'hint.reorder': 'اسحب المشهد لتغيير ترتيبه.',
-    'hint.nadir': 'صورة تغطّي مكان الحامل الثلاثي أسفل البانوراما.',
-    'hint.audio': 'تبدأ بعد أول لمسة من الزائر. الحد الأقصى 8 ميجابايت.',
-    'hint.plan': 'ارفع المخطط، ثم ضع كل مشهد كنقطة عليه.',
-    'hint.clickPano': 'اضغط على البانوراما لتحديد المكان',
-    'hint.dragHs': 'اسحب النقطة في الصورة لتغيير مكانها',
+    'hint.nadir': 'صورة تغطّي الحامل الثلاثي في أسفل البانوراما.',
+    'hint.audio': 'يبدأ التشغيل بعد أول لمسة من الزائر. الحد الأقصى 8 ميجابايت.',
+    'hint.plan': 'ارفع صورة المخطط، ثم حدّد موقع كل مشهد عليه.',
+    'hint.clickPano': 'اضغط على البانوراما لتحديد مكان النقطة.',
+    'hint.dragHs': 'اسحب النقطة داخل البانوراما لتغيير مكانها.',
     'hs.link': 'انتقال',
     'hs.info': 'معلومات',
     'shape.arrow': 'سهم',
@@ -104,67 +112,83 @@ const I18N = {
     'lib.title': 'مكتبة المشاريع',
     'lib.new': 'مشروع جديد',
     'lib.open': 'فتح',
-    'lib.current': 'المفتوح حالياً',
+    'lib.current': 'مفتوح الآن',
     'lib.dup': 'تكرار',
-    'lib.expFile': 'تصدير ملف',
     'lib.empty': 'لا توجد مشاريع بعد.',
-    'lib.scenes': '{n} مشهد',
+    'lib.scenes': {
+      zero: 'بلا مشاهد',
+      one: 'مشهد واحد',
+      two: 'مشهدان',
+      few: '{n} مشاهد',
+      many: '{n} مشهداً',
+      other: '{n} مشهد',
+    },
     'def.title': 'جولتي الافتراضية',
     'def.newProj': 'مشروع جديد',
     'def.imported': 'مشروع مستورد',
-    'def.untitled': 'بدون عنوان',
+    'def.untitled': 'بلا عنوان',
     'def.copySuffix': ' (نسخة)',
     'view.start': 'ابدأ الجولة',
     'view.loading': 'جارٍ التحميل…',
-    'empty': 'أضف صورة بانوراما 360° للبدء، أو اسحب الصور وأفلتها هنا.',
+    'empty': 'أضف صورة بانوراما \u2066360°\u2069 للبدء، أو اسحب الصور وأفلتها هنا.',
     'aria.loading': 'جارٍ التحميل',
-    'aria.canvas': 'مشهد بانورامي ٣٦٠ — الأسهم للنظر حولك، + و − للتكبير',
-    'cmp.title': 'اضغط للتوجه نحو الشمال',
-    'cmp.aria': 'البوصلة: اضغط للتوجه نحو الشمال',
+    'aria.canvas': 'بانوراما \u2066360°\u2069. استخدم الأسهم للتلفّت، و+ أو − للتكبير والتصغير.',
+    'cmp.title': 'اضغط للتوجّه نحو الشمال',
+    'cmp.aria': 'البوصلة: اضغط للتوجّه نحو الشمال',
     'msg.quotaFull':
-      '⚠️ امتلأت مساحة التخزين في المتصفح — لم يُحفظ عملك. اضغط «حفظ نسخة» الآن لتنزيله على جهازك قبل إغلاق الصفحة.',
+      'امتلأت مساحة التخزين في المتصفح ولم يُحفظ عملك. اضغط «حفظ نسخة» الآن لتنزيله على جهازك قبل إغلاق الصفحة.',
     'msg.noAutosave':
-      '⚠️ تعذّر الحفظ التلقائي في هذا المتصفح (قد يكون وضع تصفّح خاص). اضغط «حفظ نسخة» لتنزيل عملك.',
-    'msg.quotaWarn': '⚠️ استهلكت {p}% من مساحة المتصفح. صدّر مشاريعك المهمة كملفات على جهازك.',
-    'msg.autosaveBack': '✅ عاد الحفظ التلقائي للعمل.',
-    'msg.notPano': 'تنبيه: إحدى الصور ليست بانوراما 360°، وُضعت كلوحة مسطحة في وسط المشهد.',
-    'msg.imgReadFail': 'تعذر قراءة إحدى الصور.',
-    'msg.imgFail': 'تعذر قراءة الصورة.',
+      'تعذّر الحفظ التلقائي في هذا المتصفح، وقد يكون السبب وضع التصفّح الخاص. اضغط «حفظ نسخة» لتنزيل عملك.',
+    'msg.quotaWarn':
+      'استُهلك \u2066{p}%\u2069 من مساحة التخزين في المتصفح. احفظ نسخاً من مشاريعك المهمة على جهازك.',
+    'msg.autosaveBack': 'عاد الحفظ التلقائي إلى العمل.',
+    'msg.notPano': {
+      one: '«\u2068{name}\u2069» ليست بانوراما \u2066360°\u2069، فوُضعت كلوحة مسطّحة داخل المشهد.',
+      two: 'صورتان ليستا بانوراما \u2066360°\u2069، فوُضعتا كلوحتين مسطّحتين داخل مشهديهما.',
+      other: '{n} من الصور ليست بانوراما \u2066360°\u2069، فوُضعت كلوحات مسطّحة داخل مشاهدها.',
+    },
+    'msg.readFail': {
+      one: 'تعذّرت قراءة «\u2068{name}\u2069».',
+      two: 'تعذّرت قراءة ملفين.',
+      other: 'تعذّرت قراءة {n} من الملفات.',
+    },
+    'msg.imgFail': 'تعذّرت قراءة الصورة.',
     'msg.sceneFail': 'تعذّر تحميل هذا المشهد.',
-    'msg.startSaved': 'تم حفظ زاوية البداية لهذا المشهد.',
+    'msg.startSaved': 'حُفظت زاوية البداية لهذا المشهد.',
     'msg.needTwoScenes': 'أضف مشهداً ثانياً قبل إنشاء نقطة انتقال.',
     'msg.needOneScene': 'أضف مشهداً واحداً على الأقل قبل التصدير.',
     'msg.preparing': 'جارٍ تجهيز الملف…',
-    'msg.exported': '✅ تم تنزيل الجولة المستقلة ({mb} ميجابايت).',
+    'msg.exported': 'نُزّلت الجولة كملف مستقل ({mb} ميجابايت).',
     'msg.exportFail':
-      'تعذّر التصدير. شغّل الموقع عبر https (مثل GitHub Pages) أو خادم محلي — التصدير لا يعمل عند فتح الملف مباشرة بـ file://',
-    'msg.northSet': 'تم تحديد الشمال لهذا المشهد، وتظهر البوصلة في الزاوية.',
+      'تعذّر التصدير. افتح الموقع عبر https (مثل GitHub Pages) أو من خادم محلي، فالتصدير لا يعمل عند فتح الملف مباشرةً من الجهاز.',
+    'msg.northSet': 'حُدّد اتجاه الشمال لهذا المشهد، وظهرت البوصلة في الزاوية.',
     'msg.nothingToSave': 'لا يوجد ما يُحفظ بعد.',
     'msg.preparingProj': 'جارٍ تجهيز ملف المشروع…',
-    'msg.projSaved': '✅ تم تنزيل ملف المشروع على جهازك. احتفظ به كنسخة احتياطية.',
+    'msg.projSaved': 'نُزّل ملف المشروع على جهازك. احتفظ به نسخةً احتياطية.',
     'msg.projSaveFail': 'تعذّر تجهيز ملف المشروع.',
     'msg.importing': 'جارٍ الاستيراد…',
-    'msg.imported': '✅ تم استيراد المشروع إلى المكتبة وفتحه.',
+    'msg.imported': 'أُضيف المشروع إلى المكتبة وفُتح.',
     'msg.newerFile': 'هذا الملف من إصدار أحدث من التطبيق. حدّث الصفحة ثم أعد المحاولة.',
     'msg.badFile': 'ملف المشروع غير صالح أو لا يحتوي على أي مشهد.',
     'msg.openFail': 'تعذّر فتح المشروع.',
-    'msg.openFailStore': 'تعذّر فتح المشروع من التخزين.',
-    'msg.duplicated': '✅ تم تكرار المشروع.',
-    'msg.projFileSaved': '✅ تم تنزيل ملف المشروع على جهازك.',
-    'msg.projExpFail': 'تعذّر تصدير هذا المشروع.',
+    'msg.openFailStore': 'تعذّرت قراءة المشروع من التخزين.',
+    'msg.duplicated': 'أُنشئت نسخة من المشروع.',
+    'msg.projFileSaved': 'نُزّل ملف المشروع على جهازك.',
+    'msg.projExpFail': 'تعذّر حفظ نسخة من هذا المشروع.',
     'msg.gyroDenied': 'لم يُمنح الإذن',
-    'msg.gyroNA': 'الحساس غير متاح',
-    'msg.vrFail': 'تعذر تشغيل وضع VR.',
-    'msg.remind': '💡 عملك محفوظ داخل هذا المتصفح فقط. اضغط «حفظ نسخة» لتنزيل نسخة على جهازك.',
-    'msg.planSet': 'تم تحديد مكان المشهد على المخطط.',
+    'msg.gyroNA': 'المستشعر غير متاح',
+    'msg.vrFail': 'تعذّر تشغيل وضع VR.',
+    'msg.remind': 'عملك محفوظ في هذا المتصفح فقط. اضغط «حفظ نسخة» لتنزيل نسخة على جهازك.',
+    'msg.planSet': 'حُدّد موقع المشهد على المخطط.',
     'msg.planFirst': 'ارفع صورة المخطط أولاً.',
-    'msg.planClick': 'اضغط على المخطط لتحديد مكان هذا المشهد.',
-    'msg.audioBig': 'ملف الصوت أكبر من 8 ميجابايت. اختر ملفاً أصغر.',
-    'msg.audioAdded': '✅ تمت إضافة الموسيقى.',
-    'msg.urlFirst': 'اكتب رابط الجولة أولاً.',
-    'msg.copied': 'تم نسخ كود التضمين.',
+    'msg.planClick': 'اضغط على المخطط لتحديد موقع هذا المشهد.',
+    'msg.audioBig': 'حجم الملف الصوتي أكبر من 8 ميجابايت. اختر ملفاً أصغر.',
+    'msg.audioAdded': 'أُضيفت الموسيقى.',
+    'msg.urlFirst': 'أدخل رابط الجولة أولاً.',
+    'msg.badUrl': 'أدخل رابطاً كاملاً يبدأ بـ https:// أو http://',
+    'msg.copied': 'نُسخ كود التضمين.',
     'msg.noStorage':
-      '⚠️ تعذّر الوصول إلى تخزين المتصفح (قد يكون وضع تصفّح خاص). لن يُحفظ عملك تلقائياً — استخدم «حفظ نسخة» بانتظام.',
+      'تعذّر الوصول إلى تخزين المتصفح، وقد يكون السبب وضع التصفّح الخاص. لن يُحفظ عملك تلقائياً، فاستخدم «حفظ نسخة» بانتظام.',
   },
   en: {
     'doc.title': 'Tajwal 360 — Virtual Tour Studio',
@@ -180,14 +204,14 @@ const I18N = {
     'f.descPh': 'Shown on the start screen',
     'f.sceneName': 'Scene name',
     'f.size': 'Size',
-    'f.tourUrl': 'Tour link once it is hosted',
-    'f.embedPh': 'Enter the link to get the embed code',
+    'f.tourUrl': 'Tour URL after publishing',
+    'f.embedPh': 'Enter the tour URL to get the embed code',
     'f.label': 'Label',
     'f.target': 'Destination',
     'f.text': 'Text',
     'f.shape': 'Shape',
     'f.color': 'Colour',
-    'act.addImages': 'Add 360 images',
+    'act.addImages': 'Add 360° images',
     'act.undo': 'Undo',
     'act.undoTitle': 'Undo (Ctrl+Z)',
     'act.redo': 'Redo',
@@ -197,24 +221,26 @@ const I18N = {
     'act.saveCopy': 'Save a copy',
     'act.import': 'Import',
     'act.startAngle': 'Start angle',
-    'act.startAngleTitle': 'The tour opens at this angle',
+    'act.startAngleTitle': 'Use the current view as this scene’s starting view',
     'act.north': 'North direction',
-    'act.northTitle': 'Makes transitions between scenes smoother',
+    'act.northTitle':
+      'Mark the current direction as north, so the heading carries over between scenes',
     'act.moveFwd': 'Move earlier',
     'act.moveBack': 'Move later',
     'act.delScene': 'Delete scene',
-    'act.confirmDel': 'Confirm delete?',
+    'act.confirmDel': 'Click again to confirm',
     'act.upImage': 'Upload image',
-    'act.upAudio': 'Upload audio file',
+    'act.upAudio': 'Upload audio',
     'act.upPlan': 'Upload plan',
     'act.remove': 'Remove',
     'act.placeScene': 'Place this scene on the plan',
     'act.copyCode': 'Copy code',
     'act.vr': 'VR mode',
     'act.gyro': 'Gyroscope',
-    'act.backEdit': 'Back to editing',
+    'act.backEdit': 'Back to editor',
     'act.muteAria': 'Mute audio',
-    'act.planBtn': 'Plan',
+    'act.unmuteAria': 'Unmute audio',
+    'act.planBtn': 'Floor plan',
     'act.close': 'Close',
     'act.delete': 'Delete',
     'act.delHs': 'Delete hotspot',
@@ -227,13 +253,13 @@ const I18N = {
     'sec.plan': 'Floor plan',
     'sec.embed': 'Embed code',
     'opt.autorotate': 'Auto-rotate',
-    'opt.walk': 'Smooth transition between scenes',
+    'opt.walk': 'Smooth transitions between scenes',
     'hint.reorder': 'Drag a scene to reorder it.',
     'hint.nadir': 'An image that covers the tripod at the bottom of the panorama.',
-    'hint.audio': 'Starts after the visitor’s first touch. 8 MB maximum.',
-    'hint.plan': 'Upload the plan, then place each scene on it as a marker.',
-    'hint.clickPano': 'Click the panorama to pick the spot',
-    'hint.dragHs': 'Drag the hotspot in the image to move it',
+    'hint.audio': 'Starts playing after the visitor’s first tap. 8 MB maximum.',
+    'hint.plan': 'Upload a floor plan, then place each scene on it.',
+    'hint.clickPano': 'Click the panorama to place the hotspot.',
+    'hint.dragHs': 'Drag the hotspot in the panorama to move it.',
     'hs.link': 'Link',
     'hs.info': 'Info',
     'shape.arrow': 'Arrow',
@@ -245,79 +271,84 @@ const I18N = {
     'lib.title': 'Project library',
     'lib.new': 'New project',
     'lib.open': 'Open',
-    'lib.current': 'Currently open',
+    'lib.current': 'Open now',
     'lib.dup': 'Duplicate',
-    'lib.expFile': 'Export file',
     'lib.empty': 'No projects yet.',
-    'lib.scenes': '{n} scenes',
+    'lib.scenes': { one: '1 scene', other: '{n} scenes' },
     'def.title': 'My virtual tour',
     'def.newProj': 'New project',
     'def.imported': 'Imported project',
     'def.untitled': 'Untitled',
     'def.copySuffix': ' (copy)',
-    'view.start': 'Start the tour',
+    'view.start': 'Start tour',
     'view.loading': 'Loading…',
     'empty': 'Add a 360° panorama to start, or drag and drop images here.',
     'aria.loading': 'Loading',
-    'aria.canvas': '360° panorama — arrow keys to look around, + and − to zoom',
+    'aria.canvas': '360° panorama. Use the arrow keys to look around, and + or − to zoom.',
     'cmp.title': 'Click to face north',
     'cmp.aria': 'Compass: click to face north',
     'msg.quotaFull':
-      '⚠️ Browser storage is full — your work was not saved. Use “Save a copy” now to download it to your device before closing the page.',
+      'Browser storage is full, so your work was not saved. Use “Save a copy” now to download it before you close the page.',
     'msg.noAutosave':
-      '⚠️ Autosave failed in this browser (private browsing, perhaps). Use “Save a copy” to download your work.',
+      'Autosave isn’t working in this browser, possibly because of private browsing. Use “Save a copy” to download your work.',
     'msg.quotaWarn':
-      '⚠️ You have used {p}% of the browser’s storage. Export the projects that matter as files on your device.',
-    'msg.autosaveBack': '✅ Autosave is working again.',
-    'msg.notPano':
-      'Note: one of the images is not a 360° panorama. It was placed as a flat panel in the middle of the scene.',
-    'msg.imgReadFail': 'One of the images could not be read.',
+      '{p}% of this browser’s storage is in use. Save copies of the projects that matter to your device.',
+    'msg.autosaveBack': 'Autosave is working again.',
+    'msg.notPano': {
+      one: '“{name}” isn’t a 360° panorama, so it was placed as a flat panel in its scene.',
+      other: '{n} images aren’t 360° panoramas, so they were placed as flat panels.',
+    },
+    'msg.readFail': { one: '“{name}” could not be read.', other: '{n} files could not be read.' },
     'msg.imgFail': 'The image could not be read.',
     'msg.sceneFail': 'This scene could not be loaded.',
-    'msg.startSaved': 'The start angle for this scene was saved.',
+    'msg.startSaved': 'Start angle saved for this scene.',
     'msg.needTwoScenes': 'Add a second scene before creating a link hotspot.',
     'msg.needOneScene': 'Add at least one scene before exporting.',
     'msg.preparing': 'Preparing the file…',
-    'msg.exported': '✅ The standalone tour was downloaded ({mb} MB).',
+    'msg.exported': 'Tour downloaded as a single file ({mb} MB).',
     'msg.exportFail':
-      'Export failed. Serve the site over https (GitHub Pages, for example) or from a local server — export does not work when the file is opened directly with file://',
-    'msg.northSet': 'North was set for this scene, and the compass now shows in the corner.',
-    'msg.nothingToSave': 'There is nothing to save yet.',
+      'Export failed. Open the site over https (GitHub Pages, for example) or from a local server. Export doesn’t work when the page is opened straight from disk.',
+    'msg.northSet': 'North set for this scene. The compass now shows in the corner.',
+    'msg.nothingToSave': 'There’s nothing to save yet.',
     'msg.preparingProj': 'Preparing the project file…',
-    'msg.projSaved': '✅ The project file was downloaded to your device. Keep it as a backup.',
+    'msg.projSaved': 'Project file downloaded. Keep it as a backup.',
     'msg.projSaveFail': 'The project file could not be prepared.',
     'msg.importing': 'Importing…',
-    'msg.imported': '✅ The project was imported into the library and opened.',
+    'msg.imported': 'Project added to the library and opened.',
     'msg.newerFile':
-      'This file comes from a newer version of the app. Reload the page and try again.',
-    'msg.badFile': 'The project file is invalid, or it contains no scenes.',
+      'This file was made with a newer version of the app. Reload the page and try again.',
+    'msg.badFile': 'This project file is invalid or has no scenes.',
     'msg.openFail': 'The project could not be opened.',
-    'msg.openFailStore': 'The project could not be opened from storage.',
-    'msg.duplicated': '✅ The project was duplicated.',
-    'msg.projFileSaved': '✅ The project file was downloaded to your device.',
-    'msg.projExpFail': 'This project could not be exported.',
+    'msg.openFailStore': 'The project could not be read from storage.',
+    'msg.duplicated': 'Project duplicated.',
+    'msg.projFileSaved': 'Project file downloaded.',
+    'msg.projExpFail': 'A copy of this project could not be saved.',
     'msg.gyroDenied': 'Permission denied',
     'msg.gyroNA': 'Sensor unavailable',
     'msg.vrFail': 'VR mode could not be started.',
     'msg.remind':
-      '💡 Your work is saved inside this browser only. Use “Save a copy” to download it to your device.',
-    'msg.planSet': 'The scene’s position on the plan was set.',
-    'msg.planFirst': 'Upload the plan image first.',
-    'msg.planClick': 'Click the plan to set this scene’s position.',
-    'msg.audioBig': 'The audio file is larger than 8 MB. Choose a smaller one.',
-    'msg.audioAdded': '✅ The music was added.',
-    'msg.urlFirst': 'Enter the tour link first.',
-    'msg.copied': 'The embed code was copied.',
+      'Your work is only stored in this browser. Use “Save a copy” to keep a copy on your device.',
+    'msg.planSet': 'Scene placed on the plan.',
+    'msg.planFirst': 'Upload a floor plan first.',
+    'msg.planClick': 'Click the plan to place this scene.',
+    'msg.audioBig': 'The audio file is over 8 MB. Choose a smaller one.',
+    'msg.audioAdded': 'Music added.',
+    'msg.urlFirst': 'Enter the tour URL first.',
+    'msg.badUrl': 'Enter a full URL that starts with https:// or http://',
+    'msg.copied': 'Embed code copied.',
     'msg.noStorage':
-      '⚠️ Browser storage is unreachable (private browsing, perhaps). Your work will not be saved automatically — use “Save a copy” regularly.',
+      'Browser storage isn’t available, possibly because of private browsing. Your work won’t be saved automatically, so use “Save a copy” regularly.',
   },
 };
 // An exported tour carries the language its author used; the editor remembers its own.
 let LANG = (EMBED && EMBED.lang) || lsGet('vrt.lang') || 'ar';
 if (!I18N[LANG]) LANG = 'ar';
 const isRTL = () => LANG == 'ar';
+// Looks up a string and fills its {placeholders} from o. When the entry is a set of plural
+// forms, o.n picks the form through Intl.PluralRules, which knows Arabic's six categories.
 const t = (k, o) => {
-  const s = I18N[LANG][k] ?? I18N.ar[k] ?? k;
+  let s = I18N[LANG][k] ?? I18N.ar[k] ?? k;
+  if (typeof s == 'object') s = s[new Intl.PluralRules(LANG).select(o?.n ?? 0)] ?? s.other;
   return o ? s.replace(/\{(\w+)\}/g, (m, p) => (p in o ? o[p] : m)) : s;
 };
 // Replaces an element's own text and leaves child elements (the icon <svg>) alone.
@@ -425,8 +456,8 @@ const openDb = () =>
     q.onsuccess = () => r(q.result);
     q.onerror = () => j(q.error || new Error('idb'));
   });
-// Rejects on failure. An earlier version resolved on error, so a full disk
-// silently discarded the user's work with no warning at all.
+// Rejects on failure so the caller can tell the user. Resolving on error would let a
+// full disk throw work away without a word.
 const dbOp = (m, k, v) =>
   openDb().then(
     d =>
@@ -487,14 +518,16 @@ const save = () => {
 };
 // decode() can stall indefinitely when the page is not compositing, which would leave
 // the loading bar up for good. Wait for load, which is reliable, then cap decode.
+// Thumbnails only draw the image to a canvas, so they skip decode() altogether.
 const DECODE_TIMEOUT_MS = 6000;
-function loadImg(src) {
+function loadImg(src, decode = true) {
   return new Promise((res, rej) => {
     const im = new Image();
     let started = false;
     const ready = () => {
       if (started) return;
       started = true;
+      if (!decode) return res(im);
       const k = setTimeout(() => res(im), DECODE_TIMEOUT_MS),
         fin = () => {
           clearTimeout(k);
@@ -518,7 +551,7 @@ const makeTexture = im => {
 };
 async function libraryThumb(src) {
   try {
-    const im = await loadImg(src);
+    const im = await loadImg(src, false);
     const c = document.createElement('canvas');
     c.width = 320;
     c.height = 160;
@@ -704,6 +737,8 @@ const resize = () => {
 };
 new ResizeObserver(resize).observe($('stage'));
 // ───────────── hotspot sprites ─────────────
+// Arabic, Hebrew and related scripts. Canvas text needs its direction set explicitly.
+const RTL_TEXT = /[\u0590-\u08ff\ufb1d-\ufdff\ufe70-\ufeff]/;
 function drawIcon(ctx, shape, color) {
   ctx.lineCap = ctx.lineJoin = 'round';
   ctx.lineWidth = 10;
@@ -788,6 +823,7 @@ function makeHotspotSprite(h) {
     ctx.fillStyle = 'rgba(0,0,0,.6)';
     ctx.fillRect(256 - w / 2, 208, w, 60);
     ctx.fillStyle = '#fff';
+    ctx.direction = RTL_TEXT.test(h.label) ? 'rtl' : 'ltr';
     ctx.fillText(h.label, 256, 252, w - 30);
   }
   const tex = new THREE.CanvasTexture(canvas);
@@ -845,11 +881,15 @@ async function showScene(i) {
   buildHotspots();
   ui();
 }
-async function addFiles(fs) {
+async function addFiles(files) {
   let first = -1;
-  $('msg').textContent = '';
-  for (const f of fs) {
-    if (!f.type.startsWith('image/')) continue;
+  const flatNames = [],
+    failedNames = [];
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) {
+      failedNames.push(f.name);
+      continue;
+    }
     try {
       const im = await createImageBitmap(f),
         flat = Math.abs(im.width / im.height - 2) > 0.15,
@@ -866,7 +906,7 @@ async function addFiles(fs) {
         ctx.fillStyle = '#111';
         ctx.fillRect(0, 0, W, H);
         ctx.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
-        $('msg').textContent = t('msg.notPano');
+        flatNames.push(f.name);
       } else {
         const k = Math.min(1, 4096 / im.width);
         canvas.width = Math.round(im.width * k);
@@ -879,7 +919,7 @@ async function addFiles(fs) {
         id: sid,
         name: f.name.replace(/\.[^.]+$/, ''),
         img: objURL(blob),
-        blob: blob,
+        blob,
         th: sceneThumb(canvas),
         u0: flat ? 0.5 : 0,
         p0: 0,
@@ -888,9 +928,14 @@ async function addFiles(fs) {
       dirtyScenes.add(sid);
       if (first < 0) first = scenes.length - 1;
     } catch (e) {
-      $('msg').textContent = t('msg.imgReadFail');
+      failedNames.push(f.name);
     }
   }
+  const notes = [];
+  if (flatNames.length) notes.push(t('msg.notPano', { n: flatNames.length, name: flatNames[0] }));
+  if (failedNames.length)
+    notes.push(t('msg.readFail', { n: failedNames.length, name: failedNames[0] }));
+  if (notes.length) toast(notes.join(' '), 8000);
   save();
   if (first >= 0) showScene(first);
   else ui();
@@ -902,12 +947,21 @@ function renderScenes() {
     scenes
       .map((s, i) =>
         d
-          ? `<button data-i="${i}" draggable="true" class="sth ${i == current ? 'on' : ''}">${s.th ? `<img src="${esc(s.th)}" alt="" draggable="false">` : '<span class="ph"></span>'}<span>${esc(s.name)}</span></button>`
-          : `<button data-i="${i}" class="${i == current ? 'on' : ''}">${esc(s.name)}</button>`
+          ? `<button data-i="${i}" draggable="true" class="sth ${i == current ? 'on' : ''}" title="${esc(s.name)}">${s.th ? `<img src="${esc(s.th)}" alt="" draggable="false">` : '<span class="ph"></span>'}<span dir="auto">${esc(s.name)}</span></button>`
+          : `<button data-i="${i}" class="${i == current ? 'on' : ''}" dir="auto">${esc(s.name)}</button>`
       )
       .join('');
   $('scenes').innerHTML = m(1);
   $('sb').innerHTML = scenes.length > 1 ? m(0) : '';
+  // Centre the active scene in the bar. scrollIntoView() would also scroll the page that
+  // embeds a tour, so the bar is scrolled directly.
+  const sb = $('sb'),
+    on = mode == 'view' && sb.querySelector('.on');
+  if (on) {
+    const a = on.getBoundingClientRect(),
+      b = sb.getBoundingClientRect();
+    sb.scrollLeft += a.left + a.width / 2 - (b.left + b.width / 2);
+  }
   $('title').textContent = scenes[current]?.name || '';
   $('title').hidden = !scenes[current];
   const sh = $('shint');
@@ -917,7 +971,7 @@ function renderHotspotList() {
   $('hlist').innerHTML = (scenes[current]?.hs || [])
     .map(
       h =>
-        `<button data-id="${h.id}" class="${h.id == selId ? 'on' : ''}">${h.type == 'link' ? '⇢' : 'ℹ'} ${esc(h.label || t(h.type == 'link' ? 'hs.link' : 'hs.info'))}</button>`
+        `<button data-id="${esc(h.id)}" class="${h.id == selId ? 'on' : ''}">${h.type == 'link' ? '<svg class="ic flip"><use href="#i-link"/></svg>' : '<svg class="ic"><use href="#i-info"/></svg>'}<span dir="auto">${esc(h.label || t(h.type == 'link' ? 'hs.link' : 'hs.info'))}</span></button>`
     )
     .join('');
 }
@@ -941,18 +995,19 @@ function renderHotspotProps() {
   }
   const shp = ['arrow', 'ring', 'dot', 'pin', 'star', 'info'];
   p.innerHTML =
-    `<label>${t('f.label')}<input id="pl" value="${esc(h.label)}"></label>` +
+    `<label>${t('f.label')}<input id="pl" dir="auto" value="${esc(h.label)}"></label>` +
     (h.type == 'link'
       ? `<label>${t('f.target')}<select id="pt">${scenes
           .filter(s => s.id != scenes[current].id)
           .map(
-            s => `<option value="${s.id}" ${s.id == h.to ? 'selected' : ''}>${esc(s.name)}</option>`
+            s =>
+              `<option value="${esc(s.id)}" ${s.id == h.to ? 'selected' : ''}>${esc(s.name)}</option>`
           )
           .join('')}</select></label>`
-      : `<label>${t('f.text')}<textarea id="px" rows="3">${esc(h.text)}</textarea></label>`) +
+      : `<label>${t('f.text')}<textarea id="px" rows="3" dir="auto">${esc(h.text)}</textarea></label>`) +
     `<label>${t('f.shape')}<select id="ps">${shp.map(k => `<option value="${k}" ${k == h.shape ? 'selected' : ''}>${esc(t('shape.' + k))}</option>`).join('')}</select></label>
-  <label>${t('f.color')}<input id="pc" type="color" value="${h.color}"></label>
-  <label>${t('f.size')}<input id="pz" type="range" min=".5" max="2.5" step=".1" value="${h.size}"></label>
+  <label>${t('f.color')}<input id="pc" type="color" value="${esc(h.color)}"></label>
+  <label>${t('f.size')}<input id="pz" type="range" min=".5" max="2.5" step=".1" value="${esc(h.size)}"></label>
   <p id="hint3">${t('hint.dragHs')}</p><button id="pd" class="dng">${t('act.delHs')}</button>`;
   bind('pl', 'input', e => updateHotspot({ label: e.target.value }));
   bind('pt', 'change', e => updateHotspot({ to: e.target.value }));
@@ -960,10 +1015,6 @@ function renderHotspotProps() {
   bind('ps', 'change', e => updateHotspot({ shape: e.target.value }));
   bind('pc', 'input', e => updateHotspot({ color: e.target.value }));
   bind('pz', 'input', e => updateHotspot({ size: +e.target.value }));
-  bind('pm', 'click', () => {
-    placing = 'move';
-    renderHotspotProps();
-  });
   bind('pd', 'click', () => {
     scenes[current].hs = scenes[current].hs.filter(x => x.id != selId);
     selId = null;
@@ -1032,7 +1083,7 @@ $('sstart').onclick = () => {
   scenes[current].p0 = PI / 2 - r.v * PI;
   save();
   showScene(current);
-  $('msg').textContent = t('msg.startSaved');
+  toast(t('msg.startSaved'));
 };
 let delConfirm = 0;
 $('sdel').onclick = () => {
@@ -1048,9 +1099,11 @@ $('sdel').onclick = () => {
   delConfirm = 0;
   $('sdelt').textContent = t('act.delScene');
   const id = scenes[current].id;
+  if (sphereMat.map == textures[id]) sphereMat.map = null;
+  textures[id]?.dispose();
   delete textures[id];
   scenes.splice(current, 1);
-  scenes.forEach(s => (s.hs = s.hs.filter(h => h.to != id)));
+  scenes.forEach(s => (s.hs = s.hs.filter(h => h.type != 'link' || h.to != id)));
   save();
   if (scenes.length) showScene(Math.min(current, scenes.length - 1));
   else {
@@ -1062,7 +1115,7 @@ $('sdel').onclick = () => {
   }
 };
 $('addl').onclick = () => {
-  if (scenes.length < 2) $('msg').textContent = t('msg.needTwoScenes');
+  if (scenes.length < 2) toast(t('msg.needTwoScenes'));
   else {
     placing = 'link';
     selId = null;
@@ -1094,9 +1147,11 @@ const fetchText = async u => {
   if (!r.ok) throw new Error(u);
   return r.text();
 };
+// Downloads data as a file and returns its size in bytes.
 function saveFile(name, data, mime) {
-  const a = document.createElement('a'),
-    url = URL.createObjectURL(new Blob([data], { type: mime }));
+  const blob = new Blob([data], { type: mime }),
+    a = document.createElement('a'),
+    url = URL.createObjectURL(blob);
   a.href = url;
   a.download = name;
   document.body.appendChild(a);
@@ -1105,7 +1160,12 @@ function saveFile(name, data, mime) {
     URL.revokeObjectURL(url);
     a.remove();
   }, 5000);
+  return blob.size;
 }
+// The exported tour inlines everything and loads nothing from the network.
+const EXPORT_CSP =
+  "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
+  "img-src data: blob:; media-src data: blob:; base-uri 'none'; form-action 'none'";
 const fileName = ext =>
   ((project.title || 'tour').replace(/[\\\/:*?"<>|]+/g, '_').trim() || 'tour') + ext;
 // Portable form of a project: images become base64 here only, for export and
@@ -1140,10 +1200,10 @@ $('exp').onclick = async () => {
       fetchText('app.js'),
       portableProject(),
     ]);
-    const html = `<!DOCTYPE html><html lang="${LANG}" dir="${isRTL() ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(project.title)}</title><style>${css}</style></head><body><div id="root" class="view">${SHELL}</div><script>${three}<\/script><script>window.__TOUR__=${JSON.stringify(data).replace(/</g, '\\u003c')};${app}<\/script></body></html>`;
-    saveFile(fileName('.html'), html, 'text/html');
+    const html = `<!DOCTYPE html><html lang="${LANG}" dir="${isRTL() ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${EXPORT_CSP}"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(project.title)}</title><style>${css}</style></head><body><div id="root" class="view">${SHELL}</div><script>${three}<\/script><script>window.__TOUR__=${JSON.stringify(data).replace(/</g, '\\u003c')};${app}<\/script></body></html>`;
+    const bytes = saveFile(fileName('.html'), html, 'text/html');
     editCount = 0;
-    toast(t('msg.exported', { mb: (html.length / 1048576).toFixed(1) }));
+    toast(t('msg.exported', { mb: (bytes / 1048576).toFixed(1) }));
   } catch (e) {
     toast(t('msg.exportFail'), 9000);
   }
@@ -1182,7 +1242,7 @@ $('snorth').onclick = () => {
   s.n = (((worldTurn - yaw / (2 * PI)) % 1) + 1) % 1;
   save();
   ui();
-  $('msg').textContent = t('msg.northSet');
+  toast(t('msg.northSet'));
 };
 $('cmp').onclick = () => {
   const s = scenes[current];
@@ -1202,26 +1262,78 @@ $('psave').onclick = async () => {
     toast(t('msg.projSaveFail'));
   }
 };
+// An imported file is untrusted. Keep only well-formed fields with the expected types,
+// so nothing unexpected reaches the markup or an exported tour.
+const SHAPES = ['arrow', 'ring', 'dot', 'pin', 'star', 'info'];
+const num = (v, fallback) => (Number.isFinite(+v) && v !== null && v !== '' ? +v : fallback);
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const isDataImage = v => typeof v == 'string' && v.startsWith('data:image/');
+const cleanHotspot = h => ({
+  id: String(h.id || uid()),
+  type: h.type == 'info' ? 'info' : 'link',
+  to: h.type == 'info' || h.to == null ? undefined : String(h.to),
+  label: String(h.label ?? ''),
+  text: String(h.text ?? ''),
+  shape: SHAPES.includes(h.shape) ? h.shape : 'arrow',
+  color: /^#[0-9a-f]{6}$/i.test(h.color) ? h.color : '#f59e0b',
+  size: Math.min(2.5, Math.max(0.5, num(h.size, 1))),
+  u: clamp01(num(h.u, 0.5)),
+  v: clamp01(num(h.v, 0.5)),
+});
+const cleanScene = s => {
+  const out = {
+    id: String(s.id || uid()),
+    name: String(s.name ?? ''),
+    img: s.img,
+    u0: num(s.u0, 0),
+    p0: num(s.p0, 0),
+    hs: (Array.isArray(s.hs) ? s.hs : []).filter(h => h && typeof h == 'object').map(cleanHotspot),
+  };
+  if (isDataImage(s.th)) out.th = s.th;
+  if (s.n != null && Number.isFinite(+s.n)) out.n = +s.n;
+  if (s.pp && typeof s.pp == 'object')
+    out.pp = { x: clamp01(num(s.pp.x, 0.5)), y: clamp01(num(s.pp.y, 0.5)) };
+  return out;
+};
 $('pfile').onchange = async e => {
   const f = e.target.files[0];
   e.target.value = '';
   if (!f) return;
   toast(t('msg.importing'), 60000);
   try {
-    const d = JSON.parse(await f.text());
-    if (d.v && d.v > SCHEMA) throw new Error('newer');
-    d.scenes = (Array.isArray(d.scenes) ? d.scenes : [])
-      .filter(s => typeof s.img == 'string' && s.img.startsWith('data:image/'))
-      .map(s => ({ ...s, hs: Array.isArray(s.hs) ? s.hs : [] }));
+    const raw = JSON.parse(await f.text());
+    if (!raw || typeof raw != 'object') throw new Error('invalid');
+    if (raw.v && raw.v > SCHEMA) throw new Error('newer');
+    const d = {
+      v: SCHEMA,
+      title: String(raw.title ?? ''),
+      desc: String(raw.desc ?? ''),
+      auto: !!raw.auto,
+      walk: raw.walk !== false,
+      eurl: typeof raw.eurl == 'string' ? raw.eurl : '',
+      scenes: (Array.isArray(raw.scenes) ? raw.scenes : [])
+        .filter(s => s && isDataImage(s.img))
+        .map(cleanScene),
+    };
     if (!d.scenes.length) throw new Error('empty');
+    if (raw.nadir && isDataImage(raw.nadir.img))
+      d.nadir = { img: raw.nadir.img, r: Math.min(50, Math.max(8, num(raw.nadir.r, 25))) };
+    if (raw.plan && isDataImage(raw.plan.img)) d.plan = { img: raw.plan.img };
+    const a = raw.audio;
+    if (a && typeof a.src == 'string' && a.src.startsWith('data:'))
+      d.audio = {
+        src: a.src,
+        name: String(a.name ?? ''),
+        vol: Math.min(1, Math.max(0, num(a.vol, 0.6))),
+      };
     for (const s of d.scenes) {
       s.blob = dataToBlob(s.img);
       s.img = objURL(s.blob);
     }
-    if (d.audio && typeof d.audio.src == 'string' && d.audio.src.startsWith('data:')) {
+    if (d.audio) {
       d.audio.blob = dataToBlob(d.audio.src);
       d.audio.src = objURL(d.audio.blob);
-    } else delete d.audio;
+    }
     d.title = d.title || t('def.imported');
     await flush();
     const nid = uid() + uid();
@@ -1243,14 +1355,20 @@ const safeName = title =>
     .trim() || 'tour';
 function closeLib() {
   const m = $('libm');
-  if (m) m.hidden = true;
+  if (!m || m.hidden) return;
+  m.hidden = true;
+  $('lib').focus();
 }
 function setProject(id, d) {
   if (project !== d) revokeProject(project);
   projectId = id;
   project = d;
   scenes = project.scenes;
-  for (const k in textures) delete textures[k];
+  sphereMat.map = fadeMesh.material.map = null;
+  for (const k in textures) {
+    textures[k].dispose();
+    delete textures[k];
+  }
   resetHist();
   $('pdesc').value = project.desc || '';
   current = -1;
@@ -1263,7 +1381,7 @@ function setProject(id, d) {
   $('ptitle').value = project.title || '';
   $('auto').checked = !!project.auto;
   $('wk').checked = project.walk !== false;
-  $('msg').textContent = '';
+  toast('');
   if (scenes.length) showScene(0);
   else {
     sphereMat.map = null;
@@ -1333,12 +1451,18 @@ async function deleteProject(id) {
     else await newProject();
   }
 }
+const fmtDate = ms =>
+  new Date(ms).toLocaleDateString(LANG == 'ar' ? 'ar-u-nu-latn' : 'en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 function renderLibrary() {
   const L = [...library].sort((a, b) => b.t - a.t);
   $('libg').innerHTML = L.length
     ? L.map(
         e =>
-          `<div class="pc ${e.id == projectId ? 'on' : ''}" data-id="${esc(e.id)}">${e.th ? `<img src="${esc(e.th)}" alt="">` : '<div class="ph"></div>'}<div class="in"><b>${esc(e.title)}</b><small>${esc(t('lib.scenes', { n: e.n || 0 }))} · ${new Date(e.t).toLocaleDateString('en-GB')}</small><div class="row"><button data-a="open">${esc(t(e.id == projectId ? 'lib.current' : 'lib.open'))}</button><button data-a="dup">${esc(t('lib.dup'))}</button></div><div class="row"><button data-a="exp">${esc(t('lib.expFile'))}</button><button data-a="del" class="dng">${esc(t('act.delete'))}</button></div></div></div>`
+          `<div class="pc ${e.id == projectId ? 'on' : ''}" data-id="${esc(e.id)}">${e.th ? `<img src="${esc(e.th)}" alt="">` : '<div class="ph"></div>'}<div class="in"><b dir="auto">${esc(e.title)}</b><small>${esc(t('lib.scenes', { n: e.n || 0 }))} · ${fmtDate(e.t)}</small><div class="row"><button data-a="open">${esc(t(e.id == projectId ? 'lib.current' : 'lib.open'))}</button><button data-a="dup">${esc(t('lib.dup'))}</button></div><div class="row"><button data-a="exp">${esc(t('act.saveCopy'))}</button><button data-a="del" class="dng">${esc(t('act.delete'))}</button></div></div></div>`
       ).join('')
     : `<p>${esc(t('lib.empty'))}</p>`;
 }
@@ -1346,6 +1470,7 @@ if (!EMBED) {
   $('lib').onclick = () => {
     renderLibrary();
     $('libm').hidden = false;
+    $('libx').focus();
   };
   $('libx').onclick = closeLib;
   $('libn').onclick = newProject;
@@ -1447,7 +1572,7 @@ async function ensureTexture(s) {
 async function walkTo(i, h) {
   if (walking || i == current) return;
   const s = scenes[i],
-    o = scenes[current];
+    from = scenes[current];
   walking = true;
   $('pop').hidden = true;
   try {
@@ -1469,10 +1594,12 @@ async function walkTo(i, h) {
         setFov(fov - 8 * k);
       });
     }
-    const u = worldTurn - yaw / (2 * PI),
-      ut = o.n != null && s.n != null ? s.n + (u - o.n) : s.u0 || 0,
-      ub2 = ut + yaw / (2 * PI);
-    fadeGroup.rotation.y = 2 * PI * ub2 + PI / 2;
+    // Keep the visitor's compass heading when both scenes have a north set;
+    // otherwise land on the next scene's start angle.
+    const heading = worldTurn - yaw / (2 * PI),
+      target = from.n != null && s.n != null ? s.n + (heading - from.n) : s.u0 || 0,
+      nextTurn = target + yaw / (2 * PI);
+    fadeGroup.rotation.y = 2 * PI * nextTurn + PI / 2;
     fadeMesh.material.map = textures[s.id];
     fadeMesh.material.needsUpdate = true;
     fadeMesh.material.opacity = 0;
@@ -1484,7 +1611,7 @@ async function walkTo(i, h) {
     });
     sphereMat.map = textures[s.id];
     sphereMat.needsUpdate = true;
-    worldTurn = ub2;
+    worldTurn = nextTurn;
     world.rotation.y = fadeGroup.rotation.y;
     current = i;
     selId = null;
@@ -1608,11 +1735,25 @@ function activate(h) {
   } else if (renderer.xr.isPresenting) showVrPanel(h);
   else {
     const p = $('pop');
-    p.innerHTML = `<b>${esc(h.label)}</b><p>${esc(h.text)}</p><button>${esc(t('act.close'))}</button>`;
+    p.innerHTML =
+      (h.label ? `<b dir="auto">${esc(h.label)}</b>` : '') +
+      (h.text ? `<p dir="auto">${esc(h.text)}</p>` : '') +
+      `<button>${esc(t('act.close'))}</button>`;
     p.hidden = false;
-    p.querySelector('button').onclick = () => (p.hidden = true);
+    p.querySelector('button').onclick = closePop;
+    p.querySelector('button').focus({ preventScroll: true });
   }
 }
+function closePop() {
+  const p = $('pop');
+  if (p.hidden) return;
+  const hadFocus = p.contains(document.activeElement);
+  p.hidden = true;
+  if (hadFocus) glCanvas.focus({ preventScroll: true });
+}
+addEventListener('keydown', e => {
+  if (e.key == 'Escape') closePop();
+});
 glCanvas.addEventListener('pointerdown', e => {
   if (walking) return;
   if (mode == 'edit' && !placing) {
@@ -1704,7 +1845,7 @@ glCanvas.addEventListener('pointerup', e => {
           type: placing,
           label: '',
           text: '',
-          to: o?.id,
+          to: placing == 'link' ? o?.id : undefined,
           shape: placing == 'info' ? 'info' : 'arrow',
           color: '#f59e0b',
           size: 1,
@@ -1770,14 +1911,15 @@ $('vr').onclick = async () => {
     });
     await renderer.xr.setSession(s);
   } catch (e) {
-    $('msg').textContent = t('msg.vrFail');
+    toast(t('msg.vrFail'));
   }
 };
 renderer.setAnimationLoop(time => {
   const dt = Math.min((time - lastFrame) / 1000, 0.1);
   lastFrame = time;
   const xr = renderer.xr.isPresenting;
-  sphere.visible = !!sphereMat.map; // untextured MeshBasicMaterial is white; hide it so the empty state stays readable
+  // An untextured MeshBasicMaterial renders white; hide it so the empty state stays readable.
+  sphere.visible = !!sphereMat.map;
   if (!xr) {
     if (project.auto && mode == 'view' && !drag && !gyro) yaw -= dt * 0.08;
     if (gyro && gyroReady) {
@@ -1812,9 +1954,13 @@ renderer.setAnimationLoop(time => {
       hz ? activate(hz) : hideVrPanel();
     }
   }
+  // Hotspots are sized against the stage height so they stay easy to hit on a phone
+  // without dominating a large monitor. In a headset the world-space size applies.
+  const fit = xr ? 1 : Math.min(2.4, Math.max(0.9, 840 / (glCanvas.clientHeight || 600)));
   hotspotGroup.children.forEach(sp => {
     const h = sp.userData.h,
       k =
+        fit *
         (h.size || 1) *
         (sp == gazeTarget || sp.userData.h == hovered ? 1.2 : 1) *
         (sp == gazeTarget ? 1 + (gazeTime / need) * 0.3 : 1);
@@ -1843,7 +1989,7 @@ async function fillThumbs() {
   try {
     for (const s of scenes) {
       if (s.th) continue;
-      s.th = sceneThumb(await loadImg(s.img));
+      s.th = sceneThumb(await loadImg(s.img, false));
       any = true;
       renderScenes();
     }
@@ -1915,7 +2061,7 @@ function showVrPanel(h) {
   ctx.textAlign = rtl ? 'right' : 'left';
   ctx.fillStyle = '#fff';
   ctx.font = '700 56px system-ui,Tahoma,Arial';
-  ctx.fillText(h.label || tex('hs.info'), ax, 110, 780);
+  ctx.fillText(h.label || t('hs.info'), ax, 110, 780);
   ctx.font = '400 40px system-ui,Tahoma,Arial';
   ctx.fillStyle = '#e5e7eb';
   const lines = [];
@@ -2011,7 +2157,7 @@ function restoreSnapshot(i) {
   });
   scenes.forEach(s => {
     if (s.blob && !storedSceneIds.has(s.id)) dirtyScenes.add(s.id);
-  }); // scene restored by undo after its blob was deleted
+  }); // a scene brought back by undo after its blob was deleted from storage
   current = scenes.findIndex(s => s.id == id);
   selId = null;
   placing = null;
@@ -2143,7 +2289,8 @@ function syncAudio() {
     audioEl.loop = true;
     audioEl.volume = a.vol ?? 0.6;
   }
-  $('mute').textContent = muted ? '🔇' : '🔊';
+  $('mutei').setAttribute('href', muted ? '#i-mute' : '#i-volume');
+  $('mute').setAttribute('aria-label', t(muted ? 'act.unmuteAria' : 'act.muteAria'));
 }
 function startAudio() {
   if (audioEl && !muted && audioEl.paused && mode == 'view') audioEl.play().catch(() => {});
@@ -2164,10 +2311,19 @@ function renderPlan() {
     )
     .join('');
 }
+// Accepts only absolute http(s) URLs, so the snippet cannot carry a javascript: link.
+const embedUrl = () => {
+  try {
+    const u = new URL((project.eurl || '').trim());
+    return /^https?:$/.test(u.protocol) ? u.href : '';
+  } catch (e) {
+    return '';
+  }
+};
 const embedCode = () => {
-  const u = (project.eurl || '').trim().replace(/"/g, '%22');
+  const u = embedUrl();
   return u
-    ? `<iframe src="${u}" width="100%" height="480" style="border:0" allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen" allowfullscreen loading="lazy"></iframe>`
+    ? `<iframe src="${esc(u)}" width="100%" height="480" style="border:0" allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen" allowfullscreen loading="lazy"></iframe>`
     : '';
 };
 function syncExtras() {
@@ -2209,20 +2365,20 @@ $('pbox').onclick = e => {
     y: c((e.clientY - r.top) / r.height),
   };
   placingPlan = false;
-  $('msg').textContent = t('msg.planSet');
+  toast(t('msg.planSet'));
   save();
   renderPlan();
 };
 $('pset').onclick = () => {
   if (!project.plan) {
-    $('msg').textContent = t('msg.planFirst');
+    toast(t('msg.planFirst'));
     return;
   }
   if (!scenes[current]) return;
   planOpen = true;
   placingPlan = true;
   renderPlan();
-  $('msg').textContent = t('msg.planClick');
+  toast(t('msg.planClick'));
 };
 $('nfile').onchange = async e => {
   const f = e.target.files[0];
@@ -2233,7 +2389,7 @@ $('nfile').onchange = async e => {
     save();
     syncExtras();
   } catch (x) {
-    $('msg').textContent = t('msg.imgFail');
+    toast(t('msg.imgFail'));
   }
 };
 $('nrm').onclick = () => {
@@ -2280,7 +2436,7 @@ $('plfile').onchange = async e => {
     save();
     syncExtras();
   } catch (x) {
-    $('msg').textContent = t('msg.imgFail');
+    toast(t('msg.imgFail'));
   }
 };
 $('prm').onclick = () => {
@@ -2298,7 +2454,7 @@ $('eurl').oninput = e => {
 $('ecopy').onclick = async () => {
   const v = $('ecode').value;
   if (!v) {
-    $('msg').textContent = t('msg.urlFirst');
+    toast(t((project.eurl || '').trim() ? 'msg.badUrl' : 'msg.urlFirst'));
     return;
   }
   try {
@@ -2307,11 +2463,10 @@ $('ecopy').onclick = async () => {
     $('ecode').select();
     document.execCommand('copy');
   }
-  $('msg').textContent = t('msg.copied');
+  toast(t('msg.copied'));
 };
 // ───────────── toasts, pinch zoom, keyboard control, backup reminder ─────────────
-
-// Auto-dismiss. Observing #msg also covers code that writes to it directly.
+// Auto-dismiss, after the duration the last toast() asked for.
 (() => {
   const m = $('msg');
   if (!m) return;
@@ -2341,7 +2496,7 @@ addEventListener('beforeunload', e => {
   }
 });
 
-// Pinch to zoom. Without this, touch visitors have no way to zoom at all.
+// Pinch to zoom on touch screens. The wheel handler covers mice and trackpads.
 const pointers = new Map();
 let pinch = null;
 glCanvas.addEventListener('pointerdown', e => {
@@ -2373,7 +2528,7 @@ const endPointer = e => {
 glCanvas.addEventListener('pointerup', endPointer);
 glCanvas.addEventListener('pointercancel', endPointer);
 
-// Keyboard control: the scene was previously unusable without a pointer.
+// Keyboard control: arrow keys look around, + and − zoom.
 glCanvas.tabIndex = 0;
 glCanvas.setAttribute('role', 'application');
 glCanvas.setAttribute('aria-label', t('aria.canvas'));
@@ -2411,7 +2566,7 @@ glCanvas.addEventListener('keydown', e => {
   e.preventDefault();
 });
 
-// Compass is keyboard operable.
+// The compass is a div with role="button", so it needs Enter and Space by hand.
 $('cmp')?.addEventListener('keydown', e => {
   if (e.key == 'Enter' || e.key == ' ') {
     e.preventDefault();
