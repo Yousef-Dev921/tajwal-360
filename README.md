@@ -6,7 +6,7 @@ file you can put on any host.
 
 **[Open the studio →](https://yousef-dev921.github.io/tajwal-360/)**
 
-![The editor in Arabic, with a panorama open, two hotspots and the scene list](docs/screenshot.jpg)
+![The editor in English, with a panorama open, two hotspots and the scene list](docs/screenshot.jpg)
 
 The interface comes in Arabic (RTL) and English (LTR), with an auto/light/dark theme
 switch. Both choices persist in `localStorage` and are applied before the first paint,
