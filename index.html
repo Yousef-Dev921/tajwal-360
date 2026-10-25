@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- سياسة أمان المحتوى: التطبيق لا يتصل بأي خادم خارجي إطلاقاً.
+     'unsafe-inline' للأنماط فقط لأن نقاط المخطط تُرسم بخاصية style مباشرة. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self'; connect-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="description" content="Tajwal 360 — استوديو جولات افتراضية 360° يعمل بالكامل داخل متصفحك. صورك لا تغادر جهازك أبداً.">
+<meta name="theme-color" content="#b45309" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta property="og:title" content="Tajwal 360 — استوديو الجولات الافتراضية">
+<meta property="og:description" content="أنشئ جولات افتراضية 360° داخل متصفحك. بلا خادم، وبلا رفع صورك لأي مكان.">
+<meta property="og:type" content="website">
+<title>Tajwal 360 — استوديو الجولات الافتراضية</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🥽%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css?v=2.1">
+</head>
+<body>
+<div id="root">
+
+<aside id="panel">
+
+  <header class="hd">
+    <div class="bn"><i aria-hidden="true">🥽</i><span>Tajwal 360</span></div>
+    <button id="lib" class="pri">📚 المكتبة</button>
+  </header>
+
+  <!-- ——— هوية الجولة ——— -->
+  <div class="gp">
+    <label>عنوان الجولة<input id="ptitle" aria-label="عنوان الجولة"></label>
+    <label>وصف قصير<input id="pdesc" aria-label="وصف الجولة" placeholder="يظهر في شاشة البداية"></label>
+  </div>
+
+  <!-- ——— الإجراءات الأساسية ——— -->
+  <div class="gp">
+    <label class="btn pri big" for="file">＋ إضافة صور 360</label>
+    <input id="file" type="file" accept="image/*" multiple hidden>
+    <div class="row">
+      <button id="undo" disabled title="تراجع (Ctrl+Z)">↶ تراجع</button>
+      <button id="redo" disabled title="إعادة (Ctrl+Shift+Z)">↷ إعادة</button>
+    </div>
+    <div class="row">
+      <button id="prev">👁 معاينة</button>
+      <button id="exp" class="pri">⬇ تصدير HTML</button>
+    </div>
+    <div class="row">
+      <button id="psave">💾 حفظ المشروع</button>
+      <label class="btn" for="pfile">📂 استيراد</label>
+    </div>
+    <input id="pfile" type="file" accept=".json,application/json" hidden>
+  </div>
+
+  <!-- ——— المشاهد ——— -->
+  <div class="gp">
+    <p class="lb">المشاهد</p>
+    <div id="scenes"></div>
+    <p class="hint" id="shint">اسحب المشهد لتغيير ترتيبه.</p>
+  </div>
+
+  <!-- ——— إعدادات المشهد الحالي ——— -->
+  <details class="gp" id="sset" open hidden>
+    <summary>إعدادات المشهد الحالي</summary>
+    <div class="bd">
+      <label>اسم المشهد<input id="sname" aria-label="اسم المشهد"></label>
+      <div class="row">
+        <button id="sstart" title="تُفتح الجولة على هذه الزاوية">تعيين زاوية البداية</button>
+        <button id="snorth" title="يحسّن سلاسة الانتقال بين المشاهد">تعيين اتجاه الشمال</button>
+      </div>
+      <div class="row">
+        <button id="mvb">◀ تقديم</button>
+        <button id="mva">تأخير ▶</button>
+      </div>
+      <button id="sdel" class="dng">🗑 حذف المشهد</button>
+    </div>
+  </details>
+
+  <!-- ——— النقاط التفاعلية ——— -->
+  <details class="gp" id="hsec" open hidden>
+    <summary>النقاط التفاعلية</summary>
+    <div class="bd">
+      <div class="row">
+        <button id="addl">⇢ انتقال</button>
+        <button id="addi">ℹ معلومات</button>
+      </div>
+      <p id="hint2"></p>
+      <div id="hlist"></div>
+      <div id="hprops"></div>
+    </div>
+  </details>
+
+  <!-- ——— خيارات العرض ——— -->
+  <details class="gp">
+    <summary>خيارات العرض</summary>
+    <div class="bd">
+      <label class="opt"><input type="checkbox" id="auto"> دوران تلقائي</label>
+      <label class="opt"><input type="checkbox" id="wk" checked> انتقال سلس بين المشاهد</label>
+    </div>
+  </details>
+
+  <!-- ——— رقعة النادر ——— -->
+  <details class="gp">
+    <summary>رقعة النادر (شعار أسفل الصورة)</summary>
+    <div class="bd">
+      <p class="hint">تغطّي مكان الحامل الثلاثي أسفل البانوراما بشعارك.</p>
+      <div class="row">
+        <label class="btn" for="nfile">رفع صورة</label>
+        <button id="nrm">إزالة</button>
+      </div>
+      <input id="nfile" type="file" accept="image/*" hidden>
+      <label>الحجم<input id="nsz" type="range" min="8" max="50" value="25"></label>
+    </div>
+  </details>
+
+  <!-- ——— الموسيقى ——— -->
+  <details class="gp">
+    <summary>موسيقى خلفية</summary>
+    <div class="bd">
+      <p class="hint">تبدأ بعد أول لمسة من الزائر (سياسة المتصفحات). الحد 8 ميجابايت.</p>
+      <div class="row">
+        <label class="btn" for="afile">رفع ملف صوت</label>
+        <button id="arm">إزالة</button>
+      </div>
+      <input id="afile" type="file" accept="audio/*" hidden>
+    </div>
+  </details>
+
+  <!-- ——— مخطط الموقع ——— -->
+  <details class="gp">
+    <summary>مخطط الموقع</summary>
+    <div class="bd">
+      <p class="hint">ارفع المخطط، ثم ضع كل مشهد كنقطة عليه.</p>
+      <div class="row">
+        <label class="btn" for="plfile">رفع مخطط</label>
+        <button id="prm">إزالة</button>
+      </div>
+      <input id="plfile" type="file" accept="image/*" hidden>
+      <button id="pset">📍 ضع المشهد الحالي على المخطط</button>
+    </div>
+  </details>
+
+  <!-- ——— كود التضمين ——— -->
+  <details class="gp">
+    <summary>كود التضمين</summary>
+    <div class="bd">
+      <label>رابط الجولة بعد رفعها على استضافة
+        <input id="eurl" type="url" placeholder="https://..." inputmode="url">
+      </label>
+      <textarea id="ecode" rows="4" readonly placeholder="اكتب الرابط ليظهر كود التضمين"></textarea>
+      <button id="ecopy">📋 نسخ الكود</button>
+    </div>
+  </details>
+
+</aside>
+
+<main id="stage">
+  <div id="top">
+    <span class="chip" id="title"></span>
+    <button id="vr" hidden>🥽 وضع VR</button>
+    <button id="gy" hidden>📱 جيروسكوب</button>
+    <button id="back" hidden>✎ العودة للتحرير</button>
+    <button id="mute" hidden aria-label="كتم الصوت">🔊</button>
+    <button id="pbtn" hidden>🗺 المخطط</button>
+  </div>
+
+  <div id="cmp" hidden title="اضغط للتوجه نحو الشمال" role="button" tabindex="0" aria-label="البوصلة: اضغط للتوجه نحو الشمال">
+    <svg viewBox="-30 -30 60 60" width="56" height="56" aria-hidden="true"><g id="cg">
+      <circle r="28" fill="rgba(0,0,0,.55)" stroke="#fff" stroke-width="2"/>
+      <path d="M0 -22L6 0H-6Z" fill="#ef4444"/>
+      <path d="M0 22L6 0H-6Z" fill="#fff"/>
+      <text x="0" y="-6" font-size="8" font-weight="700" text-anchor="middle" fill="#fff">N</text>
+    </g></svg>
+  </div>
+
+  <div id="plan" hidden>
+    <div id="pbox"><img id="pimg" alt="مخطط الموقع"><div id="pdots"></div></div>
+  </div>
+
+  <div id="pop" hidden></div>
+  <div id="bar" hidden role="progressbar" aria-label="جارٍ التحميل"></div>
+
+  <div id="start" hidden>
+    <div class="sc"><h1 id="stt"></h1><p id="std"></p><button id="sgo">ابدأ الجولة</button></div>
+  </div>
+
+  <div id="sb"></div>
+
+  <noscript><div class="nojs"><span>هذه الصفحة تحتاج تشغيل JavaScript. افتحها في متصفح مثل Safari أو Chrome بدل معاينة الملفات.</span></div></noscript>
+
+  <div id="empty" hidden><span>أضف صورة بانوراما 360° من اللوحة للبدء، أو اسحب الصور وأفلتها هنا.</span></div>
+</main>
+
+<p id="msg" role="status" aria-live="polite"></p>
+
+</div>
+
+<div id="libm" hidden>
+  <div id="libb" role="dialog" aria-modal="true" aria-label="مكتبة المشاريع">
+    <header>
+      <b>مكتبة المشاريع</b>
+      <button id="libn" class="pri">＋ مشروع جديد</button>
+      <label class="btn" for="pfile">استيراد ملف</label>
+      <button id="libx" aria-label="إغلاق">✕</button>
+    </header>
+    <div id="libg"></div>
+  </div>
+</div>
+
+<script src="vendor/three.min.js?v=2.0"></script>
+<script src="app.js?v=2.1"></script>
+</body>
+</html>
