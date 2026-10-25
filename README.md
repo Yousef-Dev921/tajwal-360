@@ -1,168 +1,150 @@
-# Tajwal 360 — استوديو الجولات الافتراضية
+# Tajwal 360
 
-<div dir="rtl">
+A 360° virtual tour builder that runs entirely in the browser. No server, no database,
+no account. Panoramas are never uploaded anywhere — they stay in the visitor's own
+browser, and finished tours are downloaded as a single self-contained HTML file.
 
-أداة تعمل **بالكامل داخل المتصفح** لإنشاء جولات افتراضية من صور بانوراما 360°.
-لا يوجد خادم، ولا قاعدة بيانات، ولا حساب مستخدم: صورك ومشاريعك لا تُرفع إلى أي مكان إطلاقاً.
-الموقع مجرد استضافة للملفات الثابتة — وأنت تحفظ عملك على جهازك.
+**[Open the studio →](https://yousef-dev921.github.io/tajwal-360/)**
 
-**🔗 جرّبه الآن:** https://Yousef-Dev921.github.io/tajwal-360/
+![Tajwal 360](docs/screenshot.png)
 
-</div>
+The interface is Arabic (RTL).
 
-> **English:** A fully client-side 360° virtual tour editor and viewer (Three.js r128, no build step).
-> Nothing is ever uploaded: panoramas live in the visitor's own browser (IndexedDB, stored as binary
-> Blobs), "Export" downloads a self-contained HTML tour, and "Save project" downloads a JSON file.
-> Host it as plain static files — the host stores no user data whatsoever.
+## Why there is no backend
 
----
+Hosting is static files only, which has three consequences worth stating plainly:
 
-<div dir="rtl">
+- **Privacy.** Images never leave the device. There is no data to breach, no privacy
+  policy to write, and no retention obligations.
+- **Cost.** Any free static host serves it, regardless of how many people use it.
+- **Offline.** Three.js is vendored locally, so there is no CDN dependency.
 
-## لماذا هذا التصميم؟
+The trade-off is real: work lives in one browser profile. Clearing site data, using
+private browsing, or switching devices loses the project. The app surfaces this —
+it warns when storage is unavailable, when the quota is nearly full, and periodically
+reminds you to download a backup.
 
-| | |
-|---|---|
-| **خصوصية كاملة** | الصور لا تغادر الجهاز. لا سياسة خصوصية ولا التزامات حفظ بيانات. |
-| **تكلفة صفر** | ملفات ثابتة فقط — أي استضافة مجانية تكفي، مهما زاد عدد المستخدمين. |
-| **لا صيانة** | لا خادم يسقط، ولا قاعدة بيانات تُنسخ احتياطياً، ولا تحديثات أمنية للخادم. |
-| **يعمل دون إنترنت** | مكتبة Three.js مُضمَّنة محلياً، فلا اعتماد على أي CDN خارجي. |
+## Features
 
-> ⚠️ **المقابل:** عملك محفوظ داخل متصفحك فقط. مسح بيانات الموقع، أو التصفّح الخاص،
-> أو تبديل الجهاز = ضياع المشروع. **صدّر مشاريعك المهمة كملفات `.json` بانتظام** —
-> التطبيق يذكّرك بذلك تلقائياً.
+**Editing** — multiple panoramas by picker or drag-and-drop, images wider than 4096px
+downscaled automatically; link hotspots and info hotspots in six shapes with adjustable
+colour and size; drag hotspots directly in the panorama; 60 steps of undo/redo; scene
+thumbnails with drag reordering; nadir patch to cover the tripod; background audio;
+a floor plan with a scene marker per position; generated iframe embed code; per-scene
+start angle and north direction.
 
-## المميزات
+**Viewing** — walkthrough transitions that turn toward the hotspot, push in, and cross-fade
+while preserving heading; a start screen built from the first scene; neighbouring scenes
+preloaded; pinch zoom on touch and wheel zoom on desktop; full keyboard control; device
+gyroscope; WebXR VR mode with an in-headset info panel.
 
-### التحرير
-- إضافة عدة صور 360° (زر أو سحب وإفلات)، والصور الأعرض من 4096 بكسل تُصغَّر تلقائياً.
-- **نقاط انتقال** بين المشاهد و**نقاط معلومات** (عنوان + نص)، بستة أشكال وألوان وأحجام.
-- سحب النقطة بالفأرة أو الإصبع مباشرة داخل الصورة لتغيير مكانها.
-- **تراجع وإعادة** لآخر 60 خطوة (`Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y`، وعلى ماك `Cmd`).
-- صور مصغّرة للمشاهد، وترتيبها بالسحب، وإعادة التسمية والحذف.
-- **رقعة النادر:** شعار يغطي مكان الحامل أسفل البانوراما.
-- **موسيقى خلفية** (حتى 8 ميجابايت) مع زر كتم.
-- **مخطط الموقع:** صورة مخطط تضع عليها كل مشهد كنقطة، فيظهر للزائر مخطط مصغّر.
-- **كود التضمين:** يولّد لك `<iframe>` جاهزاً بعد رفع الجولة.
-- زاوية بداية لكل مشهد، وتحديد الشمال مع بوصلة تدور مع الكاميرا.
+**Storage** — a project library with thumbnails and timestamps; autosave with explicit
+failure reporting; export to a standalone HTML tour; save and import projects as `.json`.
 
-### العرض
-- انتقال **Walkthrough** سلس: الكاميرا تلتفت نحو النقطة، تقرّب، ثم يظهر المشهد التالي
-  مع الحفاظ على اتجاه النظر (يحتاج تحديد الشمال في المشهدين).
-- **شاشة «ابدأ الجولة»** بعنوان ووصف وخلفية من أول مشهد.
-- تحميل مسبق للمشاهد المجاورة، وشريط تقدّم.
-- **تكبير بإصبعين** على الجوال، وبعجلة الفأرة على سطح المكتب.
-- **تحكّم كامل بلوحة المفاتيح:** الأسهم للنظر حولك، و`+`/`−` للتكبير.
-- جيروسكوب الجوال (يحتاج https).
-- **وضع VR** عبر WebXR مع لوحة شرح داخل النظارة.
+## How projects are stored
 
-### الحفظ والتصدير (كله على جهاز المستخدم)
-- **مكتبة مشاريع** بصور مصغّرة وعدد المشاهد وتاريخ آخر تعديل.
-- حفظ تلقائي داخل المتصفح، **مع رسالة واضحة إذا فشل الحفظ** (امتلاء المساحة أو التصفّح الخاص).
-- **تصدير HTML:** ملف جولة مستقل واحد يعمل على أي استضافة.
-- **حفظ/استيراد مشروع:** ملف `.json` للنقل بين الأجهزة أو كنسخة احتياطية.
+IndexedDB database `vrtour`, object store `k`:
 
-## البنية
+| Key | Contents |
+| --- | --- |
+| `idx` | Project list: title, scene count, timestamp, thumbnail |
+| `p:<id>` | Project document **without image bytes** |
+| `b:<id>:<sceneId>` | Panorama as a binary `Blob` |
+| `a:<id>` | Audio track as a `Blob` |
+| `last` | Most recently opened project |
 
-```
-index.html          الواجهة + سياسة أمان المحتوى (CSP)
-style.css           نظام تصميم كامل (tokens، وضع فاتح/داكن، RTL)
-app.js              كل المنطق: المحرّر والعارض والتخزين
-vendor/three.min.js Three.js r128 (رخصة MIT)
-.nojekyll           يمنع GitHub Pages من معالجة الملفات بـ Jekyll
-```
+Splitting images out of the document matters more than it looks. Autosave runs on every
+edit, including each keystroke in the title field. With images inline the whole project
+was rewritten every time; a two-scene project wrote ~180 KB per keystroke. The document
+is now about 4 KB and only changed images are written. Storing images as `Blob`s rather
+than base64 strings also removes the 33% encoding overhead.
 
-### كيف يُخزَّن المشروع
+Projects written by older builds are migrated automatically on first load.
 
-قاعدة IndexedDB باسم `vrtour`، مخزن `k`:
-
-| المفتاح | المحتوى |
-|---|---|
-| `idx` | قائمة المشاريع (عنوان، عدد المشاهد، تاريخ، صورة مصغّرة) |
-| `p:<id>` | مستند المشروع **بلا بايتات الصور** (بضعة كيلوبايتات فقط) |
-| `b:<id>:<sceneId>` | صورة البانوراما كـ **Blob ثنائي** |
-| `a:<id>` | ملف الصوت كـ Blob |
-| `last` | آخر مشروع مفتوح |
-
-فصل الصور عن المستند يعني أن تعديلاً بسيطاً (كتابة حرف في العنوان) يكتب **بضعة
-كيلوبايتات** بدل إعادة كتابة كل صور المشروع. وتخزين الصور كـ Blob بدل base64
-يوفّر **33%** من المساحة.
-
-### بنية ملف المشروع (JSON)
+## Project file format
 
 ```json
 {
   "v": 1,
-  "title": "اسم الجولة",
-  "desc": "وصف قصير",
+  "title": "Tour title",
+  "desc": "Short description",
   "nadir": { "img": "data:image/png;base64,...", "r": 25 },
-  "audio": { "src": "data:audio/mpeg;base64,...", "name": "x.mp3", "vol": 0.6 },
+  "audio": { "src": "data:audio/mpeg;base64,...", "name": "track.mp3", "vol": 0.6 },
   "plan":  { "img": "data:image/jpeg;base64,..." },
   "eurl": "https://...",
   "auto": false,
   "walk": true,
   "scenes": [{
-    "id": "abc123", "name": "المحطة 1",
+    "id": "abc123",
+    "name": "Entrance",
     "img": "data:image/jpeg;base64,...",
     "th":  "data:image/jpeg;base64,...",
     "u0": 0.8, "p0": 0, "n": 0.25,
     "pp": { "x": 0.4, "y": 0.6 },
-    "hs": [{ "id": "x1", "type": "link", "to": "<sceneId>",
-             "label": "", "text": "", "shape": "arrow",
-             "color": "#f59e0b", "size": 1, "u": 0.84, "v": 0.6 }]
+    "hs": [{
+      "id": "x1", "type": "link", "to": "<sceneId>",
+      "label": "", "text": "", "shape": "arrow",
+      "color": "#4f46e5", "size": 1, "u": 0.84, "v": 0.6
+    }]
   }]
 }
 ```
 
-`u` و`v` إحداثيات equirectangular من 0 إلى 1 (`u` أفقياً من اليسار، `v` عمودياً من الأعلى).
-`u0`/`p0` اتجاه وميل البداية، و`n` موضع الشمال. حقل `v` هو إصدار المخطط.
+`u` and `v` are equirectangular coordinates from 0 to 1 — `u` horizontally from the left
+edge, `v` vertically from the top. `u0` and `p0` are the starting yaw and pitch, `n` is
+the north offset, and `v` at the root is the schema version.
 
-## التشغيل محلياً
+## Development
 
-يلزم خادم محلي (التصدير يقرأ ملفات المشروع عبر `fetch`):
+No build step. Serve the directory over HTTP:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-ثم افتح `http://localhost:8000`. فتح `index.html` بنقرة مزدوجة يعرض المحرّر،
-لكن **التصدير لن يعمل** من `file://`.
+Opening `index.html` directly shows the editor, but export will not work: it reads
+`app.js`, `style.css` and `three.min.js` with `fetch`, which `file://` blocks.
 
-## النشر
+```
+index.html          markup, icon sprite, content security policy
+style.css           design tokens, light and dark themes, RTL layout
+app.js              editor, viewer and storage
+vendor/three.min.js Three.js r128 (MIT)
+```
 
-الملفات ثابتة بالكامل — ارفع محتويات المجلد إلى جذر أي استضافة ثابتة.
-المشروع منشور على GitHub Pages من الفرع `main`.
+When changing `app.js` or `style.css`, bump the `?v=` query in `index.html`. Without it,
+returning visitors keep the cached copy.
 
-**https يُعدّ شرطاً إلزامياً** للجيروسكوب ووضع VR، وكل الاستضافات أدناه توفّره مجاناً:
-GitHub Pages · Cloudflare Pages · Netlify.
+## Deployment
 
-> عند تحديث `app.js` أو `style.css` ارفع رقم الإصدار في `index.html`
-> (`?v=2.1`) حتى تصل التحديثات لمن زار الموقع سابقاً بدل النسخة المخزَّنة مؤقتاً.
+Static files at the root of any host. This repository is deployed to GitHub Pages from
+`main`. HTTPS is required — the gyroscope and WebXR will not start without it — and
+GitHub Pages, Cloudflare Pages and Netlify all provide it on free tiers.
 
-## إتاحة الوصول
+## Accessibility
 
-- كل أزواج الألوان مُتحقَّق منها حسابياً: نص ≥ 4.5:1، وحدود وعناصر ≥ 3:1 (WCAG 1.4.3 و1.4.11).
-- أهداف لمس 44px على الشاشات اللمسية (WCAG 2.5.5 AAA) و38px على الفأرة.
-- حلقة تركيز واضحة على كل عنصر، ودعم `prefers-reduced-motion`.
-- المشهد قابل للتشغيل كاملاً بلوحة المفاتيح، ورسائل الحالة تُعلَن عبر `aria-live`.
+Colour pairs are checked numerically: text at 4.5:1 or better (WCAG 1.4.3), control
+borders and focus rings at 3:1 or better (WCAG 1.4.11). Touch targets are 44px on
+coarse pointers (WCAG 2.5.5). The panorama is fully keyboard operable, status messages
+are announced through `aria-live`, and `prefers-reduced-motion` is respected.
 
-## قيود معروفة
+## Limitations
 
-- ملف التصدير يحمل **633 كيلوبايت ثابتة** من الشيفرة (Three.js أساساً) قبل الصور،
-  والصور داخله بصيغة base64، فجولة من 15 مشهداً قد تصل إلى عشرات الميجابايتات.
-- التخزين التلقائي لا يعمل في وضع التصفّح الخاص (ستظهر لك رسالة واضحة بذلك).
-- سفاري قد يحذف تخزين المواقع بعد فترة من عدم الزيارة — صدّر مشاريعك.
-- تغيير الشمال أو التسمية لا يحدّث ملفات صدّرتها سابقاً؛ أعد التصدير.
-- **وضع VR والجيروسكوب لم يُختبرا على أجهزة فعلية** — اختبرهما قبل الاعتماد عليهما.
+- An exported tour carries about 633 KB of fixed code, mostly Three.js, before any
+  imagery, and embeds panoramas as base64. A 15-scene tour reaches tens of megabytes.
+- Autosave does not work in private browsing. The app says so rather than failing quietly.
+- Safari may evict site storage after a period without visits. Keep `.json` backups.
+- Re-exporting is required after changing a scene name or north direction; previously
+  exported files are not updated.
+- **VR mode and the gyroscope have not been tested on real hardware.** Verify them
+  before relying on either.
 
-## أفكار للتطوير
+## Roadmap
 
-تصدير ZIP (صور ثنائية بدل base64 لتقليل حجم الجولة بشكل كبير) ·
-الحفظ المباشر على القرص عبر File System Access API ·
-صوت مستقل لكل مشهد · اتجاه رؤية على المخطط · تعدد اللغات.
+ZIP export with binary images to cut tour size, a trimmed viewer bundle that omits editor
+code, direct-to-disk saving via the File System Access API, per-scene audio, a view cone
+on the floor plan, and interface localisation.
 
-## الرخصة
+## Licence
 
-[MIT](LICENSE) — ومكتبة Three.js بترخيص MIT أيضاً.
-
-</div>
+[MIT](LICENSE). Three.js is bundled under the MIT licence, copyright 2010-2021 Three.js Authors.

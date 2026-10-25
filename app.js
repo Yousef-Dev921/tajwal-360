@@ -1,7 +1,7 @@
 const $=id=>document.getElementById(id),PI=Math.PI,R=500,SHELL=$('root').innerHTML;
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid=()=>Math.random().toString(36).slice(2,9),EMB=window.__TOUR__,TX={};
-// إشعار الحالة: يختفي تلقائياً. مُعرَّف مبكراً لأن منطق التخزين يستدعيه عند الفشل.
+// Status toast. Defined early because the storage layer calls it on failure.
 let msgT,msgHold=5200;
 function toast(t,ms){msgHold=ms||5200;const m=$('msg');if(m)m.textContent=t}
 let P=EMB||{title:'جولتي الافتراضية',scenes:[]},S=P.scenes,cur=-1,sel=null,placing=null,mode=EMB?'view':'edit',yaw=0,pitch=0,fov=75,drag=null,hov=null,dw=null,dp=0,t0=0,st;
@@ -9,7 +9,8 @@ const SCHEMA=1;
 const idb=()=>new Promise((r,j)=>{const q=indexedDB.open('vrtour',1);
   q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains('k'))q.result.createObjectStore('k')};
   q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error||new Error('idb'))});
-// ترمي الأخطاء فعلاً. النسخة السابقة كانت تُرجع "نجاح" عند الفشل، فيضيع عمل المستخدم بصمت.
+// Rejects on failure. An earlier version resolved on error, so a full disk
+// silently discarded the user's work with no warning at all.
 const dbOp=(m,k,v)=>idb().then(d=>new Promise((res,rej)=>{
   let tx;try{tx=d.transaction('k',m=='get'?'readonly':'readwrite')}catch(e){return rej(e)}
   const o=tx.objectStore('k'),q=m=='get'?o.get(k):m=='put'?o.put(v,k):o.delete(k);
@@ -17,7 +18,7 @@ const dbOp=(m,k,v)=>idb().then(d=>new Promise((res,rej)=>{
   q.onerror=ev=>{ev.preventDefault&&ev.preventDefault();rej(q.error||tx.error||new Error('db:'+m))};
   tx.onabort=()=>rej(tx.error||new Error('db-abort:'+m));
 }));
-// ——— تحويلات الصور: الذاكرة تحمل blob: URL، والقرص يحمل Blob ثنائياً (بلا 33% زيادة base64) ———
+// Images: blob: URLs in memory, binary Blobs on disk (no base64 33% overhead).
 function dataToBlob(u){
   const i=u.indexOf(','),h=u.slice(0,i),bin=atob(u.slice(i+1)),n=bin.length,a=new Uint8Array(n);
   for(let x=0;x<n;x++)a[x]=bin.charCodeAt(x);
@@ -31,7 +32,7 @@ const freeURL=u=>{if(typeof u=='string'&&u.startsWith('blob:'))URL.revokeObjectU
 let IDX=[],curId=null,dirty=new Set(),lastSids=new Set(),audioDirty=false,saveErr=false,edits=0,warned=false;
 const save=()=>{if(EMB||!curId)return;clearTimeout(st);st=setTimeout(flush,400);snap();edits++};
 async function thumb(src){try{const im=new Image();im.src=src;await im.decode();const c=document.createElement('canvas');c.width=320;c.height=160;c.getContext('2d').drawImage(im,0,0,320,160);return c.toDataURL('image/jpeg',.7)}catch(e){return null}}
-// مستند المشروع بلا بايتات الصور — صغير، فكتابته في كل تعديل رخيصة
+// Project document without image bytes, so autosave stays a few KB per write.
 function docOf(Q){
   const d={...Q,v:SCHEMA,scenes:(Q.scenes||[]).map(({img,blob,...r})=>r)};
   if(Q.audio)d.audio={name:Q.audio.name,vol:Q.audio.vol}; else delete d.audio;
@@ -67,7 +68,7 @@ async function flush(){
     quotaWatch();remind();
   }catch(x){saveFailed(x)}
 }
-// تحذير مبكر قبل امتلاء الحصة بدل مفاجأة المستخدم عند الامتلاء
+// Warn before the quota fills rather than at the moment a write fails.
 async function quotaWatch(){
   if(warned||!navigator.storage?.estimate)return;
   try{const{usage,quota}=await navigator.storage.estimate();
@@ -75,12 +76,13 @@ async function quotaWatch(){
       toast(`⚠️ استهلكت ${Math.round(usage/quota*100)}% من مساحة المتصفح. صدّر مشاريعك المهمة كملفات على جهازك.`,10000)}
   }catch(e){}
 }
-// قراءة مشروع من القرص وإعادة تركيب الصور كـ blob: URL (مع ترحيل تلقائي للصيغة القديمة)
+// Load a project and rehydrate its images as blob: URLs.
+// Projects stored in the pre-Blob format are migrated on read.
 async function loadProj(id){
   const doc=await dbOp('get','p:'+id);if(!doc)return null;
   doc.scenes=Array.isArray(doc.scenes)?doc.scenes:[];
   for(const s of doc.scenes){
-    if(typeof s.img=='string'&&s.img.startsWith('data:')){   // مشروع بالصيغة القديمة
+    if(typeof s.img=='string'&&s.img.startsWith('data:')){   // legacy inline data: URL
       try{s.blob=dataToBlob(s.img);s.img=objURL(s.blob);dirty.add(s.id)}catch(e){s.blob=null;s.img=''}
     }else{
       const b=await dbOp('get','b:'+id+':'+s.id).catch(()=>null);
@@ -100,19 +102,19 @@ async function loadProj(id){
   return doc;
 }
 function revokeProj(Q){(Q?.scenes||[]).forEach(s=>freeURL(s.img));freeURL(Q?.audio?.src)}
-// three
+// ───────────── renderer ─────────────
 const rd=new THREE.WebGLRenderer({antialias:true});rd.setPixelRatio(Math.min(devicePixelRatio,2));rd.outputEncoding=THREE.sRGBEncoding;rd.xr.enabled=true;rd.xr.setReferenceSpaceType('local');
 const el=rd.domElement;$('stage').prepend(el);
 const sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(75,1,.1,2000);cam.rotation.order='YXZ';sc.add(cam);
 const world=new THREE.Group();sc.add(world);
 const gm=new THREE.SphereGeometry(R,64,40);gm.scale(-1,1,1);
-const mat=new THREE.MeshBasicMaterial();world.add(new THREE.Mesh(gm,mat));
+const mat=new THREE.MeshBasicMaterial(),sphere=new THREE.Mesh(gm,mat);world.add(sphere);
 const hs=new THREE.Group();world.add(hs);
 const V=(u,v,r)=>{const p=2*PI*u,t=PI*v;return new THREE.Vector3(Math.cos(p)*Math.sin(t),Math.cos(t),Math.sin(p)*Math.sin(t)).multiplyScalar(r)};
 const uv=d=>{d=d.clone().applyAxisAngle(new THREE.Vector3(0,1,0),-world.rotation.y).normalize();return{u:(Math.atan2(d.z,d.x)/(2*PI)+1)%1,v:Math.acos(d.y)/PI}};
 const fit=()=>{const w=$('stage').clientWidth,h=$('stage').clientHeight;if(!w||!h)return;rd.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()};
 new ResizeObserver(fit).observe($('stage'));
-// hotspot icons
+// ───────────── hotspot sprites ─────────────
 function icon(x,sh,c){
   x.lineCap=x.lineJoin='round';x.lineWidth=10;x.strokeStyle='#fff';x.fillStyle=c;x.beginPath();
   if(sh=='ring'){x.arc(0,0,64,0,7);x.lineWidth=18;x.strokeStyle=c;x.stroke();x.lineWidth=5;x.strokeStyle='#fff';x.beginPath();x.arc(0,0,76,0,7);x.stroke()}
@@ -135,7 +137,7 @@ function buildHS(){
   hs.children.slice().forEach(c=>{c.material.map.dispose();c.material.dispose()});hs.clear();dw=hov=null;
   (S[cur]?.hs||[]).forEach(h=>{const sp=mkHS(h);sp.position.copy(V(h.u,h.v,380));sp.userData.h=h;hs.add(sp)});preload();
 }
-// scenes
+// ───────────── scene loading ─────────────
 async function go(i){
   const s=S[i];if(!s)return;cur=i;sel=null;placing=null;$('pop').hidden=true;hideVP();
   if(!TX[s.id]){busy(1);try{const im=new Image();im.src=s.img;await im.decode();const t=new THREE.Texture(im);t.encoding=THREE.sRGBEncoding;t.generateMipmaps=false;t.minFilter=THREE.LinearFilter;t.needsUpdate=true;TX[s.id]=t}catch(e){busy(-1);return}busy(-1)}
@@ -156,7 +158,7 @@ async function addFiles(fs){
   }
   save();if(first>=0)go(first);else ui();
 }
-// ui
+// ───────────── ui ─────────────
 const H=()=>S[cur]?.hs.find(h=>h.id==sel);
 function renderScenes(){
   const m=d=>S.map((s,i)=>d?`<button data-i="${i}" draggable="true" class="sth ${i==cur?'on':''}">${s.th?`<img src="${esc(s.th)}" alt="" draggable="false">`:'<span class="ph"></span>'}<span>${esc(s.name)}</span></button>`:`<button data-i="${i}" class="${i==cur?'on':''}">${esc(s.name)}</button>`).join('');
@@ -209,7 +211,8 @@ $('back').onclick=()=>{mode='edit';buildHS();ui()};
 const getTxt=async u=>{const r=await fetch(u);if(!r.ok)throw new Error(u);return r.text()};
 function saveFile(name,data,mime){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([data],{type:mime}));a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},5000)}
 const fname=ext=>((P.title||'tour').replace(/[\\\/:*?"<>|]+/g,'_').trim()||'tour')+ext;
-// المشروع كاملاً بصيغة قابلة للنقل: الصور تعود base64 هنا فقط (التصدير والحفظ)، لا في التخزين
+// Portable form of a project: images become base64 here only, for export and
+// for saving a .json file. Never for storage.
 async function portable(Q){
   const out=docOf(Q);out.scenes=[];
   for(const s of Q.scenes){const{blob,...r}=s;out.scenes.push({...r,img:blob?await toDataURL(blob):s.img})}
@@ -256,7 +259,7 @@ $('pfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)
     await flush();closeLib();
     toast('✅ تم استيراد المشروع إلى المكتبة وفتحه.')}
   catch(x){toast(x.message=='newer'?'هذا الملف من إصدار أحدث من التطبيق. حدّث الصفحة ثم أعد المحاولة.':'ملف المشروع غير صالح أو لا يحتوي على أي مشهد.')}};
-// project library
+// ───────────── project library ─────────────
 const safeName=t=>(String(t||'tour').replace(/[\\\/:*?"<>|]+/g,'_').trim()||'tour');
 function closeLib(){const m=$('libm');if(m)m.hidden=true}
 function setProj(id,d){
@@ -321,7 +324,7 @@ if(!EMB){
     renderLib();
   };
 }
-// walkthrough transition
+// ───────────── walkthrough transition ─────────────
 let ub=0,walking=false;
 const Yax=new THREE.Vector3(0,1,0),ease=k=>k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
 const m2=new THREE.Mesh(gm,new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthTest:false,depthWrite:false}));m2.visible=false;m2.renderOrder=5;
@@ -345,7 +348,7 @@ async function walk(i,h){
   }finally{setFov(fov);m2.visible=false;hs.visible=true;walking=false}
 }
 $('wk').onchange=e=>{P.walk=e.target.checked;save()};
-// gyroscope
+// ───────────── gyroscope ─────────────
 let gyro=false,haveG=false,calibN=false,yawOff=0;
 const gq=new THREE.Quaternion(),gq1=new THREE.Quaternion(-Math.sqrt(.5),0,0,Math.sqrt(.5)),gq0=new THREE.Quaternion(),gzv=new THREE.Vector3(0,0,1),ge=new THREE.Euler(),gf=new THREE.Vector3();
 const gdir=()=>gf.set(0,0,-1).applyQuaternion(gq);
@@ -363,7 +366,7 @@ $('gy').onclick=async()=>{
     setTimeout(()=>{if(gyro&&!haveG){goff();gnote('الحساس غير متاح')}},1500);
   }catch(e){goff();gnote('الحساس غير متاح')}
 };
-// interaction
+// ───────────── pointer interaction ─────────────
 const rc=new THREE.Raycaster();rc.camera=cam;
 const at=e=>{const r=el.getBoundingClientRect();rc.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1),cam);const x=rc.intersectObjects(hs.children,false);return x.length?x[0].object.userData.h:null};
 const pick=(o,d)=>{rc.set(o,d);const x=rc.intersectObjects(vp.visible?[...hs.children,vpp,vpx]:hs.children,false);return x.length?x[0].object:null};
@@ -394,7 +397,7 @@ el.addEventListener('pointerup',e=>{
   sel=h?h.id:null;buildHS();ui();
 });
 el.addEventListener('wheel',e=>{e.preventDefault();fov=Math.max(40,Math.min(95,fov+e.deltaY*.04));cam.fov=fov;cam.updateProjectionMatrix()},{passive:false});
-// VR
+// ───────────── webxr ─────────────
 for(let i=0;i<2;i++){
   const c=rd.xr.getController(i);
   c.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(0,0,-4)]),new THREE.LineBasicMaterial({color:0xffffff})));
@@ -405,6 +408,7 @@ if(navigator.xr)navigator.xr.isSessionSupported('immersive-vr').then(ok=>{if(ok)
 $('vr').onclick=async()=>{try{mode='view';ui();const s=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local','local-floor']});await rd.xr.setSession(s)}catch(e){$('msg').textContent='تعذر تشغيل وضع VR.'}};
 rd.setAnimationLoop(t=>{
   const dt=Math.min((t-t0)/1000,.1);t0=t;const xr=rd.xr.isPresenting;
+  sphere.visible=!!mat.map;   // untextured MeshBasicMaterial is white; hide it so the empty state stays readable
   if(!xr){if(P.auto&&mode=='view'&&!drag&&!gyro)yaw-=dt*.08;if(gyro&&haveG){const f=gdir();yaw=yawOff+Math.atan2(-f.x,-f.z);pitch=Math.asin(Math.max(-1,Math.min(1,f.y)))}cam.rotation.set(pitch,yaw,0);const s=S[cur];if(s&&s.n!=null)$('cg').setAttribute('transform',`rotate(${-(ub-yaw/(2*PI)-s.n)*360})`)}
   let gz=null;if(xr){const o=new THREE.Vector3(),d=new THREE.Vector3();cam.getWorldPosition(o);cam.getWorldDirection(d);gz=pick(o,d)}
   if(gz!==dw){dw=gz;dp=0}
@@ -412,7 +416,7 @@ rd.setAnimationLoop(t=>{
   hs.children.forEach(sp=>{const h=sp.userData.h,k=(h.size||1)*(sp==dw||sp.userData.h==hov?1.2:1)*(sp==dw?1+dp/need*.3:1);sp.scale.set(70*k,43.75*k,1)});
   rd.render(sc,cam);
 });
-// drag hotspots + scene thumbnails
+// ───────────── hotspot dragging, thumbnails ─────────────
 let hd=null,thBusy=false;
 el.addEventListener('pointercancel',()=>{hd=null;drag=null});
 function mkTh(c){const t=document.createElement('canvas');t.width=160;t.height=80;t.getContext('2d').drawImage(c,0,0,160,80);return t.toDataURL('image/jpeg',.6)}
@@ -421,7 +425,7 @@ async function fillTh(){
   try{for(const s of S){if(s.th)continue;const im=new Image();im.src=s.img;await im.decode();s.th=mkTh(im);any=true;renderScenes()}}catch(e){}
   thBusy=false;if(any){clearTimeout(st);st=setTimeout(flush,400)}
 }
-// phase 2: VR info panel, loading bar, preload, undo/redo, start screen
+// ───────────── vr info panel, preload, undo/redo, start screen ─────────────
 const vp=new THREE.Group();vp.visible=false;sc.add(vp);
 const vpp=new THREE.Mesh(new THREE.PlaneGeometry(1.6,1),new THREE.MeshBasicMaterial({transparent:true,depthTest:false}));vpp.renderOrder=20;vpp.userData.vp=1;
 const vpx=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');x.fillStyle='#b45309';x.beginPath();x.arc(64,64,60,0,7);x.fill();x.strokeStyle='#fff';x.lineWidth=10;x.lineCap='round';x.beginPath();x.moveTo(42,42);x.lineTo(86,86);x.moveTo(86,42);x.lineTo(42,86);x.stroke();
@@ -452,7 +456,7 @@ function resetHist(){clearTimeout(hst);hist=[];hp=-1;snapNow()}
 function goHist(i){
   if(i<0||i>=hist.length)return;restoring=true;hp=i;const id=S[cur]?.id;
   const oth=Object.fromEntries(S.map(s=>[s.id,s.th]));P.scenes=S=hist[i].s.map(clone);S.forEach(s=>{if(!s.th&&oth[s.id])s.th=oth[s.id]});
-  S.forEach(s=>{if(s.blob&&!lastSids.has(s.id))dirty.add(s.id)});   // مشهد عاد بالتراجع بعد حذفه من القرص
+  S.forEach(s=>{if(s.blob&&!lastSids.has(s.id))dirty.add(s.id)});   // scene restored by undo after its blob was deleted
   cur=S.findIndex(s=>s.id==id);sel=null;placing=null;restoring=false;
   clearTimeout(st);st=setTimeout(flush,400);updUndo();
   if(cur>=0){buildHS();ui()}else if(S.length)go(0);else{cur=-1;mat.map=null;mat.needsUpdate=true;buildHS();ui()}
@@ -465,7 +469,7 @@ addEventListener('keydown',e=>{
 });
 $('pdesc').oninput=e=>{P.desc=e.target.value;save()};
 $('sgo').onclick=()=>{$('start').hidden=true;startAudio()};
-// phase 1 extras: nadir patch, audio, floor plan, embed
+// ───────────── nadir patch, audio, floor plan, embed code ─────────────
 async function shrink(f,max,type){const im=await createImageBitmap(f),k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL(type,.88)}
 let npm=null,nsrc='',au=null,asrc='',muted=false,planOpen=false,placingPlan=false,psrc='';
 function syncNadir(){
@@ -518,26 +522,26 @@ $('plfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f
 $('prm').onclick=()=>{delete P.plan;S.forEach(s=>delete s.pp);planOpen=false;save();extras()};
 $('eurl').oninput=e=>{P.eurl=e.target.value;save();$('ecode').value=embedCode()};
 $('ecopy').onclick=async()=>{const v=$('ecode').value;if(!v){$('msg').textContent='اكتب رابط الجولة أولاً.';return}try{await navigator.clipboard.writeText(v)}catch(x){$('ecode').select();document.execCommand('copy')}$('msg').textContent='تم نسخ كود التضمين.'};
-// ════════════ طبقة تجربة الاستخدام: إشعارات، تكبير باللمس، لوحة مفاتيح، تذكير بالنسخ الاحتياطي ════════════
+// ───────────── toasts, pinch zoom, keyboard control, backup reminder ─────────────
 
-// إخفاء الإشعار تلقائياً — يلتقط أيضاً أي رسالة تُكتب في #msg مباشرة
+// Auto-dismiss. Observing #msg also covers code that writes to it directly.
 (()=>{const m=$('msg');if(!m)return;
   new MutationObserver(()=>{clearTimeout(msgT);
     if(m.textContent)msgT=setTimeout(()=>{m.textContent='';msgHold=5200},msgHold);
   }).observe(m,{childList:true,characterData:true,subtree:true});
 })();
 
-// تذكير بتنزيل نسخة احتياطية: التخزين في المتصفح وحده ليس أماناً كافياً
+// Browser storage alone is not a safe home for someone's work.
 let remindAt=40;
 function remind(){
   if(EMB||edits<remindAt)return;remindAt=edits+80;
   toast('💡 عملك محفوظ داخل هذا المتصفح فقط. اضغط «حفظ المشروع» لتنزيل نسخة على جهازك.',9000);
 }
 
-// تحذير عند الإغلاق إذا كان الحفظ التلقائي معطّلاً — وإلا يضيع العمل بلا إنذار
+// Only warn on unload when autosave is known to be broken.
 addEventListener('beforeunload',e=>{if(!EMB&&saveErr){e.preventDefault();e.returnValue=''}});
 
-// ——— التكبير بإصبعين (كان مفقوداً تماماً: زوّار الجوال لم يستطيعوا التكبير) ———
+// Pinch to zoom. Without this, touch visitors have no way to zoom at all.
 const pts=new Map();let pinch=null;
 el.addEventListener('pointerdown',e=>{
   pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -553,7 +557,7 @@ el.addEventListener('pointermove',e=>{
 const endPt=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=null};
 el.addEventListener('pointerup',endPt);el.addEventListener('pointercancel',endPt);
 
-// ——— التحكم بلوحة المفاتيح (إتاحة الوصول: لم يكن المشهد قابلاً للتشغيل بلا فأرة) ———
+// Keyboard control: the scene was previously unusable without a pointer.
 el.tabIndex=0;
 el.setAttribute('role','application');
 el.setAttribute('aria-label','مشهد بانورامي ٣٦٠ — الأسهم للنظر حولك، + و − للتكبير');
@@ -572,17 +576,17 @@ el.addEventListener('keydown',e=>{
   e.preventDefault();
 });
 
-// البوصلة قابلة للتشغيل بلوحة المفاتيح
+// Compass is keyboard operable.
 $('cmp')?.addEventListener('keydown',e=>{if(e.key=='Enter'||e.key==' '){e.preventDefault();$('cmp').click()}});
 
-// تذكّر الأقسام المفتوحة بين الجلسات
+// Remember which sections were left open.
 if(!EMB)document.querySelectorAll('details.gp').forEach((d,i)=>{
   const k='vrt.sec.'+(d.id||i);
   try{const v=localStorage.getItem(k);if(v!==null)d.open=v=='1'}catch(e){}
   d.addEventListener('toggle',()=>{try{localStorage.setItem(k,d.open?'1':'0')}catch(e){}});
 });
 
-// مؤشر بصري أثناء سحب المشاهد لإعادة الترتيب
+// Drop indicator while reordering scenes.
 if(!EMB){const scn=$('scenes');
   scn.addEventListener('dragover',e=>{const b=e.target.closest('.sth');
     scn.querySelectorAll('.sth.dz').forEach(x=>x!==b&&x.classList.remove('dz'));b&&b.classList.add('dz')});
@@ -594,7 +598,7 @@ if(!EMB){const scn=$('scenes');
   if(!EMB){try{
     IDX=(await dbOp('get','idx'))||[];
     if(!IDX.length){
-      const old=await dbOp('get','p').catch(()=>null);     // مشروع مفرد من نسخة قديمة جداً
+      const old=await dbOp('get','p').catch(()=>null);   // single-project layout from a much older build
       if(old&&Array.isArray(old.scenes)){
         curId=uid()+uid();
         for(const s of old.scenes)if(typeof s.img=='string'&&s.img.startsWith('data:')){try{s.blob=dataToBlob(s.img);s.img=objURL(s.blob);dirty.add(s.id)}catch(e){}}
