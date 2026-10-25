@@ -957,6 +957,168 @@ canvas {
   }
 }
 
+/* ───────────────────────── logo ───────────────────────── */
+/* The stage logo, the drop outline shown while dragging it, and the preview inside the
+   corner picker share one set of corner rules. Corners are physical, not logical. */
+#logo,
+#logoslot {
+  position: absolute;
+  z-index: 3;
+  --gap-x: var(--s3);
+  --gap-t: var(--s3);
+  --gap-b: calc(var(--s4) + var(--sb-h, 0px));
+}
+/* width and height are set from logoBox() in app.js */
+#logo {
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.28));
+  transition:
+    transform var(--mo3) var(--ez),
+    opacity var(--mo1) var(--ez);
+}
+#logo[data-pos^='t'],
+#logoslot[data-pos^='t'] {
+  top: calc(env(safe-area-inset-top, 0px) + var(--gap-t));
+}
+#logo[data-pos^='b'],
+#logoslot[data-pos^='b'] {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--gap-b));
+}
+#logo[data-pos$='l'],
+#logoslot[data-pos$='l'] {
+  left: calc(env(safe-area-inset-left, 0px) + var(--gap-x));
+  object-position: left center;
+}
+#logo[data-pos$='r'],
+#logoslot[data-pos$='r'] {
+  right: calc(env(safe-area-inset-right, 0px) + var(--gap-x));
+  object-position: right center;
+}
+/* in the editor it can be picked up and moved */
+#root:not(.view) #logo {
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+}
+#root:not(.view) #logo:hover {
+  outline: 2px dashed rgba(255, 255, 255, 0.75);
+  outline-offset: 4px;
+  border-radius: var(--r1);
+}
+#logo.dragging {
+  cursor: grabbing;
+  transition: opacity var(--mo1) var(--ez);
+  filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.5));
+}
+#logoslot {
+  border: 2px dashed rgba(255, 255, 255, 0.85);
+  border-radius: var(--r2);
+  background: color-mix(in srgb, var(--ac) 22%, transparent);
+  pointer-events: none;
+}
+/* the start screen covers the stage, but the logo belongs on it too */
+#stage:has(> #start:not([hidden])) #logo {
+  z-index: 16;
+}
+/* make room for a top logo in the title row, and move the compass below it */
+.logo-tl #top {
+  padding-left: calc(var(--logo-w, 0px) + var(--s3));
+}
+.logo-tr #top {
+  padding-right: calc(var(--logo-w, 0px) + var(--s3));
+}
+:root[dir='ltr'] .logo-tr #cmp,
+:root[dir='rtl'] .logo-tl #cmp {
+  top: calc(env(safe-area-inset-top, 0px) + max(62px, var(--s3) + var(--logo-h, 0px) + var(--s3)));
+}
+
+/* corner picker: a small frame of the current scene with a target in each corner */
+#lpos {
+  position: relative;
+  direction: ltr;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--r2);
+  border: 1px solid var(--bds);
+  overflow: hidden;
+  background: #2a2a36 center / cover no-repeat;
+}
+#lpos::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.18);
+}
+#lpos button {
+  position: absolute;
+  width: 36%;
+  height: 40%;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  border: 1.5px dashed rgba(255, 255, 255, 0.6);
+  border-radius: var(--r1);
+  box-shadow: none;
+}
+#lpos button:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: #fff;
+}
+#lpos button[aria-pressed='true'] {
+  border: 2px solid var(--ac);
+  background: color-mix(in srgb, var(--ac) 20%, transparent);
+}
+#lpos [data-pos^='t'] {
+  top: 5%;
+}
+#lpos [data-pos^='b'] {
+  bottom: 5%;
+}
+#lpos [data-pos$='l'] {
+  left: 3%;
+}
+#lpos [data-pos$='r'] {
+  right: 3%;
+}
+/* the preview is sized by the same rule as the stage logo, measured against the frame */
+#lthumb {
+  position: absolute;
+  object-fit: contain;
+  pointer-events: none;
+  transition: opacity var(--mo1) var(--ez);
+}
+#lthumb[data-pos^='t'] {
+  top: 7%;
+}
+#lthumb[data-pos^='b'] {
+  bottom: 7%;
+}
+#lthumb[data-pos$='l'] {
+  left: 5%;
+  object-position: left center;
+}
+#lthumb[data-pos$='r'] {
+  right: 5%;
+  object-position: right center;
+}
+.lrow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s2);
+}
+.lrow output {
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+#lctl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
 /* ───────────────────────── start screen ───────────────────────── */
 #start {
   position: absolute;
@@ -1256,6 +1418,11 @@ canvas {
   }
   #plan {
     width: min(56vw, 260px);
+  }
+  /* the panel sheet overlaps the bottom of the stage while editing */
+  #root:not(.view) #logo,
+  #root:not(.view) #logoslot {
+    --gap-b: calc(var(--s4) + 14px);
   }
   #msg {
     max-width: 92vw;

@@ -89,6 +89,18 @@ const I18N = {
     'sec.sceneSet': 'إعدادات المشهد',
     'sec.hotspots': 'النقاط التفاعلية',
     'sec.view': 'خيارات العرض',
+    'sec.logo': 'الشعار',
+    'hint.logo':
+      'ارفع شعاراً بخلفية شفافة (PNG أو SVG أو WebP). يظهر في زاوية الجولة فوق كل المشاهد، ويمكنك سحبه داخل البانوراما إلى أي زاوية.',
+    'act.upLogo': 'رفع شعار',
+    'act.replaceLogo': 'تغيير الشعار',
+    'f.position': 'الموضع',
+    'f.opacity': 'درجة الظهور',
+    'logo.tl': 'أعلى اليسار',
+    'logo.tr': 'أعلى اليمين',
+    'logo.bl': 'أسفل اليسار',
+    'logo.br': 'أسفل اليمين',
+    'logo.dragTitle': 'اسحب الشعار إلى أي زاوية',
     'sec.nadir': 'غطاء الحامل',
     'sec.audio': 'موسيقى خلفية',
     'sec.plan': 'مخطط الموقع',
@@ -184,6 +196,10 @@ const I18N = {
     'msg.planClick': 'اضغط على المخطط لتحديد موقع هذا المشهد.',
     'msg.audioBig': 'حجم الملف الصوتي أكبر من 8 ميجابايت. اختر ملفاً أصغر.',
     'msg.audioAdded': 'أُضيفت الموسيقى.',
+    'msg.logoAdded': 'أُضيف الشعار. اسحبه داخل البانوراما إلى الزاوية التي تريدها.',
+    'msg.logoOpaque':
+      'أُضيف الشعار، لكن خلفيته غير شفافة فسيظهر داخل مستطيل. ملف PNG بخلفية شفافة يعطي نتيجة أنظف.',
+    'msg.logoBig': 'حجم ملف الشعار أكبر من 5 ميجابايت. اختر ملفاً أصغر.',
     'msg.urlFirst': 'أدخل رابط الجولة أولاً.',
     'msg.badUrl': 'أدخل رابطاً كاملاً يبدأ بـ https:// أو http://',
     'msg.copied': 'نُسخ كود التضمين.',
@@ -248,6 +264,18 @@ const I18N = {
     'sec.sceneSet': 'Scene settings',
     'sec.hotspots': 'Hotspots',
     'sec.view': 'Viewing options',
+    'sec.logo': 'Logo',
+    'hint.logo':
+      'Upload a logo with a transparent background (PNG, SVG or WebP). It shows in a corner of the tour, over every scene, and you can drag it to any corner on the panorama.',
+    'act.upLogo': 'Upload logo',
+    'act.replaceLogo': 'Replace logo',
+    'f.position': 'Position',
+    'f.opacity': 'Opacity',
+    'logo.tl': 'Top left',
+    'logo.tr': 'Top right',
+    'logo.bl': 'Bottom left',
+    'logo.br': 'Bottom right',
+    'logo.dragTitle': 'Drag the logo to any corner',
     'sec.nadir': 'Nadir patch',
     'sec.audio': 'Background music',
     'sec.plan': 'Floor plan',
@@ -333,6 +361,10 @@ const I18N = {
     'msg.planClick': 'Click the plan to place this scene.',
     'msg.audioBig': 'The audio file is over 8 MB. Choose a smaller one.',
     'msg.audioAdded': 'Music added.',
+    'msg.logoAdded': 'Logo added. Drag it on the panorama to the corner you want.',
+    'msg.logoOpaque':
+      'Logo added, but its background isn’t transparent, so it will show as a rectangle. A PNG with a transparent background looks cleaner.',
+    'msg.logoBig': 'The logo file is over 5 MB. Choose a smaller one.',
     'msg.urlFirst': 'Enter the tour URL first.',
     'msg.badUrl': 'Enter a full URL that starts with https:// or http://',
     'msg.copied': 'Embed code copied.',
@@ -1319,6 +1351,7 @@ $('pfile').onchange = async e => {
     if (raw.nadir && isDataImage(raw.nadir.img))
       d.nadir = { img: raw.nadir.img, r: Math.min(50, Math.max(8, num(raw.nadir.r, 25))) };
     if (raw.plan && isDataImage(raw.plan.img)) d.plan = { img: raw.plan.img };
+    if (raw.logo && isDataImage(raw.logo.img)) d.logo = cleanLogo(raw.logo);
     const a = raw.audio;
     if (a && typeof a.src == 'string' && a.src.startsWith('data:'))
       d.audio = {
@@ -2336,6 +2369,7 @@ function syncExtras() {
   if (document.activeElement != $('nsz')) $('nsz').value = project.nadir?.r || 25;
   if (document.activeElement != $('eurl')) $('eurl').value = project.eurl || '';
   $('ecode').value = embedCode();
+  syncLogo();
   if (audioEl) {
     mode == 'view' ? startAudio() : audioEl.pause();
   }
@@ -2465,6 +2499,264 @@ $('ecopy').onclick = async () => {
   }
   toast(t('msg.copied'));
 };
+// ───────────── logo ─────────────
+// A logo sits in a corner of the stage, over every scene, as a plain <img>: it stays sharp
+// at any size and needs nothing from the 3D scene. Corners are physical (tl, tr, bl, br),
+// so a tour looks the same whichever language it opens in. op is the opacity, ar the
+// width-to-height ratio, and size sets how much of the screen the logo covers (see logoBox).
+const LOGO_CORNERS = ['tl', 'tr', 'bl', 'br'],
+  LOGO_MAX_PX = 800,
+  LOGO_DEFAULT = { size: 14, op: 1 };
+const cleanLogo = l => ({
+  img: l.img,
+  pos: LOGO_CORNERS.includes(l.pos) ? l.pos : 'tl',
+  size: Math.min(40, Math.max(5, num(l.size, LOGO_DEFAULT.size))),
+  op: Math.min(1, Math.max(0.2, num(l.op, LOGO_DEFAULT.op))),
+  ar: Math.min(10, Math.max(0.1, num(l.ar, 1))),
+});
+// The logo's box for a frame of w × h pixels. size scales its area rather than its width,
+// so a wide wordmark and a square mark at the same setting look equally heavy, and it is
+// measured against the frame's geometric mean so a phone and a monitor both get a sensible
+// size. Its short side is at least 18 px so a wide wordmark stays legible on a phone, and
+// the box never takes more than 45% of the width or 30% of the height.
+function logoBox(l, w, h, minSide = 18) {
+  const side = (l.size / 100) * 0.6 * Math.sqrt(w * h),
+    r = Math.sqrt(l.ar),
+    grow = Math.max(1, minSide / Math.min(side * r, side / r));
+  let bw = side * r * grow,
+    bh = (side / r) * grow;
+  const fit = Math.min(1, (w * 0.45) / bw, (h * 0.3) / bh);
+  return [Math.round(bw * fit), Math.round(bh * fit)];
+}
+function sizeLogo() {
+  const l = project.logo;
+  if (!l) return;
+  const stage = $('stage'),
+    [w, h] = logoBox(l, stage.clientWidth, stage.clientHeight),
+    img = $('logo');
+  img.style.width = w + 'px';
+  img.style.height = h + 'px';
+  // The title row and the compass read these to make room for a logo at the top.
+  stage.style.setProperty('--logo-w', w + 'px');
+  stage.style.setProperty('--logo-h', h + 'px');
+  if (EMBED) return;
+  const frame = $('lpos'),
+    // The preview keeps true proportions, so it skips the minimum size.
+    [tw, th] = logoBox(l, frame.clientWidth, frame.clientHeight, 0);
+  $('lthumb').style.width = tw + 'px';
+  $('lthumb').style.height = th + 'px';
+}
+let logoSrc = '';
+// Raster logos are decoded with createImageBitmap, which rejects a damaged file instead of
+// drawing the part it could read, and re-encoded as PNG at up to 800 px on the long side so
+// their transparency survives. SVG is stored as it is and stays sharp at every size.
+async function readLogo(f) {
+  if (f.type == 'image/svg+xml') {
+    const url = objURL(f);
+    try {
+      const im = await loadImg(url, false),
+        vb = (await f.text()).match(
+          /viewBox\s*=\s*["']\s*[-\d.e]+[\s,]+[-\d.e]+[\s,]+([\d.e]+)[\s,]+([\d.e]+)/i
+        ),
+        // An SVG without width and height reports a default 300 × 150 size, so its
+        // viewBox is the better source for the shape.
+        ar =
+          vb && +vb[1] > 0 && +vb[2] > 0
+            ? +vb[1] / +vb[2]
+            : im.naturalWidth && im.naturalHeight
+              ? im.naturalWidth / im.naturalHeight
+              : 1;
+      return { img: await toDataURL(f), ar, opaque: false };
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+  const im = await createImageBitmap(f),
+    w = im.width,
+    h = im.height,
+    k = Math.min(1, LOGO_MAX_PX / Math.max(w, h)),
+    canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(w * k));
+  canvas.height = Math.max(1, Math.round(h * k));
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(im, 0, 0, canvas.width, canvas.height);
+  im.close();
+  const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data,
+    alphaAt = (x, y) => px[(y * canvas.width + x) * 4 + 3];
+  // An image with nothing visible in it cannot serve as a logo.
+  let visible = false;
+  for (let i = 3; i < px.length && !visible; i += 4) visible = px[i] > 8;
+  if (!visible) throw new Error('empty');
+  // Four solid corners almost always mean a background the user did not mean to keep.
+  const x1 = canvas.width - 1,
+    y1 = canvas.height - 1,
+    opaque = [alphaAt(0, 0), alphaAt(x1, 0), alphaAt(0, y1), alphaAt(x1, y1)].every(a => a == 255);
+  return { img: canvas.toDataURL('image/png'), ar: w / h, opaque };
+}
+// Places the stage logo and keeps the panel controls in step with project.logo.
+function syncLogo() {
+  const l = project.logo,
+    img = $('logo'),
+    stage = $('stage');
+  LOGO_CORNERS.forEach(c => stage.classList.toggle('logo-' + c, !!l && l.pos == c));
+  // Bottom corners sit above the scene bar when it is showing.
+  stage.style.setProperty('--sb-h', $('sb').offsetHeight + 'px');
+  img.hidden = !l;
+  if (!l) {
+    logoSrc = '';
+    img.removeAttribute('src');
+  } else {
+    if (logoSrc != l.img) img.src = logoSrc = l.img;
+    img.dataset.pos = l.pos;
+    img.style.opacity = l.op;
+    img.title = mode == 'edit' && !EMBED ? t('logo.dragTitle') : '';
+  }
+  if (EMBED) return sizeLogo();
+  $('lctl').hidden = !l;
+  $('lrm').disabled = !l;
+  setText($('lupt'), t(l ? 'act.replaceLogo' : 'act.upLogo'));
+  if (!l) return;
+  const th = scenes[current]?.th;
+  $('lpos').style.backgroundImage = th ? `url("${th}")` : '';
+  $('lpos')
+    .querySelectorAll('button')
+    .forEach(b => b.setAttribute('aria-pressed', b.dataset.pos == l.pos));
+  const thumb = $('lthumb');
+  if (thumb.getAttribute('src') != l.img) thumb.src = l.img;
+  thumb.dataset.pos = l.pos;
+  thumb.style.opacity = l.op;
+  if (document.activeElement != $('lsz')) $('lsz').value = l.size;
+  if (document.activeElement != $('lop')) $('lop').value = Math.round(l.op * 100);
+  $('lszv').value = l.size + '%';
+  $('lopv').value = Math.round(l.op * 100) + '%';
+  sizeLogo();
+}
+const logoResize = new ResizeObserver(sizeLogo);
+logoResize.observe($('stage'));
+logoResize.observe($('lpos'));
+$('lfile').onchange = async e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  if (f.size > 5e6) {
+    toast(t('msg.logoBig'));
+    return;
+  }
+  try {
+    const { img, ar, opaque } = await readLogo(f),
+      prev = project.logo;
+    project.logo = cleanLogo({
+      img,
+      ar,
+      pos: prev?.pos ?? (isRTL() ? 'tr' : 'tl'),
+      size: prev?.size,
+      op: prev?.op,
+    });
+    save();
+    syncExtras();
+    toast(t(opaque ? 'msg.logoOpaque' : 'msg.logoAdded'), opaque ? 9000 : 6000);
+  } catch (x) {
+    toast(t('msg.imgFail'));
+  }
+};
+$('lrm').onclick = () => {
+  delete project.logo;
+  save();
+  syncExtras();
+};
+$('lpos').onclick = e => {
+  const b = e.target.closest('button');
+  if (b && project.logo) setLogoCorner(b.dataset.pos);
+};
+$('lsz').oninput = e => {
+  if (!project.logo) return;
+  project.logo.size = +e.target.value;
+  save();
+  syncLogo();
+};
+$('lop').oninput = e => {
+  if (!project.logo) return;
+  project.logo.op = +e.target.value / 100;
+  save();
+  syncLogo();
+};
+// Moves the logo to a corner. When from is the logo's rectangle before the move, it glides
+// from there to its new place instead of jumping.
+function setLogoCorner(pos, from) {
+  const img = $('logo');
+  project.logo.pos = pos;
+  save();
+  // Measure the new place with no transform and no transition running, then start from
+  // the old place and let the CSS transition carry it home.
+  img.style.transition = 'none';
+  img.style.transform = '';
+  syncLogo();
+  if (from) {
+    const to = img.getBoundingClientRect();
+    img.style.transform = `translate(${from.left - to.left}px, ${from.top - to.top}px)`;
+  }
+  img.getBoundingClientRect();
+  img.style.transition = '';
+  img.style.transform = '';
+}
+// The corner nearest to the logo's centre.
+function nearestCorner() {
+  const r = $('logo').getBoundingClientRect(),
+    s = $('stage').getBoundingClientRect();
+  return (
+    (r.top + r.height / 2 < s.top + s.height / 2 ? 't' : 'b') +
+    (r.left + r.width / 2 < s.left + s.width / 2 ? 'l' : 'r')
+  );
+}
+// In the editor the logo can be dragged on the stage; it snaps to the nearest corner on
+// release, and a dashed outline shows where it will land. A click opens its settings.
+let logoDrag = null;
+$('logo').addEventListener('pointerdown', e => {
+  if (mode != 'edit' || EMBED || !project.logo || e.button > 0) return;
+  e.preventDefault();
+  logoDrag = { x: e.clientX, y: e.clientY, moved: false };
+  try {
+    $('logo').setPointerCapture(e.pointerId);
+  } catch (x) {} // the pointer can already be gone, e.g. a touch that ended at once
+});
+$('logo').addEventListener('pointermove', e => {
+  if (!logoDrag) return;
+  const img = $('logo'),
+    slot = $('logoslot'),
+    dx = e.clientX - logoDrag.x,
+    dy = e.clientY - logoDrag.y;
+  if (!logoDrag.moved && Math.hypot(dx, dy) < 4) return;
+  if (!logoDrag.moved) {
+    logoDrag.moved = true;
+    const r = img.getBoundingClientRect();
+    slot.style.width = r.width + 'px';
+    slot.style.height = r.height + 'px';
+    img.classList.add('dragging');
+    slot.hidden = false;
+  }
+  img.style.transform = `translate(${dx}px, ${dy}px)`;
+  slot.dataset.pos = nearestCorner();
+});
+const endLogoDrag = (e, cancelled) => {
+  if (!logoDrag) return;
+  const { moved } = logoDrag,
+    img = $('logo');
+  logoDrag = null;
+  $('logoslot').hidden = true;
+  img.classList.remove('dragging');
+  if (!moved) {
+    if (!cancelled) {
+      $('lsec').open = true;
+      $('lsec').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+    return;
+  }
+  if (cancelled) setLogoCorner(project.logo.pos, img.getBoundingClientRect());
+  else setLogoCorner(nearestCorner(), img.getBoundingClientRect());
+};
+$('logo').addEventListener('pointerup', e => endLogoDrag(e, false));
+$('logo').addEventListener('pointercancel', e => endLogoDrag(e, true));
+
 // ───────────── toasts, pinch zoom, keyboard control, backup reminder ─────────────
 // Auto-dismiss, after the duration the last toast() asked for.
 (() => {
