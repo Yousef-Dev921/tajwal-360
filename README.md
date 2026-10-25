@@ -43,7 +43,15 @@ prompts for a backup download.
   row, the compass and the scene bar out of its way. PNG, WebP and SVG keep their
   transparency, and a logo with a solid background gets a warning.
 - Nadir patch to cover the tripod, background audio, and a floor plan with one marker
-  per scene.
+  per scene. The plan is kept at up to 4096px, as PNG so thin lines and small text stay
+  sharp (a scanned or photographic plan whose PNG would pass 3 MB is stored as JPEG). It
+  opens full-stage with wheel, pinch and button zoom, and scenes are placed on the
+  enlarged plan.
+- The capture date and GPS position are read from each JPEG's Exif block before the image
+  is re-encoded. The editor shows them in the scene settings; the tour shows them, with a
+  map link, only when "Show capture date and location" is on, and an exported tour leaves
+  them out entirely while it is off. Altitude is not read: camera GPS heights are too rough
+  to put next to survey levels.
 - Per-scene start angle and north direction.
 - Generated `<iframe>` embed code.
 
@@ -64,6 +72,11 @@ prompts for a backup download.
   cross-fades to the next scene while preserving heading.
 - A start screen built from the first scene.
 - Neighbouring scenes are preloaded.
+- At most 8 panoramas (4 on touch devices) stay in GPU memory; older ones are released and
+  decoded again when revisited. Each one is 32 MB at 4096 × 2048, and Safari on iOS reloads
+  a page that holds much more than about 600 MB, so without the limit a long tour would
+  crash on an iPhone.
+- An exported tour shows its title and a loading indicator while the file downloads.
 - Pinch zoom on touch, wheel zoom on desktop, and full keyboard control.
 - Device gyroscope, and WebXR VR mode with an in-headset info panel.
 
@@ -87,6 +100,7 @@ IndexedDB database `vrtour`, object store `k`:
 | `p:<id>` | Project document, **without image bytes** |
 | `b:<id>:<sceneId>` | Panorama as a binary `Blob` |
 | `a:<id>` | Audio track as a `Blob` |
+| `pl:<id>` | Floor plan image as a `Blob` |
 | `last` | Most recently opened project |
 
 Keeping images out of the document is what makes autosave cheap. Autosave runs on
@@ -95,7 +109,9 @@ project was rewritten each time, roughly 180 KB per keystroke for two scenes. Th
 document is now about 4 KB, and only images that actually changed are written. Storing
 them as `Blob`s rather than base64 also drops the 33% encoding overhead.
 
-Projects written by older builds are migrated on first load.
+Projects written by older builds are migrated on first load, including plans that were
+stored inside the document. What a migration moves out is written on the next save,
+whichever way the project was opened.
 
 ## Project file format
 
@@ -112,6 +128,7 @@ Projects written by older builds are migrated on first load.
   "eurl": "https://...",
   "auto": false,
   "walk": true,
+  "meta": false,
   "scenes": [{
     "id": "abc123",
     "name": "Entrance",
@@ -119,6 +136,8 @@ Projects written by older builds are migrated on first load.
     "th":  "data:image/jpeg;base64,...",
     "u0": 0.8, "p0": 0, "n": 0.25,
     "pp": { "x": 0.4, "y": 0.6 },
+    "taken": "2026-10-20T09:14:37",
+    "gps": { "lat": 24.7136111, "lon": 46.6752778 },
     "hs": [{
       "id": "x1", "type": "link", "to": "<sceneId>",
       "label": "", "text": "", "shape": "arrow",
@@ -136,6 +155,9 @@ Projects written by older builds are migrated on first load.
   from the left edge, `v` vertically from the top.
 - `u0` and `p0` are the scene's starting yaw and pitch; `n` is its north offset.
 - `pp` is the scene's position on the floor plan, also 0 to 1.
+- `taken` is the camera's local capture time, with no time zone, and `gps` the position in
+  decimal degrees. Both are optional. `meta` decides whether the tour shows them; an
+  exported tour carries them only when it is `true`.
 - `logo.pos` is a physical corner (`tl`, `tr`, `bl` or `br`), so the logo stays put when
   the language changes. `size` runs from 5 to 40 and scales the logo's area against the
   screen, `op` is its opacity, and `ar` its width-to-height ratio.
