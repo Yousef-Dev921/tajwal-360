@@ -67,6 +67,11 @@ that isn't granted it says once per session that the browser may clear the work.
 - Glyphs on light icon colours, such as white, are drawn dark so they stay visible.
 - 60 steps of undo and redo.
 - Scene thumbnails, drag-to-reorder, rename and delete.
+- Tours of more than 12 scenes get a search field over the scene list and over a link's
+  list of destinations. Search ignores case, accents and Arabic diacritics, treats the alef
+  forms (أ إ آ ا) as one, and finds a scene by its number in the tour as well as by name.
+  Scenes can still be dragged to a new place while the list is filtered; on Enter, the
+  destination search takes its first match.
 - A company logo in any corner of the tour, over every scene, with adjustable size and
   opacity. Drag it on the panorama and it snaps to the nearest corner; it moves the title
   row, the compass and the scene bar out of its way. PNG, WebP and SVG keep their
@@ -116,6 +121,25 @@ that isn't granted it says once per session that the browser may clear the work.
   away from the hotspot they took; so return links keep the sense of direction with no
   setup. Failing both, the next scene opens at its start angle.
 - A start screen built from the first scene.
+- A scene bar with a counter (48/143) and a grid of every scene, with thumbnails and the
+  same search as the editor. The grid is a dialog: arrow keys move through it, Enter opens
+  a scene, Escape closes it, and focus goes back to the button that opened it. A scene
+  chosen there opens directly, without the walk, since it is a jump rather than a step.
+  - Up to 12 scenes, the bar also names every scene, so each is one tap away.
+  - A longer tour shows previous and next buttons instead. A row of 143 names would have to
+    be scrolled to find where you are, and each name is a blurred glass button that a
+    phone redraws every frame. Previous and next follow the tour's order, which in a survey
+    is usually the route walked on site. With the grid, they are also how a keyboard reaches
+    every scene, since the hotspots on the panorama can't take focus.
+- Click anywhere, an option under Viewing options, off by default. A click in the tour that
+  misses every hotspot takes the link hotspot that lies most nearly in its direction, and
+  walks there. Directions are compared after level correction, with heights counting half
+  as much as bearings: how far below the horizon a floor arrow sits mostly says how far
+  away it is, while its bearing is where the visitor wants to go. A link more than 60° from
+  the click is never taken. That is about the edge of a 16:9 screen at the default zoom,
+  so the walk always turns toward something the visitor can see. Before the click, the
+  hotspot it would take grows under the pointer, as on hover. A drag, a pinch, a click on
+  a plain text note and a click with any button but the main one never trigger it.
 - Neighbouring scenes are preloaded.
 - Panoramas in GPU memory stay within a budget of pixels: eight 4096 × 2048 panoramas, or
   four on touch devices, with an 8192 × 4096 one counting as four. Older ones are released
@@ -243,6 +267,7 @@ whichever way the project was opened.
   "walk": true,
   "meta": false,
   "hd": true,
+  "click": true,
   "scenes": [{
     "id": "abc123",
     "name": "Entrance",
@@ -287,6 +312,8 @@ whichever way the project was opened.
   4096 px. Root `hd: true` keeps high resolution on for images added later. A build that
   predates them ignores both and keeps `img`. In a folder tour's `data.js`, `img` and `hd`
   are relative paths, and the viewer picks one per device.
+- `click`, optional, turns on click anywhere. It is left out while off, and only `true`
+  is accepted on import.
 - `taken` is the camera's local capture time, with no time zone, and `gps` the position in
   decimal degrees. Both are optional. `meta` decides whether the tour shows them; an
   exported tour carries them only when it is `true`.
@@ -349,7 +376,8 @@ GitHub Pages, Cloudflare Pages and Netlify all provide it on free tiers.
 
 Colour pairs are checked numerically: text at 4.5:1 or better (WCAG 1.4.3), control
 borders and focus rings at 3:1 or better (WCAG 1.4.11). Touch targets are 44px on
-coarse pointers (WCAG 2.5.5). The panorama is fully keyboard operable, status messages
+coarse pointers (WCAG 2.5.5). The panorama is fully keyboard operable, every scene of a tour
+can be reached from the keyboard through the scene bar and the scene grid, status messages
 are announced through `aria-live`, and `prefers-reduced-motion` is respected.
 
 ## Limitations
@@ -367,7 +395,11 @@ are announced through `aria-live`, and `prefers-reduced-motion` is respected.
 - Safari may evict site storage after a period without visits. Keep `.json` backups.
 - Renaming a scene or changing its north direction does not update tours you already
   exported. Export again.
-- The logo is a screen overlay, so it does not appear inside a VR headset.
+- The logo is a screen overlay, so it does not appear inside a VR headset. Nor do the
+  scene bar and the scene grid.
+- Click anywhere stays off in a VR headset: a trigger pulled at empty space does nothing.
+  Nothing in the headset would show which link it was about to take, the visitor would be
+  moved without a walk, and the controller's ray already makes a hotspot easy to aim at.
 - Safari on iPhone and iPad doesn't let a page set an audio volume, so there the music
   pauses while a scene's clip plays instead of fading down, and resumes afterwards.
 - **VR mode and the gyroscope have not been tested on real hardware.** Verify both
