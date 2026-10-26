@@ -65,7 +65,12 @@ const I18N = {
     'act.redo': 'إعادة',
     'act.redoTitle': 'إعادة (Ctrl+Shift+Z)',
     'act.preview': 'معاينة',
-    'act.export': 'تصدير الجولة',
+    'act.export': 'تصدير HTML',
+    'act.exportTitle':
+      'ملف HTML واحد يُفتح في أي مكان، حتى من الجهاز مباشرة. يناسب الجولات الصغيرة.',
+    'act.exportZip': 'تصدير كمجلد (ZIP)',
+    'act.exportZipTitle':
+      'مجلد ملفات تنشره على استضافة ويب مثل GitHub Pages أو Netlify. يُفتح أسرع ويناسب الجولات الكبيرة.',
     'act.saveCopy': 'حفظ نسخة',
     'act.import': 'استيراد',
     'act.startAngle': 'زاوية البداية',
@@ -215,6 +220,17 @@ const I18N = {
     'msg.needOneScene': 'أضف مشهداً واحداً على الأقل قبل التصدير.',
     'msg.preparing': 'جارٍ تجهيز الملف…',
     'msg.exported': 'نُزّلت الجولة كملف مستقل ({mb} ميجابايت).',
+    'msg.exportBig':
+      'سيبلغ حجم الملف نحو {mb} ميجابايت. الملف الواحد بهذا الحجم بطيء التحميل وقد يُغلق الصفحة على الهواتف، و«تصدير كمجلد (ZIP)» أنسب له. اضغط «تصدير HTML» مرة أخرى للمتابعة رغم ذلك.',
+    'msg.zipProgress': 'جارٍ تجهيز المجلد… \u2066{p}%\u2069',
+    'msg.zipDone':
+      'نُزّلت الجولة كمجلد مضغوط ({mb} ميجابايت). فكّ الضغط وارفع المجلد إلى استضافة ويب، فهو لا يعمل عند فتحه من الجهاز مباشرة.',
+    'msg.zipLimit':
+      'الجولة أكبر من أن تُحفظ في ملف ZIP واحد، إذ تتجاوز 4 جيجابايت. قسّمها إلى مشروعين.',
+    'view.fileProto':
+      'هذه الجولة مجلد ملفات، ولا تعمل عند فتحها من الجهاز مباشرة لأن المتصفح يمنع عرض الصور من الملفات المحلية. ارفع المجلد كما هو إلى استضافة ويب مثل GitHub Pages أو Netlify، أو شغّل خادماً محلياً داخله بالأمر \u2066python3 -m http.server\u2069 ثم افتح \u2066http://localhost:8000\u2069',
+    'zip.readme':
+      'جولة افتراضية من Tajwal 360\n\nافتح index.html من خادم ويب، لا من الجهاز مباشرة، لأن المتصفح يمنع عرض الصور من الملفات المحلية.\n\nللنشر: ارفع هذا المجلد كما هو إلى أي استضافة ملفات ثابتة، مثل GitHub Pages أو Netlify أو Cloudflare Pages، مع الإبقاء على ترتيب المجلدات.\n\nللمعاينة على هذا الجهاز: افتح الطرفية داخل هذا المجلد وشغّل\n    python3 -m http.server 8000\nثم افتح http://localhost:8000 في المتصفح.',
     'msg.exportFail':
       'تعذّر التصدير. افتح الموقع عبر https (مثل GitHub Pages) أو من خادم محلي، فالتصدير لا يعمل عند فتح الملف مباشرةً من الجهاز.',
     'msg.northSet': 'حُدّد اتجاه الشمال لهذا المشهد، وظهرت البوصلة في الزاوية.',
@@ -280,7 +296,12 @@ const I18N = {
     'act.redo': 'Redo',
     'act.redoTitle': 'Redo (Ctrl+Shift+Z)',
     'act.preview': 'Preview',
-    'act.export': 'Export tour',
+    'act.export': 'Export HTML',
+    'act.exportTitle':
+      'One HTML file that opens anywhere, even straight from disk. Best for small tours.',
+    'act.exportZip': 'Export as folder (ZIP)',
+    'act.exportZipTitle':
+      'A folder of files to publish on a web host such as GitHub Pages or Netlify. Opens faster and suits large tours.',
     'act.saveCopy': 'Save a copy',
     'act.import': 'Import',
     'act.startAngle': 'Start angle',
@@ -419,6 +440,17 @@ const I18N = {
     'msg.needOneScene': 'Add at least one scene before exporting.',
     'msg.preparing': 'Preparing the file…',
     'msg.exported': 'Tour downloaded as a single file ({mb} MB).',
+    'msg.exportBig':
+      'The file would be about {mb} MB. A single file this large loads slowly and can crash the page on phones, so “Export as folder (ZIP)” suits it better. Click “Export HTML” again to go ahead anyway.',
+    'msg.zipProgress': 'Packing the folder… {p}%',
+    'msg.zipDone':
+      'Tour downloaded as a ZIP folder ({mb} MB). Unzip it and upload the folder to a web host; it doesn’t open straight from disk.',
+    'msg.zipLimit':
+      'This tour is too large for one ZIP file: it would pass 4 GB. Split it into two projects.',
+    'view.fileProto':
+      'This tour is a folder of files and doesn’t work when opened straight from disk, because browsers block panoramas loaded from local files. Upload the folder as it is to a web host such as GitHub Pages or Netlify, or run a local server inside it with python3 -m http.server and open http://localhost:8000',
+    'zip.readme':
+      'Tajwal 360 virtual tour\n\nOpen index.html from a web server, not straight from disk: browsers block panoramas loaded from local files.\n\nTo publish, upload this folder as it is to any static web host, such as GitHub Pages, Netlify or Cloudflare Pages. Keep the folder structure.\n\nTo preview on this computer, open a terminal in this folder and run\n    python3 -m http.server 8000\nthen open http://localhost:8000 in a browser.',
     'msg.exportFail':
       'Export failed. Open the site over https (GitHub Pages, for example) or from a local server. Export doesn’t work when the page is opened straight from disk.',
     'msg.northSet': 'North set for this scene. The compass now shows in the corner.',
@@ -1983,8 +2015,15 @@ const fileName = ext =>
 // Portable form of a project: images become base64 here only, for export and
 // for saving a .json file. Never for storage. A published tour leaves out the capture date
 // and position unless the author chose to show them, so they don't travel unseen.
-async function toPortable(Q, forTour) {
-  const out = toDoc(Q);
+// put(blob, name) decides how a file travels: as a data: URL by default, or, for the folder
+// export, as a file in the ZIP whose relative path takes its place. name is a path without
+// an extension, unique within the tour.
+async function toPortable(Q, forTour, put) {
+  const out = toDoc(Q),
+    zip = !!put,
+    // Small images the document carries inline (icons, nadir, logo) become files too.
+    inline = (u, name) => (zip ? put(dataToBlob(u), name) : u);
+  put = put || toDataURL;
   out.scenes = [];
   for (const s of Q.scenes) {
     const { blob, ...r } = s;
@@ -1992,29 +2031,54 @@ async function toPortable(Q, forTour) {
       delete r.taken;
       delete r.gps;
     }
-    out.scenes.push({ ...r, img: blob ? await toDataURL(blob) : s.img });
+    // Scene thumbnails only show in the editor's scene list.
+    if (zip) delete r.th;
+    out.scenes.push({ ...r, img: blob ? await put(blob, 'scenes/' + s.id) : s.img });
   }
   if (Q.audio)
     out.audio = {
       name: Q.audio.name,
       vol: Q.audio.vol,
-      src: Q.audio.blob ? await toDataURL(Q.audio.blob) : Q.audio.src,
+      src: Q.audio.blob ? await put(Q.audio.blob, 'audio/music') : Q.audio.src,
     };
-  if (Q.plan) out.plan = { img: Q.plan.blob ? await toDataURL(Q.plan.blob) : Q.plan.img };
-  if (Q.cover) out.cover = { img: Q.cover.blob ? await toDataURL(Q.cover.blob) : Q.cover.img };
+  if (Q.plan) out.plan = { img: Q.plan.blob ? await put(Q.plan.blob, 'plan') : Q.plan.img };
+  if (Q.cover) out.cover = { img: Q.cover.blob ? await put(Q.cover.blob, 'cover') : Q.cover.img };
   // The editor keeps every icon uploaded to a project; a file carries only those in use.
   const used = new Set(Q.scenes.flatMap(s => s.hs.filter(h => h.shape == 'img').map(h => h.icon)));
-  out.icons = (Q.icons || []).filter(ic => used.has(ic.id));
+  out.icons = [];
+  for (const ic of Q.icons || [])
+    if (used.has(ic.id)) out.icons.push({ ...ic, img: await inline(ic.img, 'icons/' + ic.id) });
   if (!out.icons.length) delete out.icons;
+  if (zip && Q.nadir) out.nadir = { ...Q.nadir, img: await inline(Q.nadir.img, 'nadir') };
+  if (zip && Q.logo) out.logo = { ...Q.logo, img: await inline(Q.logo.img, 'logo') };
   out.lang = LANG; // an exported tour renders in the language its author was using
   return out;
 }
 const portableProject = () => toPortable(project);
+// What the single file would weigh: base64 grows every byte by a third, on top of about
+// 750 KB of code. Past EXPORT_BIG_MB the author is pointed to the folder export first.
+const EXPORT_BIG_MB = 100;
+function exportEstimate() {
+  let n = 0;
+  for (const s of scenes) n += s.blob?.size || 0;
+  n += (project.audio?.blob?.size || 0) + (project.plan?.blob?.size || 0);
+  n += project.cover?.blob?.size || 0;
+  return (n * 4) / 3 + 8e5;
+}
+let expArmed = 0;
 $('exp').onclick = async () => {
   if (!scenes.length) {
     toast(t('msg.needOneScene'));
     return;
   }
+  const mb = exportEstimate() / 1048576;
+  // A large file takes a second click, once the author has read what it will weigh.
+  if (mb > EXPORT_BIG_MB && Date.now() - expArmed > 15000) {
+    expArmed = Date.now();
+    toast(t('msg.exportBig', { mb: Math.round(mb) }), 15000);
+    return;
+  }
+  expArmed = 0;
   toast(t('msg.preparing'), 60000);
   try {
     const [css, three, app, data] = await Promise.all([
@@ -2030,6 +2094,177 @@ $('exp').onclick = async () => {
   } catch (e) {
     toast(t('msg.exportFail'), 9000);
   }
+};
+// ───────────── folder (ZIP) export ─────────────
+// The folder tour loads each panorama as its own file, so a large tour costs no more to open
+// than the scenes a visitor actually sees, and nothing is inflated by base64. Layout:
+//   index.html        the page, with its own content security policy
+//   tour/             style.css, three.min.js, app.js (cached by the browser between visits)
+//                     and data.js, the tour document, which sets window.__TOUR__ exactly as
+//                     the single file does, so the viewer has one code path for both
+//   scenes/, audio/, icons/, plan, cover, nadir, logo   the media, as binary files
+// data.js is a script rather than JSON so the page needs no fetch() and no connect-src.
+// file: lets the scripts run when the folder is opened from disk, whichever way a browser
+// reads 'self' for a file, so the page can explain that it needs a web server; a hosted page
+// can't load file: URLs anyway.
+const ZIP_CSP =
+  "default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; " +
+  "img-src 'self' data:; media-src 'self'; base-uri 'none'; form-action 'none'";
+const FAVICON = document.querySelector('link[rel=icon]')?.getAttribute('href') || '';
+// File extensions by type, so a static host serves each file with the right Content-Type.
+const EXT = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/svg+xml': 'svg',
+  'audio/mpeg': 'mp3',
+  'audio/mp3': 'mp3',
+  'audio/mp4': 'm4a',
+  'audio/x-m4a': 'm4a',
+  'audio/aac': 'aac',
+  'audio/ogg': 'ogg',
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+  'audio/webm': 'webm',
+  'audio/flac': 'flac',
+};
+// A ZIP written by hand. Every entry is STORED, since JPEG and compressed audio don't shrink
+// any further, with its CRC-32 and a UTF-8 name, followed by the central directory. The
+// archive is a Blob made of the files' own Blobs between small headers: the browser can leave
+// the images where they already are (on disk, for blobs read from IndexedDB) rather than
+// copy them into one huge buffer, and the CRC is computed over 4 MB slices. Without ZIP64 an
+// archive holds at most 65,535 entries and 4 GiB; a 143-scene tour at 8192 px comes to about
+// 2 GB, so a tour past either limit is refused, before any file is read.
+const CRC_TABLE = (() => {
+  const T = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    T[n] = c;
+  }
+  return T;
+})();
+function crc32(a, c) {
+  for (let i = 0, n = a.length; i < n; i++) c = CRC_TABLE[(c ^ a[i]) & 255] ^ (c >>> 8);
+  return c;
+}
+const ZIP_SLICE = 4 << 20;
+// files: [{ name, data: Blob or string }]. progress(done, total) runs after each file.
+async function zipBlob(files, progress) {
+  const enc = new TextEncoder(),
+    items = files.map(f => ({
+      name: enc.encode(f.name),
+      b: f.data instanceof Blob ? f.data : new Blob([f.data]),
+    })),
+    total = items.reduce((n, x) => n + 30 + 46 + 2 * x.name.length + x.b.size, 22);
+  if (items.length > 0xffff || total > 0xffffffff) throw new Error('zip-limit');
+  const d = new Date(),
+    time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1),
+    date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate(),
+    parts = [],
+    dir = [];
+  let off = 0;
+  for (let i = 0; i < items.length; i++) {
+    const { name, b } = items[i];
+    let c = 0xffffffff;
+    for (let p = 0; p < b.size; p += ZIP_SLICE)
+      c = crc32(new Uint8Array(await b.slice(p, p + ZIP_SLICE).arrayBuffer()), c);
+    c = (c ^ 0xffffffff) >>> 0;
+    // Local header, then the same fields again in the central directory.
+    const L = new DataView(new ArrayBuffer(30)),
+      C = new DataView(new ArrayBuffer(46)),
+      common = (v, o) => {
+        v.setUint16(o, 20, true); // version needed: 2.0
+        v.setUint16(o + 2, 0x0800, true); // bit 11: the name is UTF-8
+        v.setUint16(o + 4, 0, true); // method: STORE
+        v.setUint16(o + 6, time, true);
+        v.setUint16(o + 8, date, true);
+        v.setUint32(o + 10, c, true);
+        v.setUint32(o + 14, b.size, true);
+        v.setUint32(o + 18, b.size, true);
+        v.setUint16(o + 22, name.length, true);
+      };
+    L.setUint32(0, 0x04034b50, true);
+    common(L, 4);
+    C.setUint32(0, 0x02014b50, true);
+    C.setUint16(4, 0x0314, true); // made by Unix, 2.0, so the mode below applies
+    common(C, 6);
+    C.setUint32(38, 0o100644 << 16, true); // a regular file, rw-r--r--
+    C.setUint32(42, off, true);
+    parts.push(L.buffer, name, b);
+    dir.push(C.buffer, name);
+    off += 30 + name.length + b.size;
+    progress?.(i + 1, items.length);
+  }
+  const size = dir.reduce((n, x) => n + x.byteLength, 0),
+    E = new DataView(new ArrayBuffer(22));
+  E.setUint32(0, 0x06054b50, true);
+  E.setUint16(8, items.length, true);
+  E.setUint16(10, items.length, true);
+  E.setUint32(12, size, true);
+  E.setUint32(16, off, true);
+  return new Blob([...parts, ...dir, E.buffer], { type: 'application/zip' });
+}
+// Builds the folder tour's file list and the page that loads it.
+async function folderTour() {
+  const files = [],
+    taken = new Set(),
+    put = (b, name) => {
+      // Ids from an imported file can hold anything, so a name keeps only safe characters,
+      // and stays unique if two of them clean up the same way.
+      const ext = EXT[(b.type || '').split(';')[0]] || (/^audio\//.test(b.type) ? 'mp3' : 'jpg');
+      let base = name.replace(/[^\w\/-]/g, '_'),
+        path = base + '.' + ext;
+      for (let k = 2; taken.has(path); k++) path = base + '-' + k + '.' + ext;
+      taken.add(path);
+      files.push({ name: path, data: b });
+      return path;
+    };
+  const [css, three, app, data] = await Promise.all([
+      fetchText('style.css'),
+      fetchText('vendor/three.min.js'),
+      fetchText('app.js'),
+      toPortable(project, true, put),
+    ]),
+    // A new query string on every export, so visitors don't keep last version's code.
+    v = Date.now().toString(36),
+    html = `<!DOCTYPE html><html lang="${LANG}" dir="${isRTL() ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${ZIP_CSP}"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(project.title)}</title><link rel="icon" href="${esc(FAVICON)}"><link rel="stylesheet" href="tour/style.css?v=${v}"><noscript><style>#xload{display:none}</style></noscript></head><body><div id="xload" role="status"><b dir="auto">${esc(project.title)}</b><i></i><span>${esc(t('view.loading'))}</span></div><div id="root" class="view">${SHELL}</div><script src="tour/three.min.js?v=${v}"><\/script><script src="tour/data.js?v=${v}"><\/script><script src="tour/app.js?v=${v}"><\/script></body></html>`;
+  files.unshift(
+    { name: 'index.html', data: html },
+    { name: 'tour/style.css', data: css },
+    { name: 'tour/three.min.js', data: three },
+    { name: 'tour/app.js', data: app },
+    {
+      name: 'tour/data.js',
+      data: `window.__TOUR__=${JSON.stringify(data).replace(/</g, '\\u003c')};`,
+    },
+    // Both languages, since whoever unpacks the folder may not read the tour's.
+    { name: 'README.txt', data: I18N.en['zip.readme'] + '\n\n' + I18N.ar['zip.readme'] + '\n' }
+  );
+  return files;
+}
+$('expz').onclick = async () => {
+  if (!scenes.length) {
+    toast(t('msg.needOneScene'));
+    return;
+  }
+  toast(t('msg.preparing'), 600000);
+  busy(1);
+  try {
+    let last = -1;
+    const zip = await zipBlob(await folderTour(), (i, n) => {
+        // In steps of ten, so a screen reader isn't read every file.
+        const p = Math.floor((i / n) * 10) * 10;
+        if (p != last) toast(t('msg.zipProgress', { p: (last = p) }), 600000);
+      }),
+      bytes = saveFile(fileName('.zip'), zip, 'application/zip');
+    editCount = 0;
+    toast(t('msg.zipDone', { mb: (bytes / 1048576).toFixed(1) }), 12000);
+  } catch (e) {
+    toast(t(e.message == 'zip-limit' ? 'msg.zipLimit' : 'msg.exportFail'), 12000);
+  }
+  busy(-1);
 };
 let dragFrom = -1;
 function moveScene(a, b) {
@@ -4201,6 +4436,19 @@ if (!EMBED) {
     $('sgo').disabled = true;
     $('sgo').textContent = t('view.loading');
     $('start').hidden = false;
+    // A folder tour opened from disk: Chrome and Firefox refuse to hand a file:// image to
+    // WebGL, so every scene would fail. Say why, in both languages, and how to open it.
+    if (location.protocol == 'file:' && !/^data:/.test(scenes[0].img)) {
+      $('sgo').hidden = true;
+      $('std').textContent = t('view.fileProto');
+      const o = isRTL() ? 'en' : 'ar',
+        p = document.createElement('p');
+      p.lang = o;
+      p.dir = o == 'ar' ? 'rtl' : 'ltr';
+      p.textContent = I18N[o]['view.fileProto'];
+      $('std').after(p);
+      return;
+    }
   }
   ui();
   resize();

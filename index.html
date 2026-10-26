@@ -49,6 +49,7 @@
  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 11l5 5 5-5M4 20h16"/></symbol>
  <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
  <symbol id="i-import" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+ <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11.5v5M9.8 14.5l2.2 2.2 2.2-2.2"/></symbol>
  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></symbol>
  <symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h10v10H9z"/><path d="M5 15V5h10"/></symbol>
@@ -105,8 +106,9 @@
     </div>
     <div class="row">
       <button id="prev"><svg class="ic"><use href="#i-eye"/></svg><span data-i18n="act.preview">معاينة</span></button>
-      <button id="exp" class="pri"><svg class="ic"><use href="#i-download"/></svg><span data-i18n="act.export">تصدير الجولة</span></button>
+      <button id="exp" class="pri" data-i18n-title="act.exportTitle" title="ملف HTML واحد يُفتح في أي مكان، حتى من الجهاز مباشرة. يناسب الجولات الصغيرة."><svg class="ic"><use href="#i-download"/></svg><span data-i18n="act.export">تصدير HTML</span></button>
     </div>
+    <button id="expz" data-i18n-title="act.exportZipTitle" title="مجلد ملفات تنشره على استضافة ويب مثل GitHub Pages أو Netlify. يُفتح أسرع ويناسب الجولات الكبيرة."><svg class="ic"><use href="#i-folder"/></svg><span data-i18n="act.exportZip">تصدير كمجلد (ZIP)</span></button>
     <div class="row">
       <button id="psave"><svg class="ic"><use href="#i-save"/></svg><span data-i18n="act.saveCopy">حفظ نسخة</span></button>
       <label class="btn" for="pfile"><svg class="ic"><use href="#i-import"/></svg><span data-i18n="act.import">استيراد</span></label>
@@ -322,6 +324,6 @@
 </div>
 
 <script src="vendor/three.min.js?v=2.0"></script>
-<script src="app.js?v=4.7"></script>
+<script src="app.js?v=4.8"></script>
 </body>
 </html>
