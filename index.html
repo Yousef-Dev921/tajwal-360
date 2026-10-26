@@ -127,6 +127,7 @@
     <div class="bd">
       <label data-i18n="f.sceneName">اسم المشهد<input id="sname" dir="auto" data-i18n-aria="f.sceneName" aria-label="اسم المشهد"></label>
       <p class="hint" id="scap" hidden></p>
+      <p class="hint" id="shd" hidden data-i18n="f.hdScene">لهذا المشهد نسخة عالية الدقة تظهر على أجهزة الكمبيوتر.</p>
       <div class="row">
         <button id="sstart" data-i18n-title="act.startAngleTitle" title="اجعل المنظر الحالي، بما فيه التكبير، بداية هذا المشهد"><svg class="ic"><use href="#i-start"/></svg><span data-i18n="act.startAngle">زاوية البداية</span></button>
         <button id="snorth" data-i18n-title="act.northTitle" title="اجعل الاتجاه الحالي هو الشمال، ليبقى الاتجاه ثابتاً عند الانتقال بين المشاهد"><svg class="ic"><use href="#i-north"/></svg><span data-i18n="act.north">اتجاه الشمال</span></button>
@@ -169,6 +170,8 @@
       <label class="opt"><input type="checkbox" id="wk" checked><span data-i18n="opt.walk">انتقال سلس بين المشاهد</span></label>
       <label class="opt"><input type="checkbox" id="metaon"><span data-i18n="opt.meta">إظهار تاريخ التصوير وموقعه</span></label>
       <p class="hint" data-i18n="hint.meta">يُقرأ التاريخ والموقع من بيانات الكاميرا داخل الصورة، ولا تتضمّنهما الجولة المصدَّرة إلا عند تفعيل هذا الخيار.</p>
+      <label class="opt"><input type="checkbox" id="hdon"><span data-i18n="opt.hd">الاحتفاظ بنسخة عالية الدقة (&#x2066;8192&#x2069; بكسل)</span></label>
+      <p class="hint" data-i18n="hint.hd">يسري على الصور التي تُضاف بعد تفعيله. تُحفظ لكل بانوراما أعرض من &#x2066;4096&#x2069; بكسل نسختان: حتى &#x2066;8192&#x2069; لأجهزة الكمبيوتر، و&#x2066;4096&#x2069; للهواتف والأجهزة اللوحية. يحمل التصدير كمجلد النسختين، أما ملف HTML فيحمل نسخة &#x2066;4096&#x2069; وحدها.</p>
     </div>
   </details>
 

@@ -36,6 +36,14 @@ that isn't granted it says once per session that the browser may clear the work.
 - Load several panoramas at once, by file picker or drag-and-drop. Anything wider than
   4096px is downscaled; anything that is not roughly 2:1 is placed as a flat panel
   instead of being stretched across the sphere.
+- High-resolution panoramas, a project option under Viewing options. While it is on, a
+  panorama wider than 4096 px also keeps a master of up to 8192 px, and the 4096 px copy is
+  drawn from that master. Desktops show the master; phones, tablets and any GPU that can't
+  hold an 8192 texture show the 4096 px copy and never download or decode the master. It is
+  a project setting rather than a choice per import because it describes the tour being
+  made, and it applies to images added after it is turned on: an image already reduced to
+  4096 px can't be enlarged again. The folder export carries both sizes; the single HTML
+  file carries the 4096 px copies only, and says so.
 - Link hotspots and info hotspots, in seven shapes (including a floor spot, a marker lying
   on the floor with a soft beam of light), as text only, or with an icon of your own.
   Colour and size are adjustable. Drag a hotspot in the panorama to move it.
@@ -106,10 +114,14 @@ that isn't granted it says once per session that the browser may clear the work.
   setup. Failing both, the next scene opens at its start angle.
 - A start screen built from the first scene.
 - Neighbouring scenes are preloaded.
-- At most 8 panoramas (4 on touch devices) stay in GPU memory; older ones are released and
-  decoded again when revisited. Each one is 32 MB at 4096 × 2048, and Safari on iOS reloads
-  a page that holds much more than about 600 MB, so without the limit a long tour would
-  crash on an iPhone.
+- Panoramas in GPU memory stay within a budget of pixels: eight 4096 × 2048 panoramas, or
+  four on touch devices, with an 8192 × 4096 one counting as four. Older ones are released
+  and decoded again when revisited; the current scene and a walk in progress never are.
+  Each 4096 panorama is 32 MB, and Safari on iOS reloads a page that holds much more than
+  about 600 MB, so without the limit a long tour would crash on an iPhone. Preloading fills
+  only what the budget leaves beside the current scene.
+- Decodes take turns, one at a time on touch devices and two elsewhere, and the scene the
+  visitor is waiting for jumps ahead of preloads.
 - An exported tour shows its title and a loading indicator while the file downloads.
 - Pinch zoom on touch, wheel zoom on desktop, and full keyboard control.
 - Device gyroscope, and WebXR VR mode with an in-headset info panel.
@@ -183,7 +195,8 @@ IndexedDB database `vrtour`, object store `k`:
 | --- | --- |
 | `idx` | Project list: title, scene count, timestamp, thumbnail |
 | `p:<id>` | Project document, **without image bytes** |
-| `b:<id>:<sceneId>` | Panorama as a binary `Blob` |
+| `b:<id>:<sceneId>` | Panorama as a binary `Blob`, at most 4096 px wide |
+| `h:<id>:<sceneId>` | High-resolution master of up to 8192 px, for scenes that have one |
 | `a:<id>` | Audio track as a `Blob` |
 | `pl:<id>` | Floor plan image as a `Blob` |
 | `cv:<id>` | Cover image as a `Blob` |
@@ -217,11 +230,13 @@ whichever way the project was opened.
   "auto": false,
   "walk": true,
   "meta": false,
+  "hd": true,
   "scenes": [{
     "id": "abc123",
     "name": "Entrance",
     "img": "data:image/jpeg;base64,...",
     "th":  "data:image/jpeg;base64,...",
+    "hd":  "data:image/jpeg;base64,...",
     "u0": 0.8, "p0": 0, "n": 0.25, "f0": 60,
     "lq": [0.0262, 0, 0, 0.9997],
     "pp": { "x": 0.4, "y": 0.6 },
@@ -255,6 +270,10 @@ whichever way the project was opened.
   optional, is its starting zoom as a vertical field of view from 40 to 95 degrees
   (75 when absent). `lq`, optional, is its level correction as a quaternion `[x, y, z, w]`.
 - `pp` is the scene's position on the floor plan, also 0 to 1.
+- Scene `hd`, optional, is the high-resolution master of up to 8192 px, beside `img` at
+  4096 px. Root `hd: true` keeps high resolution on for images added later. A build that
+  predates them ignores both and keeps `img`. In a folder tour's `data.js`, `img` and `hd`
+  are relative paths, and the viewer picks one per device.
 - `taken` is the camera's local capture time, with no time zone, and `gps` the position in
   decimal degrees. Both are optional. `meta` decides whether the tour shows them; an
   exported tour carries them only when it is `true`.
@@ -322,6 +341,10 @@ are announced through `aria-live`, and `prefers-reduced-motion` is respected.
   imagery, and embeds panoramas as base64. A 15-scene tour reaches tens of megabytes; use
   the folder export for anything larger.
 - A folder tour doesn't open from disk; it needs a web server, even a local one.
+- High resolution can't be added to images already in a project, since they were stored at
+  4096 px; add them again with the option on. Safari on iPhone and iPad refuses a canvas of
+  8192 × 4096, so images added there keep the 4096 px copy only.
+- A touch-screen laptop counts as a touch device and gets the 4096 px copies.
 - Autosave does not work in private browsing. The editor says so rather than failing
   quietly.
 - Safari may evict site storage after a period without visits. Keep `.json` backups.
@@ -333,8 +356,6 @@ are announced through `aria-live`, and `prefers-reduced-motion` is respected.
 
 ## Roadmap
 
-- Sharper panoramas: 8192 px for desktops and 4096 px for phones, chosen per device. It
-  waits on ZIP export, since a single HTML file with 8192 px images grows about fourfold.
 - A trimmed viewer bundle that leaves out editor code.
 - Direct-to-disk saving through the File System Access API.
 - Per-scene audio and a view cone on the floor plan.
