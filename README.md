@@ -185,9 +185,10 @@ uncompressed (JPEG and compressed audio don't shrink), with its CRC-32 and a UTF
 It is assembled from the images' own `Blob`s, so a 150-scene export holds about 60 MB of
 JavaScript memory at its peak rather than the whole archive. Without ZIP64 a ZIP holds at most
 65,535 files and 4 GB; a tour past either limit is refused with a message before anything
-is read. 143 scenes at 4096 px come to roughly 400 MB.
+is read. 143 scenes at 4096 px come to roughly 300 MB as a folder, against about 400 MB as
+one HTML file; with an 8192 px master each, about 2 GB.
 
-**The folder must be served over HTTP.** Opened straight from disk, Chrome and Firefox
+**The folder must be served over HTTP.** Opened straight from disk, browsers such as Chrome
 refuse to hand `file://` images to WebGL, so the page says so, in both languages, instead of
 failing silently. Upload the unpacked folder as it is to GitHub Pages, Netlify, Cloudflare
 Pages or any static host. To preview it on your own machine, run this inside the folder and
