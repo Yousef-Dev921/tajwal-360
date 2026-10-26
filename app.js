@@ -1380,8 +1380,8 @@ function makeHotspotSprite(h) {
     e.lb.renderOrder = 11;
     e.lW = c.width;
     e.lH = c.height;
-    // A label shown on hover starts hidden, in the tour; nothing is hovered after a rebuild.
-    e.a = mode == 'view' && hoverLabel(h) && h !== hovered ? 0 : 1;
+    // A label shown on hover starts hidden in the tour, unless its hotspot is hovered or peeked.
+    e.a = mode == 'view' && hoverLabel(h) && h !== hovered && h !== peek?.h ? 0 : 1;
   }
   return e;
 }
@@ -1443,9 +1443,9 @@ function buildHotspots() {
   hotspotGroup.clear();
   gazeTarget = null;
   // A redraw, such as a custom icon finishing decoding, leaves a hovered hotspot hovered and a
-  // peeked one peeked; a new scene starts with neither.
+  // peeked one peeked; a new scene starts with neither, and the editor has no peek.
   if (!scenes[current]?.hs.includes(hovered)) hovered = null;
-  if (!scenes[current]?.hs.includes(peek?.h)) peek = null;
+  if (mode != 'view' || !scenes[current]?.hs.includes(peek?.h)) peek = null;
   hsParts = (scenes[current]?.hs || []).map(h => {
     const e = makeHotspotSprite(h);
     [e.dc, e.ic, e.lb].forEach(o => {
