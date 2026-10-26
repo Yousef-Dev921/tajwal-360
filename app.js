@@ -115,6 +115,19 @@ const I18N = {
     'opt.autorotate': 'دوران تلقائي',
     'opt.walk': 'انتقال سلس بين المشاهد',
     'opt.meta': 'إظهار تاريخ التصوير وموقعه',
+    'opt.click': 'النقر في أي مكان للانتقال',
+    'hint.click':
+      'في الجولة، تنقل النقرة التي لا تصيب أي نقطة إلى نقطة الانتقال الأقرب إلى اتجاهها. تكبر تلك النقطة تحت المؤشر قبل النقر، فيرى الزائر إلى أين سيذهب.',
+    'nav.bar': 'التنقّل بين المشاهد',
+    'nav.all': 'كل المشاهد',
+    'nav.gridAria': 'كل المشاهد. أنت في المشهد {i} من {n}',
+    'nav.prev': 'المشهد السابق',
+    'nav.next': 'المشهد التالي',
+    'nav.filterPh': 'ابحث باسم المشهد',
+    'nav.filterAria': 'تصفية المشاهد بالاسم',
+    'nav.none': 'لا يوجد مشهد يطابق البحث.',
+    'nav.matches': '{n} من {t}',
+    'f.targetFind': 'ابحث عن الوجهة',
     'hint.meta':
       'يُقرأ التاريخ والموقع من بيانات الكاميرا داخل الصورة، ولا تتضمّنهما الجولة المصدَّرة إلا عند تفعيل هذا الخيار.',
     'f.captured': 'التُقطت:',
@@ -330,6 +343,19 @@ const I18N = {
     'opt.autorotate': 'Auto-rotate',
     'opt.walk': 'Smooth transitions between scenes',
     'opt.meta': 'Show capture date and location',
+    'opt.click': 'Click anywhere to move',
+    'hint.click':
+      'In the tour, a click that misses every hotspot takes the link hotspot nearest its direction. That hotspot grows under the pointer first, so visitors see where they will go.',
+    'nav.bar': 'Scene navigation',
+    'nav.all': 'All scenes',
+    'nav.gridAria': 'All scenes. You are on scene {i} of {n}',
+    'nav.prev': 'Previous scene',
+    'nav.next': 'Next scene',
+    'nav.filterPh': 'Search by scene name',
+    'nav.filterAria': 'Filter scenes by name',
+    'nav.none': 'No scene matches.',
+    'nav.matches': '{n} of {t}',
+    'f.targetFind': 'Find a destination',
     'hint.meta':
       'Both are read from the camera data in each photo. An exported tour includes them only while this is on.',
     'f.captured': 'Captured:',
@@ -1247,7 +1273,11 @@ function makeHotspotSprite(h) {
   sprite.renderOrder = 10;
   return sprite;
 }
+// The scene whose hotspots are on the panorama. showScene() moves current on at once but
+// builds the next scene's hotspots only once its panorama has loaded.
+let hotspotsOf = null;
 function buildHotspots() {
+  hotspotsOf = scenes[current]?.id;
   hotspotGroup.children.slice().forEach(c => {
     c.material.map.dispose();
     c.material.dispose();
@@ -1466,30 +1496,117 @@ async function addFiles(files) {
 }
 // ───────────── ui ─────────────
 const selHotspot = () => scenes[current]?.hs.find(h => h.id == selId);
+// Up to MANY scenes, the tour's bar names every scene, so each is one tap away. A longer tour
+// gets previous, next and the scene grid there instead: a strip of 143 names has to be
+// scrolled to find where you are, and each name in it is a blurred glass button that a
+// phone's GPU redraws every frame. The editor's scene list and its destination list get a
+// search field from the same size.
+const MANY = 12;
+// Folds text for searching. Case, accents and Arabic diacritics (tashkeel, tatweel) are
+// dropped; alef with hamza or madda becomes a plain alef, alef maqsura yaa and taa marbuta
+// haa; Arabic-Indic digits become Latin. So "ايوان" finds "إيوان" and "12" finds "١٢". NFKD
+// splits the hamza and madda off their letters and undoes presentation forms.
+const fold = s =>
+  String(s ?? '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f\u0610-\u061a\u064b-\u065f\u0670\u06d6-\u06ed\u0640]/g, '')
+    .replace(/\u0671/g, '\u0627')
+    .replace(/\u0649/g, '\u064a')
+    .replace(/\u0629/g, '\u0647')
+    .replace(/[\u0660-\u0669\u06f0-\u06f9]/g, d => d.charCodeAt(0) % 16)
+    .toLowerCase();
+// A test for search q: every word of it must appear in the scene's name. A number on its own
+// also finds the scene at that place in the tour, as the counter shows it.
+function sceneMatcher(q) {
+  const f = fold(q).trim(),
+    w = f.split(/\s+/).filter(Boolean),
+    n = /^\d+$/.test(f) ? +f : 0;
+  return (s, i) => {
+    const nm = fold(s.name);
+    return w.every(x => nm.includes(x)) || i + 1 == n;
+  };
+}
+// The editor's list is rebuilt only when its scenes or thumbnails change; a new name is
+// written in place and the current scene just marked. With 150 scenes the list carries a few
+// hundred KB of thumbnails, and this runs on every change in the editor.
+let listShown = []; // [id, name, thumbnail] of each scene as #scenes shows it
 function renderScenes() {
-  const m = d =>
-    scenes
-      .map((s, i) =>
-        d
-          ? `<button data-i="${i}" draggable="true" class="sth ${i == current ? 'on' : ''}" title="${esc(s.name)}">${s.th ? `<img src="${esc(s.th)}" alt="" draggable="false">` : '<span class="ph"></span>'}<span dir="auto">${esc(s.name)}</span></button>`
-          : `<button data-i="${i}" class="${i == current ? 'on' : ''}" dir="auto">${esc(s.name)}</button>`
+  const L = $('scenes'),
+    rows = scenes.map(s => [s.id, s.name, s.th]),
+    same =
+      rows.length == listShown.length &&
+      rows.every((r, i) => r[0] === listShown[i][0] && r[2] === listShown[i][2]);
+  if (!same)
+    L.innerHTML = scenes
+      .map(
+        (s, i) =>
+          `<button data-i="${i}" draggable="true" class="sth" title="${esc(s.name)}">${s.th ? `<img src="${esc(s.th)}" alt="" draggable="false">` : '<span class="ph"></span>'}<span dir="auto">${esc(s.name)}</span></button>`
       )
       .join('');
-  $('scenes').innerHTML = m(1);
-  $('sb').innerHTML = scenes.length > 1 ? m(0) : '';
+  else
+    rows.forEach((r, i) => {
+      if (r[1] === listShown[i][1]) return;
+      const b = L.children[i];
+      b.title = r[1];
+      b.lastChild.textContent = r[1];
+    });
+  listShown = rows;
+  // Reordering still works while the list is filtered: each button keeps its place in the tour.
+  const fq = $('sfilt'),
+    many = scenes.length > MANY;
+  fq.hidden = !many;
+  if (!many) fq.value = '';
+  const m = sceneMatcher(fq.value);
+  let hits = 0;
+  [...L.children].forEach((b, i) => {
+    b.classList.toggle('on', i == current);
+    b.hidden = !m(scenes[i], i);
+    hits += !b.hidden;
+  });
+  $('snone').hidden = hits > 0 || !scenes.length;
+  renderBar();
+  $('title').textContent = scenes[current]?.name || '';
+  $('title').hidden = !scenes[current];
+  const sh = $('shint');
+  if (sh) sh.hidden = scenes.length < 2;
+}
+// The tour's scene bar. It is rebuilt on every scene change, so the button that had focus
+// gets it back, and a keyboard user can press Next again and again.
+function renderBar() {
+  const sb = $('sb'),
+    n = scenes.length,
+    i = current,
+    f = sb.contains(document.activeElement) && document.activeElement,
+    was = f && (f.dataset.a || f.dataset.i);
+  if (n < 2) {
+    sb.innerHTML = '';
+    return;
+  }
+  const step = (k, dis) =>
+      `<button data-a="${k}" class="sbn" title="${esc(t('nav.' + k))}" aria-label="${esc(t('nav.' + k))}"${dis ? ' disabled' : ''}><svg class="ic flip"><use href="#i-${k}"/></svg></button>`,
+    grid = `<button data-a="grid" class="sbg" aria-haspopup="dialog" title="${esc(t('nav.all'))}" aria-label="${esc(t('nav.gridAria', { i: i + 1, n }))}"><svg class="ic"><use href="#i-grid"/></svg><span dir="ltr">${i + 1}/${n}</span></button>`;
+  sb.innerHTML =
+    n > MANY
+      ? step('prev', i <= 0) + grid + step('next', i >= n - 1)
+      : grid +
+        scenes
+          .map(
+            (s, k) =>
+              `<button data-i="${k}" class="${k == i ? 'on' : ''}" dir="auto">${esc(s.name)}</button>`
+          )
+          .join('');
+  if (was) {
+    const b = sb.querySelector(`[data-a="${was}"], [data-i="${was}"]`);
+    (b && !b.disabled ? b : sb.querySelector('[data-a="grid"]')).focus({ preventScroll: true });
+  }
   // Centre the active scene in the bar. scrollIntoView() would also scroll the page that
   // embeds a tour, so the bar is scrolled directly.
-  const sb = $('sb'),
-    on = mode == 'view' && sb.querySelector('.on');
+  const on = mode == 'view' && sb.querySelector('.on');
   if (on) {
     const a = on.getBoundingClientRect(),
       b = sb.getBoundingClientRect();
     sb.scrollLeft += a.left + a.width / 2 - (b.left + b.width / 2);
   }
-  $('title').textContent = scenes[current]?.name || '';
-  $('title').hidden = !scenes[current];
-  const sh = $('shint');
-  if (sh) sh.hidden = scenes.length < 2;
 }
 function renderHotspotList() {
   $('hlist').innerHTML = (scenes[current]?.hs || [])
@@ -1516,6 +1633,23 @@ const bind = (id, ev, f) => {
   const e = $(id);
   if (e) e.addEventListener(ev, f);
 };
+// A link's destinations: every other scene, in tour order. In a tour of more than MANY scenes
+// a search field narrows them; the current destination stays in the list so it still shows.
+let pickQ = '',
+  pickFor = null;
+function targetOptions(h) {
+  const m = sceneMatcher(scenes.length > MANY ? pickQ : ''),
+    here = scenes[current].id;
+  let hits = 0;
+  const o = scenes
+    .map((s, i) => {
+      if (s.id == here || (s.id != h.to && !m(s, i))) return '';
+      hits += s.id != h.to;
+      return `<option value="${esc(s.id)}" ${s.id == h.to ? 'selected' : ''}>${esc(s.name)}</option>`;
+    })
+    .join('');
+  return hits ? o : o + `<option disabled>${esc(t('nav.none'))}</option>`;
+}
 function renderHotspotProps() {
   const h = selHotspot(),
     p = $('hprops');
@@ -1524,18 +1658,16 @@ function renderHotspotProps() {
     p.innerHTML = '';
     return;
   }
+  if (pickFor != h.id) {
+    pickFor = h.id;
+    pickQ = '';
+  }
   const rng = (id, key, min, max, step, v, out) =>
     `<label id="${id}w"><span class="lrow"><span>${t(key)}</span><output id="${id}v" dir="ltr">${out}</output></span><input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${esc(v)}"></label>`;
   p.innerHTML =
     `<label>${t('f.label')}<textarea id="pl" rows="2" dir="auto" placeholder="${esc(t('f.labelPh'))}">${esc(h.label)}</textarea></label>` +
     (h.type == 'link'
-      ? `<label>${t('f.target')}<select id="pt">${scenes
-          .filter(s => s.id != scenes[current].id)
-          .map(
-            s =>
-              `<option value="${esc(s.id)}" ${s.id == h.to ? 'selected' : ''}>${esc(s.name)}</option>`
-          )
-          .join('')}</select></label>`
+      ? `<div class="fld"><label for="pt">${t('f.target')}</label>${scenes.length > MANY ? `<input id="ptq" type="search" dir="auto" autocomplete="off" value="${esc(pickQ)}" placeholder="${esc(t('f.targetFind'))}" aria-label="${esc(t('f.targetFind'))}">` : ''}<select id="pt">${targetOptions(h)}</select></div>`
       : `<label>${t('f.text')}<textarea id="px" rows="3" dir="auto">${esc(h.text)}</textarea></label>`) +
     `<label>${t('f.shape')}<select id="ps">${SHAPES.filter(k => k != 'img')
       .map(
@@ -1569,6 +1701,21 @@ function renderHotspotProps() {
   fit();
   bind('pl', 'input', e => updateHotspot({ label: e.target.value }));
   bind('pt', 'change', e => updateHotspot({ to: e.target.value }));
+  bind('ptq', 'input', e => {
+    pickQ = e.target.value;
+    $('pt').innerHTML = targetOptions(selHotspot());
+  });
+  // Enter takes the first match.
+  bind('ptq', 'keydown', e => {
+    if (e.key != 'Enter') return;
+    e.preventDefault();
+    const m = sceneMatcher(pickQ),
+      o = scenes.find((s, i) => s.id != scenes[current].id && m(s, i));
+    if (o && o.id != selHotspot().to) {
+      updateHotspot({ to: o.id });
+      $('pt').innerHTML = targetOptions(selHotspot());
+    }
+  });
   bind('px', 'input', e => updateHotspot({ text: e.target.value }));
   bind('ps', 'change', e => {
     const v = e.target.value;
@@ -1773,13 +1920,24 @@ function ui() {
   syncExtras();
   setTimeout(resize, 0);
 }
-[$('scenes'), $('sb')].forEach(
-  e =>
-    (e.onclick = ev => {
-      const b = ev.target.closest('button');
-      if (b) showScene(+b.dataset.i);
-    })
-);
+$('scenes').onclick = ev => {
+  const b = ev.target.closest('button');
+  if (b) showScene(+b.dataset.i);
+};
+$('sfilt').oninput = renderScenes;
+// Previous and next follow the tour's order, which in a survey is usually the route walked
+// on site. Like the grid, they jump rather than walk: neighbours in the list need not be
+// neighbours in the building.
+$('sb').onclick = ev => {
+  const b = ev.target.closest('button');
+  if (!b || walking) return;
+  const a = b.dataset.a;
+  if (a == 'grid') openGrid(b);
+  else if (a) {
+    const k = current + (a == 'next' ? 1 : -1);
+    if (scenes[k]) showScene(k);
+  } else showScene(+b.dataset.i);
+};
 $('hlist').onclick = e => {
   const b = e.target.closest('button');
   if (b) {
@@ -1804,6 +1962,13 @@ $('ptitle').oninput = e => {
 };
 $('auto').onchange = e => {
   project.auto = e.target.checked;
+  save();
+};
+// Left out of the project while off.
+$('ca').onchange = e => {
+  if (e.target.checked) project.click = true;
+  else delete project.click;
+  hovered = null;
   save();
 };
 $('metaon').onchange = e => {
@@ -1950,6 +2115,7 @@ $('prev').onclick = () => {
   ui();
 };
 $('back').onclick = () => {
+  closeGrid();
   mode = 'edit';
   buildHotspots();
   ui();
@@ -2166,6 +2332,7 @@ $('pfile').onchange = async e => {
       auto: !!raw.auto,
       walk: raw.walk !== false,
       meta: !!raw.meta,
+      ...(raw.click === true && { click: true }),
       eurl: typeof raw.eurl == 'string' ? raw.eurl : '',
       scenes: (Array.isArray(raw.scenes) ? raw.scenes : [])
         .filter(s => s && isDataImage(s.img))
@@ -2273,6 +2440,7 @@ function setProject(id, d) {
   $('ptitle').value = project.title || '';
   $('auto').checked = !!project.auto;
   $('wk').checked = project.walk !== false;
+  $('ca').checked = !!project.click;
   toast('');
   if (scenes.length) showScene(0);
   else {
@@ -2424,6 +2592,147 @@ if (!EMBED) {
     renderLibrary();
   };
 }
+// ───────────── scene grid ─────────────
+// Every scene as a thumbnail over the whole stage, with a search field. It is how a visitor
+// finds one scene among 150, and with previous and next in the bar it is how a keyboard
+// reaches every scene, since the hotspots on the panorama can't take focus. The grid is one
+// tab stop that the arrow keys move through. Choosing a scene jumps there without a walk.
+let gridFrom = null;
+const gridCells = () => [...$('sgl').children].filter(b => !b.hidden);
+function openGrid(from) {
+  const L = $('sgl');
+  gridFrom = from;
+  L.innerHTML = scenes
+    .map(
+      (s, i) =>
+        `<button data-i="${i}" tabindex="-1"${i == current ? ' class="on" aria-current="true"' : ''}><span class="no" dir="ltr">${i + 1}</span>${s.th ? `<img src="${esc(s.th)}" alt="" loading="lazy" draggable="false">` : '<span class="ph"></span>'}<span class="nm" dir="auto">${esc(s.name)}</span></button>`
+    )
+    .join('');
+  $('sgf').value = '';
+  filterGrid();
+  $('sgm').hidden = false;
+  gridFocus(L.children[current] || L.firstElementChild, true);
+}
+function closeGrid() {
+  if ($('sgm').hidden) return;
+  $('sgm').hidden = true;
+  $('sgl').innerHTML = '';
+  // The bar may have been redrawn meanwhile; its grid button stands in for the one pressed.
+  const f = gridFrom?.isConnected ? gridFrom : $('sb').querySelector('[data-a="grid"]');
+  gridFrom = null;
+  f?.focus({ preventScroll: true });
+}
+function pickGrid(i) {
+  closeGrid();
+  if (i != current && !walking) showScene(i);
+}
+function filterGrid() {
+  const q = $('sgf').value,
+    m = sceneMatcher(q);
+  let hits = 0;
+  [...$('sgl').children].forEach((b, i) => {
+    b.hidden = !m(scenes[i], i);
+    hits += !b.hidden;
+  });
+  $('sge').hidden = hits > 0;
+  $('sgn').textContent = q.trim()
+    ? t('nav.matches', { n: hits, t: scenes.length })
+    : t('lib.scenes', { n: scenes.length });
+  // The tab stop moves to the first match when its own cell is filtered out.
+  const c = gridCells();
+  if (c.length && !c.some(b => b.tabIndex == 0)) {
+    $('sgl')
+      .querySelectorAll('[tabindex="0"]')
+      .forEach(b => (b.tabIndex = -1));
+    c[0].tabIndex = 0;
+  }
+}
+// Makes b the grid's tab stop and focuses it, centred or just brought into view. The list is
+// scrolled by hand: scrollIntoView() would also scroll a page that embeds the tour.
+function gridFocus(b, centre) {
+  if (!b) return;
+  const L = $('sgl');
+  L.querySelectorAll('[tabindex="0"]').forEach(x => (x.tabIndex = -1));
+  b.tabIndex = 0;
+  b.focus({ preventScroll: true });
+  const y = b.offsetTop,
+    h = b.offsetHeight,
+    pad = 16;
+  if (centre) L.scrollTop = y - (L.clientHeight - h) / 2;
+  else if (y - pad < L.scrollTop) L.scrollTop = y - pad;
+  else if (y + h + pad > L.scrollTop + L.clientHeight) L.scrollTop = y + h + pad - L.clientHeight;
+}
+$('sgf').oninput = filterGrid;
+$('sgx').onclick = closeGrid;
+$('sgl').onclick = e => {
+  const b = e.target.closest('button');
+  if (b) pickGrid(+b.dataset.i);
+};
+$('sgm').onclick = e => {
+  if (e.target == $('sgm')) closeGrid();
+};
+$('sgm').addEventListener('keydown', e => {
+  const f = $('sgf'),
+    a = document.activeElement,
+    c = gridCells(),
+    stop = c.find(b => b.tabIndex == 0);
+  if (e.key == 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+    // The first Escape in a search field with text clears it, as it does elsewhere.
+    if (a == f && f.value) {
+      f.value = '';
+      filterGrid();
+    } else closeGrid();
+    return;
+  }
+  // Focus stays in the dialog: close, search, then the grid.
+  if (e.key == 'Tab') {
+    const ring = [$('sgx'), f, stop].filter(Boolean),
+      k = ring.indexOf(a);
+    e.preventDefault();
+    ring[k < 0 ? 0 : (k + (e.shiftKey ? ring.length - 1 : 1)) % ring.length].focus();
+    return;
+  }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (a == f) {
+    // Down goes into the grid; Enter opens the first match of a search.
+    if (e.key == 'ArrowDown' && stop) {
+      e.preventDefault();
+      gridFocus(stop);
+    } else if (e.key == 'Enter' && f.value.trim() && c.length) {
+      e.preventDefault();
+      pickGrid(+c[0].dataset.i);
+    }
+    return;
+  }
+  const i = c.indexOf(a);
+  if (i < 0) return;
+  let cols = 1;
+  while (cols < c.length && c[cols].offsetTop == c[0].offsetTop) cols++;
+  const rtl = isRTL(),
+    go = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1, ArrowDown: cols, ArrowUp: -cols }[
+      e.key
+    ];
+  let k;
+  if (go != null) k = i + go;
+  else if (e.key == 'Home') k = 0;
+  else if (e.key == 'End') k = c.length - 1;
+  else {
+    // Typing a letter goes to the search field, which takes the letter.
+    if (e.key.length == 1 && e.key != ' ') f.focus();
+    return;
+  }
+  e.preventDefault();
+  if (k < 0) {
+    if (e.key == 'ArrowUp') f.focus();
+    return;
+  }
+  // Down from the row above a short last row lands on its last cell.
+  if (k >= c.length) k = c[c.length - 1].offsetTop > a.offsetTop ? c.length - 1 : i;
+  gridFocus(c[k]);
+});
+
 // ───────────── walkthrough transition ─────────────
 let worldTurn = 0,
   walking = false;
@@ -2653,6 +2962,56 @@ const pickXR = (o, d) => {
 // A text-only note with nothing more to say is a label on the scene, not a button: in the
 // tour it doesn't react to the pointer or to gaze, since a popup would only repeat it.
 const inert = h => !!h && h.type == 'info' && h.shape == 'none' && !(h.text || '').trim();
+// ── click anywhere ──
+// With the project's "click anywhere" on, a click in the tour that misses every hotspot takes
+// the link that lies most nearly in its direction, through the usual walk. Directions are
+// compared in the scene, so level correction counts, with heights squeezed to half
+// (AIM_SQUASH): how far below the horizon a floor arrow sits mostly says how far off it is (a
+// metre away it is 55° down, five metres 17°), while its bearing is where the visitor means
+// to go. A link more than 60° from the click (AIM_COS) is not taken; that is about the edge of
+// a 16:9 screen at the default zoom, so the walk turns toward something the visitor can see.
+// Adding a pull toward the floor instead, dot(p, ray) + dot(p, down), leans every click
+// halfway down and accepts a link some 77° off: a click straight ahead can then take a floor
+// arrow at the visitor's side, and an arrow under the tripod wins almost any click.
+const AIM_SQUASH = 0.5,
+  AIM_COS = 0.5,
+  aimQ = new THREE.Quaternion(),
+  aimRay = new THREE.Vector3(),
+  aimDir = new THREE.Vector3();
+function aimedLink(ray) {
+  sceneQuat(aimQ);
+  aimRay
+    .copy(ray)
+    .setY(ray.y * AIM_SQUASH)
+    .normalize();
+  let best = null,
+    top = AIM_COS;
+  for (const sp of hotspotGroup.children) {
+    const h = sp.userData.h;
+    if (h.type != 'link' || !scenes.some(s => s.id == h.to)) continue;
+    aimDir.copy(sp.position).applyQuaternion(aimQ);
+    const c = aimDir
+      .setY(aimDir.y * AIM_SQUASH)
+      .normalize()
+      .dot(aimRay);
+    if (c > top) {
+      top = c;
+      best = h;
+    }
+  }
+  return best;
+}
+// What a click at e takes: the hotspot under it, or in the tour with click anywhere on, the
+// link it aims at. A plain note under the pointer takes nothing, since it is there to be read.
+// While a scene loads, the hotspots shown are still the last scene's, and take nothing.
+function clickTarget(e, aim = true) {
+  if (hotspotsOf != scenes[current]?.id) return null;
+  const h = hotspotAt(e);
+  if (h || !aim || !project.click || mode != 'view') return h;
+  return raycaster.intersectObjects(hotspotGroup.children, false).length
+    ? null
+    : aimedLink(raycaster.ray.direction);
+}
 function activate(h) {
   if (inert(h)) return;
   if (h.type == 'link') {
@@ -2738,9 +3097,13 @@ glCanvas.addEventListener('pointermove', e => {
     drag.x = e.clientX;
     drag.y = e.clientY;
   } else {
-    hovered = hotspotAt(e);
+    // With click anywhere on, the link a click would take grows as if hovered.
+    hovered = pointers.size > 1 ? null : clickTarget(e);
     glCanvas.style.cursor = placing ? 'crosshair' : hovered ? 'pointer' : 'grab';
   }
+});
+glCanvas.addEventListener('pointerleave', () => {
+  if (!drag && !hsDrag) hovered = null;
 });
 glCanvas.addEventListener('pointerup', e => {
   if (hsDrag) {
@@ -2756,11 +3119,13 @@ glCanvas.addEventListener('pointerup', e => {
   drag = null;
   glCanvas.style.cursor = 'grab';
   if (!was || was.m >= 6) return;
-  const h = hotspotAt(e);
   if (mode == 'view') {
-    if (h) activate(h);
+    // Only the main button aims; a pinch never gets here, since it clears drag.
+    const g = clickTarget(e, e.button == 0);
+    if (g) activate(g);
     return;
   }
+  const h = hotspotAt(e);
   if (placing) {
     const p = vecToUV(raycaster.ray.direction);
     if (placing == 'move') Object.assign(selHotspot(), p);
@@ -2814,6 +3179,9 @@ for (let i = 0; i < 2; i++) {
       new THREE.LineBasicMaterial({ color: 0xffffff })
     )
   );
+  // A trigger pulled at empty space does nothing, click anywhere or not. In a headset nothing
+  // would show which link it was about to take, the visitor would be moved without a walk,
+  // and the controller's ray already makes a hotspot easy to aim at.
   c.addEventListener('selectstart', () => {
     const m = new THREE.Matrix4().extractRotation(c.matrixWorld),
       o = new THREE.Vector3().setFromMatrixPosition(c.matrixWorld),
@@ -4192,6 +4560,7 @@ if (!EMBED) {
   $('pdesc').value = project.desc || '';
   $('auto').checked = !!project.auto;
   $('wk').checked = project.walk !== false;
+  $('ca').checked = !!project.click;
   resetHist();
   if (EMBED && scenes.length) {
     $('stt').textContent = project.title || '';
