@@ -71,6 +71,9 @@ that isn't granted it says once per session that the browser may clear the work.
   opacity. Drag it on the panorama and it snaps to the nearest corner; it moves the title
   row, the compass and the scene bar out of its way. PNG, WebP and SVG keep their
   transparency, and a logo with a solid background gets a warning.
+- Scene audio: each scene can have its own clip, such as a narration of the room, up to
+  8 MB, with a loop option and a delay of 0 to 30 seconds. The editor plays it on demand
+  with a Listen button.
 - Nadir patch to cover the tripod, background audio, and a floor plan with one marker
   per scene. The plan is kept at up to 4096px, as PNG so thin lines and small text stay
   sharp (a scanned or photographic plan whose PNG would pass 3 MB is stored as JPEG). It
@@ -123,6 +126,12 @@ that isn't granted it says once per session that the browser may clear the work.
 - Decodes take turns, one at a time on touch devices and two elsewhere, and the scene the
   visitor is waiting for jumps ahead of preloads.
 - An exported tour shows its title and a loading indicator while the file downloads.
+- A scene's clip starts when the visitor enters the scene, after its delay, and stops when
+  they leave. The background music fades down to a quarter of its volume while the clip
+  plays and back up when it ends. Nothing plays before the visitor's first tap or click,
+  as browsers require, nor behind the start screen. The mute button silences both, and a
+  clip resumes where it was when sound comes back on. This works in Preview, in both
+  exports and in VR mode.
 - Pinch zoom on touch, wheel zoom on desktop, and full keyboard control.
 - Device gyroscope, and WebXR VR mode with an in-headset info panel.
 
@@ -158,6 +167,7 @@ tour/app.js
 tour/data.js        the tour document; it sets window.__TOUR__ as the single file does
 scenes/<id>.jpg     one file per panorama
 audio/music.<ext>   background music
+audio/<id>.<ext>    each scene's audio clip
 icons/<id>.png      custom icons, only those in use
 plan.<ext>, cover.jpg, nadir.png, logo.<ext>
 ```
@@ -200,6 +210,7 @@ IndexedDB database `vrtour`, object store `k`:
 | `a:<id>` | Audio track as a `Blob` |
 | `pl:<id>` | Floor plan image as a `Blob` |
 | `cv:<id>` | Cover image as a `Blob` |
+| `sa:<id>:<sceneId>` | A scene's audio clip as a `Blob` |
 | `last` | Most recently opened project |
 
 Keeping images out of the document is what makes autosave cheap. Autosave runs on
@@ -242,6 +253,7 @@ whichever way the project was opened.
     "pp": { "x": 0.4, "y": 0.6 },
     "taken": "2026-10-20T09:14:37",
     "gps": { "lat": 24.7136111, "lon": 46.6752778 },
+    "snd": { "src": "data:audio/mpeg;base64,...", "name": "guide.mp3", "loop": true, "delay": 2 },
     "hs": [{
       "id": "x1", "type": "link", "to": "<sceneId>",
       "label": "", "text": "", "shape": "arrow",
@@ -277,6 +289,10 @@ whichever way the project was opened.
 - `taken` is the camera's local capture time, with no time zone, and `gps` the position in
   decimal degrees. Both are optional. `meta` decides whether the tour shows them; an
   exported tour carries them only when it is `true`.
+- Scene `snd`, optional, is the scene's audio clip. `loop: true` repeats it while the
+  visitor stays, and `delay` is the wait in whole seconds before it starts, 0 to 30; both
+  are left out at their defaults. On import the clip must be a `data:audio/` URL of at most
+  8 MB.
 - `logo.pos` is a physical corner (`tl`, `tr`, `bl` or `br`), so the logo stays put when
   the language changes. `size` runs from 5 to 40 and scales the logo's area against the
   screen, `op` is its opacity, and `ar` its width-to-height ratio.
@@ -351,6 +367,8 @@ are announced through `aria-live`, and `prefers-reduced-motion` is respected.
 - Renaming a scene or changing its north direction does not update tours you already
   exported. Export again.
 - The logo is a screen overlay, so it does not appear inside a VR headset.
+- Safari on iPhone and iPad doesn't let a page set an audio volume, so there the music
+  pauses while a scene's clip plays instead of fading down, and resumes afterwards.
 - **VR mode and the gyroscope have not been tested on real hardware.** Verify both
   before relying on them.
 
@@ -358,7 +376,7 @@ are announced through `aria-live`, and `prefers-reduced-motion` is respected.
 
 - A trimmed viewer bundle that leaves out editor code.
 - Direct-to-disk saving through the File System Access API.
-- Per-scene audio and a view cone on the floor plan.
+- A view cone on the floor plan.
 - More interface languages.
 
 ## Credits
