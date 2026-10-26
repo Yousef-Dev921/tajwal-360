@@ -69,7 +69,7 @@ const I18N = {
     'act.saveCopy': 'حفظ نسخة',
     'act.import': 'استيراد',
     'act.startAngle': 'زاوية البداية',
-    'act.startAngleTitle': 'اجعل الزاوية الحالية نقطة بداية هذا المشهد',
+    'act.startAngleTitle': 'اجعل المنظر الحالي، بما فيه التكبير، بداية هذا المشهد',
     'act.north': 'اتجاه الشمال',
     'act.northTitle':
       'اجعل الاتجاه الحالي هو الشمال، ليبقى الاتجاه ثابتاً عند الانتقال بين المشاهد',
@@ -138,6 +138,21 @@ const I18N = {
     'shape.star': 'نجمة',
     'shape.info': 'معلومات',
     'shape.none': 'نص فقط',
+    'shape.spot': 'بقعة أرضية',
+    'shape.img': 'أيقونة',
+    'act.upIcon': 'رفع أيقونة خاصة',
+    'msg.iconBig': 'حجم ملف الأيقونة أكبر من 2 ميجابايت. اختر ملفاً أصغر.',
+    'f.level': 'تصحيح الميلان',
+    'act.tiltCcw': 'تدوير عكس عقارب الساعة',
+    'act.tiltCw': 'تدوير مع عقارب الساعة',
+    'act.reset': 'إعادة الضبط',
+    'hint.level':
+      'انظر إلى خط عمودي في المشهد، كحافة باب أو عمود، ودوّر حتى يوازي الخطوط الإرشادية. كرّر ذلك بعد الالتفات ربع دورة. تبقى النقاط في أماكنها.',
+    'sec.cover': 'صورة الغلاف',
+    'hint.cover':
+      'تظهر خلف عنوان الجولة في شاشة البداية، وفي مكتبة المشاريع. وجّه المشهد إلى المنظر الذي تريده ثم التقطه.',
+    'act.coverSet': 'التقط المنظر الحالي',
+    'msg.coverSet': 'أصبح المنظر الحالي صورة الغلاف.',
     'f.labelPh': 'اضغط Enter لبدء سطر جديد',
     'f.textSize': 'حجم النص',
     'f.labelBox': 'خلفية داكنة خلف النص',
@@ -269,7 +284,7 @@ const I18N = {
     'act.saveCopy': 'Save a copy',
     'act.import': 'Import',
     'act.startAngle': 'Start angle',
-    'act.startAngleTitle': 'Use the current view as this scene’s starting view',
+    'act.startAngleTitle': 'Use the current view, zoom included, as this scene’s starting view',
     'act.north': 'North direction',
     'act.northTitle':
       'Mark the current direction as north, so the heading carries over between scenes',
@@ -338,6 +353,21 @@ const I18N = {
     'shape.star': 'Star',
     'shape.info': 'Info',
     'shape.none': 'Text only',
+    'shape.spot': 'Floor spot',
+    'shape.img': 'Icon',
+    'act.upIcon': 'Upload your own icon',
+    'msg.iconBig': 'The icon file is over 2 MB. Choose a smaller one.',
+    'f.level': 'Level correction',
+    'act.tiltCcw': 'Rotate anticlockwise',
+    'act.tiltCw': 'Rotate clockwise',
+    'act.reset': 'Reset',
+    'hint.level':
+      'Look at a vertical edge in the scene, such as a door frame or a column, and rotate until it runs parallel to the guide lines. Repeat after turning a quarter of the way round. Hotspots stay in place.',
+    'sec.cover': 'Cover image',
+    'hint.cover':
+      'Shown behind the tour title on the start screen, and in the project library. Turn the scene to the view you want, then take it.',
+    'act.coverSet': 'Use the current view',
+    'msg.coverSet': 'The current view is now the cover image.',
     'f.labelPh': 'Press Enter to start a new line',
     'f.textSize': 'Text size',
     'f.labelBox': 'Dark background behind the text',
@@ -523,6 +553,10 @@ function toast(text, ms) {
   const m = $('msg');
   if (m) m.textContent = text;
 }
+// The default zoom, as the camera's vertical field of view in degrees; zoom runs from 40 to 95.
+const FOV0 = 75,
+  FOV_MIN = 40,
+  FOV_MAX = 95;
 let project = EMBED || { title: t('def.title'), scenes: [] },
   scenes = project.scenes,
   current = -1,
@@ -531,7 +565,7 @@ let project = EMBED || { title: t('def.title'), scenes: [] },
   mode = EMBED ? 'view' : 'edit',
   yaw = 0,
   pitch = 0,
-  fov = 75,
+  fov = FOV0,
   drag = null,
   hovered = null,
   gazeTarget = null,
@@ -599,6 +633,7 @@ let library = [],
   storedSceneIds = new Set(),
   audioDirty = false,
   planDirty = false,
+  coverDirty = false,
   saveBroken = false,
   editCount = 0,
   quotaWarned = false;
@@ -700,7 +735,21 @@ async function libraryThumb(src) {
     const c = document.createElement('canvas');
     c.width = 320;
     c.height = 160;
-    c.getContext('2d').drawImage(im, 0, 0, 320, 160);
+    // Cropped to fill: a 2:1 panorama fits as it is, a 16:9 cover loses a strip top and bottom.
+    const w = im.naturalWidth,
+      h = im.naturalHeight,
+      k = Math.min(w / 320, h / 160);
+    c.getContext('2d').drawImage(
+      im,
+      (w - 320 * k) / 2,
+      (h - 160 * k) / 2,
+      320 * k,
+      160 * k,
+      0,
+      0,
+      320,
+      160
+    );
     return c.toDataURL('image/jpeg', 0.7);
   } catch (e) {
     return null;
@@ -713,6 +762,8 @@ function toDoc(Q) {
   else delete d.audio;
   // The plan image is stored on its own; the document only records that there is one.
   if (Q.plan) d.plan = {};
+  // So is the cover; its time tells the library when to redraw the project's thumbnail.
+  if (Q.cover) d.cover = { t: Q.cover.t };
   return d;
 }
 function saveFailed(e) {
@@ -738,8 +789,9 @@ async function flush() {
     // Taken now rather than cleared after the write: opening another project during the
     // await sets the flags for that project, and clearing them afterwards would lose them.
     const audio = audioDirty,
-      plan = planDirty;
-    audioDirty = planDirty = false;
+      plan = planDirty,
+      cover = coverDirty;
+    audioDirty = planDirty = coverDirty = false;
     try {
       if (audio) {
         if (Q.audio && Q.audio.blob) await dbOp('put', 'a:' + id, Q.audio.blob);
@@ -749,11 +801,16 @@ async function flush() {
         if (Q.plan && Q.plan.blob) await dbOp('put', 'pl:' + id, Q.plan.blob);
         else await dbOp('del', 'pl:' + id).catch(() => {});
       }
+      if (cover) {
+        if (Q.cover && Q.cover.blob) await dbOp('put', 'cv:' + id, Q.cover.blob);
+        else await dbOp('del', 'cv:' + id).catch(() => {});
+      }
     } catch (x) {
       // Not written: try again on the next save, if this is still the open project.
       if (id == projectId) {
         if (audio) audioDirty = true;
         if (plan) planDirty = true;
+        if (cover) coverDirty = true;
       }
       throw x;
     }
@@ -770,13 +827,15 @@ async function flush() {
     e.title = Q.title || t('def.untitled');
     e.n = Q.scenes.length;
     e.t = Date.now();
-    const f = Q.scenes[0];
+    // The library shows the cover, or else the first scene.
+    const f = Q.scenes[0],
+      thid = Q.cover ? 'cv' + Q.cover.t : f?.id;
     if (!f) {
       e.th = null;
       e.thid = null;
-    } else if (e.thid != f.id) {
-      e.thid = f.id;
-      e.th = f.th || (await libraryThumb(f.img));
+    } else if (e.thid != thid) {
+      e.thid = thid;
+      e.th = Q.cover ? await libraryThumb(Q.cover.img) : f.th || (await libraryThumb(f.img));
     }
     await dbOp('put', 'idx', library);
     await dbOp('put', 'last', id);
@@ -811,6 +870,7 @@ function applyMigration(d) {
   dirtyScenes = new Set(m?.scenes);
   audioDirty = !!m?.audio;
   planDirty = !!m?.plan;
+  coverDirty = false;
 }
 // Load a project and rehydrate its images as blob: URLs.
 // Projects stored in the pre-Blob format are migrated on read.
@@ -877,12 +937,18 @@ async function loadProject(id) {
       else delete doc.plan;
     }
   }
+  if (doc.cover) {
+    const b = await dbOp('get', 'cv:' + id).catch(() => null);
+    if (b instanceof Blob) doc.cover = { img: objURL(b), blob: b, t: num(doc.cover.t, 0) };
+    else delete doc.cover;
+  }
   return doc;
 }
 function revokeProject(Q) {
   (Q?.scenes || []).forEach(s => freeURL(s.img));
   freeURL(Q?.audio?.src);
   freeURL(Q?.plan?.img);
+  freeURL(Q?.cover?.img);
 }
 // ───────────── renderer ─────────────
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -896,15 +962,25 @@ const scene3d = new THREE.Scene(),
   camera = new THREE.PerspectiveCamera(75, 1, 0.1, 2000);
 camera.rotation.order = 'YXZ';
 scene3d.add(camera);
-const world = new THREE.Group();
+// world turns the scene to its start angle; level, inside it, holds the scene's level
+// correction. The panorama and its hotspots both sit in level, so straightening a tilted
+// photo carries the hotspots with it and they stay on what they point at.
+const world = new THREE.Group(),
+  level = new THREE.Group();
 scene3d.add(world);
+world.add(level);
 const sphereGeo = new THREE.SphereGeometry(SPHERE_R, 64, 40);
 sphereGeo.scale(-1, 1, 1);
 const sphereMat = new THREE.MeshBasicMaterial(),
   sphere = new THREE.Mesh(sphereGeo, sphereMat);
-world.add(sphere);
+level.add(sphere);
 const hotspotGroup = new THREE.Group();
-world.add(hotspotGroup);
+level.add(hotspotGroup);
+const UP = new THREE.Vector3(0, 1, 0),
+  NO_TILT = [0, 0, 0, 1],
+  // The rotation from the panorama's own frame to the scene.
+  sceneQuat = (q = new THREE.Quaternion()) =>
+    q.setFromAxisAngle(UP, world.rotation.y).multiply(level.quaternion);
 const sphereToVec = (u, v, r) => {
   const phi = 2 * PI * u,
     theta = PI * v;
@@ -915,10 +991,7 @@ const sphereToVec = (u, v, r) => {
   ).multiplyScalar(r);
 };
 const vecToUV = d => {
-  d = d
-    .clone()
-    .applyAxisAngle(new THREE.Vector3(0, 1, 0), -world.rotation.y)
-    .normalize();
+  d = d.clone().applyQuaternion(sceneQuat().invert()).normalize();
   return { u: (Math.atan2(d.z, d.x) / (2 * PI) + 1) % 1, v: Math.acos(d.y) / PI };
 };
 const resize = () => {
@@ -973,6 +1046,28 @@ function drawIcon(ctx, shape, color) {
     ctx.beginPath();
     ctx.arc(0, -18, 18, 0, 7);
     ctx.fill();
+  } else if (shape == 'spot') {
+    // A marker lying on the floor, seen in perspective, with a soft beam rising from it.
+    const g = ctx.createLinearGradient(0, 0, 0, -96);
+    g.addColorStop(0, color + 'aa');
+    g.addColorStop(1, color + '00');
+    ctx.fillStyle = g;
+    ctx.moveTo(-70, 0);
+    ctx.lineTo(-58, -96);
+    ctx.lineTo(58, -96);
+    ctx.lineTo(70, 0);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 84, 30, 0, 0, 7);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.lineWidth = 9;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 44, 15, 0, 0, 7);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = ink;
+    ctx.stroke();
   } else if (shape == 'star') {
     for (let i = 0; i < 10; i++) {
       const r = i % 2 ? 32 : 72,
@@ -1024,6 +1119,46 @@ function wrapLines(ctx, text, max) {
 // 200 px square; the label sits under it, or alone for a text-only hotspot ('none'), in up
 // to HS_MAX_LINES lines of at most HS_LABEL_W px. Without a box the label gets a dark outline,
 // so white text stays readable on a bright wall.
+// Custom icons are uploaded per project and kept as PNG, decoded once and drawn into every
+// hotspot that uses them. A sprite drawn before its icon has decoded is redrawn when it has.
+const ICON_MAX_PX = 256,
+  ICON_MAX_CHARS = 6e5,
+  ICON_BOX = 176,
+  iconImgs = new Map(); // icon id → { src, im, ok }
+const projectIcon = id => (project.icons || []).find(x => x.id == id);
+function iconImage(id) {
+  const ic = projectIcon(id);
+  if (!ic) return null;
+  let e = iconImgs.get(id);
+  if (!e || e.src != ic.img) {
+    e = { src: ic.img, im: new Image(), ok: false };
+    iconImgs.set(id, e);
+    e.im.onload = () => {
+      e.ok = true;
+      if (iconImgs.get(id) === e && scenes[current]?.hs.some(h => h.icon == id)) buildHotspots();
+    };
+    e.im.src = ic.img;
+  }
+  return e.ok ? e.im : null;
+}
+function drawCustomIcon(ctx, id) {
+  const im = iconImage(id),
+    ar = projectIcon(id)?.ar || 1;
+  if (!im) {
+    // Still decoding, or missing: a faint ring keeps the hotspot visible and clickable.
+    ctx.strokeStyle = 'rgba(255,255,255,.6)';
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(0, 0, 60, 0, 7);
+    ctx.stroke();
+    return;
+  }
+  const w = ar >= 1 ? ICON_BOX : ICON_BOX * ar,
+    h = ar >= 1 ? ICON_BOX / ar : ICON_BOX;
+  ctx.drawImage(im, -w / 2, -h / 2, w, h);
+}
+// Shapes that have a direction, and so a rotation.
+const TURNS = ['arrow', 'img'];
 const HS_PX = 512 / 70,
   HS_ICON = 200,
   HS_LABEL_W = 900,
@@ -1068,8 +1203,9 @@ function makeHotspotSprite(h) {
       ctx.stroke();
       ctx.setLineDash([]);
     }
-    if (h.shape == 'arrow') ctx.rotate(((h.rot || 0) * PI) / 180);
-    drawIcon(ctx, h.shape, h.color);
+    if (TURNS.includes(h.shape)) ctx.rotate(((h.rot || 0) * PI) / 180);
+    if (h.shape == 'img') drawCustomIcon(ctx, h.icon);
+    else drawIcon(ctx, h.shape, h.color);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
   if (lines.length) {
@@ -1152,8 +1288,12 @@ async function showScene(i) {
   sphereMat.needsUpdate = true;
   worldTurn = s.u0 || 0;
   world.rotation.y = 2 * PI * worldTurn + PI / 2;
+  level.quaternion.fromArray(s.lq || NO_TILT);
   yaw = 0;
   pitch = s.p0 || 0;
+  fov = s.f0 || FOV0;
+  camera.fov = fov;
+  camera.updateProjectionMatrix();
   if (gyro) calibrateGyro();
   buildHotspots();
   ui();
@@ -1362,7 +1502,7 @@ function renderHotspotList() {
 // The look of the last link and the last info hotspot the author styled. A new hotspot of
 // the same kind starts from it, so a tour of many scenes needs its arrows styled only once.
 // Held for the session only.
-const LOOK = ['shape', 'color', 'size', 'ts', 'box', 'fix'],
+const LOOK = ['shape', 'icon', 'color', 'size', 'ts', 'box', 'fix'],
   hsLook = { link: null, info: null };
 const updateHotspot = o => {
   const h = selHotspot();
@@ -1397,7 +1537,18 @@ function renderHotspotProps() {
           )
           .join('')}</select></label>`
       : `<label>${t('f.text')}<textarea id="px" rows="3" dir="auto">${esc(h.text)}</textarea></label>`) +
-    `<label>${t('f.shape')}<select id="ps">${SHAPES.map(k => `<option value="${k}" ${k == h.shape ? 'selected' : ''}>${esc(t('shape.' + k))}</option>`).join('')}</select></label>
+    `<label>${t('f.shape')}<select id="ps">${SHAPES.filter(k => k != 'img')
+      .map(
+        k =>
+          `<option value="${k}" ${k == h.shape ? 'selected' : ''}>${esc(t('shape.' + k))}</option>`
+      )
+      .join('')}${(project.icons || [])
+      .map(
+        ic =>
+          `<option value="img:${esc(ic.id)}" ${h.shape == 'img' && h.icon == ic.id ? 'selected' : ''} dir="auto">${esc(ic.name || t('shape.img'))}</option>`
+      )
+      .join('')}</select></label>
+  <label class="btn" for="pif"><svg class="ic"><use href="#i-image"/></svg><span>${t('act.upIcon')}</span></label><input id="pif" type="file" accept="image/png,image/webp,image/svg+xml,image/gif,image/jpeg" hidden>
   ${rng('pr', 'f.rotation', -180, 180, 5, h.rot || 0, (h.rot || 0) + '°')}
   <label id="pcw">${t('f.color')}<input id="pc" type="color" value="${esc(h.color)}"></label>
   ${rng('pz', 'f.size', 0.5, 2.5, 0.1, h.size, '×' + h.size)}
@@ -1407,20 +1558,29 @@ function renderHotspotProps() {
   <p id="hint3">${t('hint.dragHs')}</p>
   <div class="row"><button id="pdup" title="${esc(t('act.dupTitle'))}"><svg class="ic"><use href="#i-dup"/></svg><span>${t('act.dup')}</span></button><button id="pcopy" title="${esc(t('act.copyTitle'))}"><svg class="ic"><use href="#i-copy"/></svg><span>${t('act.copy')}</span></button></div>
   <button id="pd" class="dng">${t('act.delHs')}</button>`;
-  // Only an arrow has a direction, a text-only hotspot has no icon to colour, and its size
-  // already sets the text size.
+  // Only an arrow or a custom icon has a direction, neither a custom icon nor a text-only
+  // hotspot takes a colour, and a text-only hotspot's size already sets its text size.
   const fit = () => {
     const s = selHotspot()?.shape;
-    $('prw').hidden = s != 'arrow';
-    $('pcw').hidden = $('pfw').hidden = s == 'none';
+    $('prw').hidden = !TURNS.includes(s);
+    $('pcw').hidden = s == 'none' || s == 'img';
+    $('pfw').hidden = s == 'none';
   };
   fit();
   bind('pl', 'input', e => updateHotspot({ label: e.target.value }));
   bind('pt', 'change', e => updateHotspot({ to: e.target.value }));
   bind('px', 'input', e => updateHotspot({ text: e.target.value }));
   bind('ps', 'change', e => {
-    updateHotspot({ shape: e.target.value });
+    const v = e.target.value;
+    updateHotspot(
+      v.startsWith('img:') ? { shape: 'img', icon: v.slice(4) } : { shape: v, icon: undefined }
+    );
     fit();
+  });
+  bind('pif', 'change', e => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (f) addIcon(f);
   });
   bind('pc', 'input', e => updateHotspot({ color: e.target.value }));
   bind('pr', 'input', e => {
@@ -1441,6 +1601,51 @@ function renderHotspotProps() {
   bind('pdup', 'click', duplicateHotspot);
   bind('pcopy', 'click', copyHotspot);
 }
+// ── custom icons ──
+// Raster icons are re-encoded as PNG at up to ICON_MAX_PX, keeping transparency. SVG is drawn
+// into a PNG once here too: a vector image drawn onto a canvas can stop that canvas being
+// uploaded to the GPU in some browsers, and every hotspot is a canvas texture.
+async function readIcon(f) {
+  if (f.type != 'image/svg+xml') return readLogo(f, ICON_MAX_PX);
+  const { img, ar } = await readLogo(f),
+    im = await loadImg(img, false),
+    c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(ar >= 1 ? ICON_MAX_PX : ICON_MAX_PX * ar));
+  c.height = Math.max(1, Math.round(ar >= 1 ? ICON_MAX_PX / ar : ICON_MAX_PX));
+  // An SVG with only a viewBox has no size of its own, which some browsers refuse to draw.
+  im.width = c.width;
+  im.height = c.height;
+  c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+  return { img: c.toDataURL('image/png'), ar };
+}
+// Adds an icon to the project, reusing an identical one already there, and gives it to the
+// selected hotspot if that is still the one selected once the file has been read.
+async function addIcon(f) {
+  if (f.size > 2e6) {
+    toast(t('msg.iconBig'));
+    return;
+  }
+  const h = selHotspot();
+  try {
+    const { img, ar } = await readIcon(f),
+      icons = project.icons || (project.icons = []);
+    let ic = icons.find(x => x.img == img);
+    if (!ic) {
+      ic = {
+        id: uid(),
+        name: f.name.replace(/\.[^.]+$/, '').slice(0, 60),
+        img,
+        ar: +ar.toFixed(4),
+      };
+      icons.push(ic);
+    }
+    if (h && selHotspot() === h) updateHotspot({ shape: 'img', icon: ic.id });
+    else save();
+    renderHotspotProps();
+  } catch (x) {
+    toast(t('msg.imgFail'));
+  }
+}
 // ── copy, paste, duplicate ──
 // A copied hotspot keeps its look and text, so a styled arrow or a note can be repeated across
 // a long tour. It is held in memory only, and survives switching scenes and projects.
@@ -1456,7 +1661,9 @@ function deleteHotspot() {
 function copyHotspot() {
   const h = selHotspot();
   if (!h) return;
-  hsClip = { h: JSON.parse(JSON.stringify(h)), from: scenes[current].id };
+  // A custom icon travels with the copy, so it can be pasted into another project.
+  const ic = h.shape == 'img' && projectIcon(h.icon);
+  hsClip = { h: JSON.parse(JSON.stringify(h)), from: scenes[current].id, icon: ic && { ...ic } };
   syncPaste();
   toast(t('msg.hsCopied'));
 }
@@ -1469,10 +1676,14 @@ function viewUV() {
 // Adds a copy of h to the current scene at p. A link can't lead to the scene it sits in: one
 // pasted into its own destination leads back to the scene it was copied from, which is what
 // a return arrow needs, and one whose destination is gone leads to the first other scene.
-function addHotspotCopy(h, from, p) {
+function addHotspotCopy(h, from, p, icon) {
   const s = scenes[current];
   if (!s) return;
   const n = { ...JSON.parse(JSON.stringify(h)), id: uid(), ...p };
+  if (n.shape == 'img' && !projectIcon(n.icon)) {
+    if (icon) (project.icons || (project.icons = [])).push({ ...icon });
+    else n.shape = 'arrow';
+  }
   if (n.type == 'link') {
     const ok = id => id && id != s.id && scenes.some(x => x.id == id);
     if (!ok(n.to)) n.to = ok(from) ? from : scenes.find(x => x.id != s.id)?.id;
@@ -1488,7 +1699,7 @@ function addHotspotCopy(h, from, p) {
   ui();
   save();
 }
-const pasteHotspot = () => hsClip && addHotspotCopy(hsClip.h, hsClip.from, viewUV());
+const pasteHotspot = () => hsClip && addHotspotCopy(hsClip.h, hsClip.from, viewUV(), hsClip.icon);
 // The duplicate lands a little to one side, so it doesn't hide the original.
 function duplicateHotspot() {
   const h = selHotspot();
@@ -1558,6 +1769,7 @@ function ui() {
   renderHotspotList();
   renderHotspotProps();
   syncMeta();
+  syncLevel();
   syncExtras();
   setTimeout(resize, 0);
 }
@@ -1604,15 +1816,88 @@ $('sname').oninput = e => {
   renderScenes();
   save();
 };
+// The start view is the current one, zoom included. It is stored as the turn and pitch that
+// showScene() will set, so it comes back exactly, however the scene is levelled.
 $('sstart').onclick = () => {
-  const d = new THREE.Vector3();
-  camera.getWorldDirection(d);
-  const r = vecToUV(d);
-  scenes[current].u0 = r.u;
-  scenes[current].p0 = PI / 2 - r.v * PI;
+  const s = scenes[current];
+  s.u0 = (((worldTurn - yaw / (2 * PI)) % 1) + 1) % 1;
+  s.p0 = pitch;
+  if (Math.abs(fov - FOV0) > 0.5) s.f0 = Math.round(fov * 10) / 10;
+  else delete s.f0;
   save();
   showScene(current);
   toast(t('msg.startSaved'));
+};
+// ── level correction ──
+// A step turns the scene by LEVEL_STEP degrees about the direction the camera faces, laid flat
+// on the horizon: a turn about a level axis tilts the scene without spinning it round.
+// Straightening a vertical edge in front, then one a quarter turn away, levels the photo.
+// The correction is stored per scene as a quaternion (lq) and left out when there is none.
+const LEVEL_STEP = 0.25;
+// How far a correction tips the vertical, in degrees.
+const tiltOf = a =>
+  (Math.acos(Math.min(1, UP.clone().applyQuaternion(new THREE.Quaternion().fromArray(a)).y)) *
+    180) /
+  PI;
+function tiltScene(deg) {
+  const s = scenes[current];
+  if (!s) return;
+  const axis = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)).applyAxisAngle(
+      UP,
+      -world.rotation.y
+    ),
+    q = new THREE.Quaternion()
+      .setFromAxisAngle(axis, (deg * PI) / 180)
+      .multiply(level.quaternion)
+      .normalize(),
+    a = q.toArray().map(v => Math.round(v * 1e6) / 1e6);
+  if (tiltOf(a) < 0.01) delete s.lq;
+  else s.lq = a;
+  showGuides();
+  syncLevel();
+  save();
+}
+function syncLevel() {
+  const s = scenes[current];
+  level.quaternion.fromArray(s?.lq || NO_TILT);
+  if (EMBED) return;
+  $('lvlv').value = (s?.lq ? tiltOf(s.lq) : 0).toFixed(2) + '°';
+  $('lvl0').disabled = !s?.lq;
+}
+// Vertical guide lines over the panorama, shown for a moment after each step.
+let guidesTimer;
+function showGuides() {
+  $('guides').hidden = false;
+  clearTimeout(guidesTimer);
+  guidesTimer = setTimeout(() => ($('guides').hidden = true), 2500);
+}
+// A press steps once; holding the button keeps stepping.
+function repeatOnHold(b, f) {
+  let timer = null,
+    held = false;
+  const stop = () => {
+    clearTimeout(timer);
+    clearInterval(timer);
+    timer = null;
+  };
+  b.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    held = false;
+    stop();
+    timer = setTimeout(() => {
+      held = true;
+      timer = setInterval(f, 70);
+    }, 400);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
+  b.addEventListener('click', () => (held ? (held = false) : f()));
+}
+repeatOnHold($('lvlccw'), () => tiltScene(-LEVEL_STEP));
+repeatOnHold($('lvlcw'), () => tiltScene(LEVEL_STEP));
+$('lvl0').onclick = () => {
+  delete scenes[current]?.lq;
+  syncLevel();
+  save();
 };
 let delConfirm = 0;
 $('sdel').onclick = () => {
@@ -1716,6 +2001,11 @@ async function toPortable(Q, forTour) {
       src: Q.audio.blob ? await toDataURL(Q.audio.blob) : Q.audio.src,
     };
   if (Q.plan) out.plan = { img: Q.plan.blob ? await toDataURL(Q.plan.blob) : Q.plan.img };
+  if (Q.cover) out.cover = { img: Q.cover.blob ? await toDataURL(Q.cover.blob) : Q.cover.img };
+  // The editor keeps every icon uploaded to a project; a file carries only those in use.
+  const used = new Set(Q.scenes.flatMap(s => s.hs.filter(h => h.shape == 'img').map(h => h.icon)));
+  out.icons = (Q.icons || []).filter(ic => used.has(ic.id));
+  if (!out.icons.length) delete out.icons;
   out.lang = LANG; // an exported tour renders in the language its author was using
   return out;
 }
@@ -1797,7 +2087,7 @@ $('psave').onclick = async () => {
 };
 // An imported file is untrusted. Keep only well-formed fields with the expected types,
 // so nothing unexpected reaches the markup or an exported tour.
-const SHAPES = ['arrow', 'ring', 'dot', 'pin', 'star', 'info', 'none'];
+const SHAPES = ['arrow', 'spot', 'ring', 'dot', 'pin', 'star', 'info', 'none', 'img'];
 const num = (v, fallback) => (Number.isFinite(+v) && v !== null && v !== '' ? +v : fallback);
 const clamp01 = v => Math.min(1, Math.max(0, v));
 const isDataImage = v => typeof v == 'string' && v.startsWith('data:image/');
@@ -1821,6 +2111,11 @@ const cleanHotspot = h => {
   if (ts != 1) out.ts = ts;
   if (h.box === false) out.box = false;
   if (h.fix === true) out.fix = true;
+  // A custom icon is named by its id in the project's icon list; the import checks it exists.
+  if (out.shape == 'img') {
+    if (typeof h.icon == 'string' && h.icon) out.icon = h.icon;
+    else out.shape = 'arrow';
+  }
   return out;
 };
 const cleanScene = s => {
@@ -1834,6 +2129,17 @@ const cleanScene = s => {
   };
   if (isDataImage(s.th)) out.th = s.th;
   if (s.n != null && Number.isFinite(+s.n)) out.n = +s.n;
+  const f0 = num(s.f0, NaN);
+  if (f0 >= FOV_MIN && f0 <= FOV_MAX) out.f0 = f0;
+  if (Array.isArray(s.lq) && s.lq.length == 4 && s.lq.every(v => Number.isFinite(+v))) {
+    const q = new THREE.Quaternion().fromArray(s.lq.map(Number));
+    // A unit quaternion, give or take rounding; anything else would collapse the scene.
+    if (Math.abs(q.length() - 1) < 0.01)
+      out.lq = q
+        .normalize()
+        .toArray()
+        .map(v => Math.round(v * 1e6) / 1e6);
+  }
   if (s.pp && typeof s.pp == 'object')
     out.pp = { x: clamp01(num(s.pp.x, 0.5)), y: clamp01(num(s.pp.y, 0.5)) };
   if (typeof s.taken == 'string' && TAKEN.test(s.taken)) out.taken = s.taken;
@@ -1869,7 +2175,33 @@ $('pfile').onchange = async e => {
     if (raw.nadir && isDataImage(raw.nadir.img))
       d.nadir = { img: raw.nadir.img, r: Math.min(50, Math.max(8, num(raw.nadir.r, 25))) };
     if (raw.plan && isDataImage(raw.plan.img)) d.plan = { img: raw.plan.img };
+    if (raw.cover && isDataImage(raw.cover.img)) d.cover = { img: raw.cover.img, t: Date.now() };
     if (raw.logo && isDataImage(raw.logo.img)) d.logo = cleanLogo(raw.logo);
+    const icons = (Array.isArray(raw.icons) ? raw.icons : [])
+      // Only what readIcon() makes: a PNG of at most 256 px, a few hundred KB at most.
+      .filter(
+        ic =>
+          ic &&
+          typeof ic.id == 'string' &&
+          ic.id &&
+          typeof ic.img == 'string' &&
+          ic.img.startsWith('data:image/png;') &&
+          ic.img.length <= ICON_MAX_CHARS
+      )
+      .slice(0, 200)
+      .map(ic => ({
+        id: ic.id,
+        name: String(ic.name ?? '').slice(0, 60),
+        img: ic.img,
+        ar: Math.min(10, Math.max(0.1, num(ic.ar, 1))),
+      }));
+    if (icons.length) d.icons = icons;
+    for (const s of d.scenes)
+      for (const h of s.hs)
+        if (h.shape == 'img' && !icons.some(ic => ic.id == h.icon)) {
+          h.shape = 'arrow';
+          delete h.icon;
+        }
     const a = raw.audio;
     if (a && typeof a.src == 'string' && a.src.startsWith('data:'))
       d.audio = {
@@ -1889,6 +2221,10 @@ $('pfile').onchange = async e => {
       d.plan.blob = dataToBlob(d.plan.img);
       d.plan.img = objURL(d.plan.blob);
     }
+    if (d.cover) {
+      d.cover.blob = dataToBlob(d.cover.img);
+      d.cover.img = objURL(d.cover.blob);
+    }
     d.title = d.title || t('def.imported');
     await flush();
     const nid = uid() + uid();
@@ -1896,6 +2232,7 @@ $('pfile').onchange = async e => {
     d.scenes.forEach(s => dirtyScenes.add(s.id));
     audioDirty = !!d.audio;
     planDirty = !!d.plan;
+    coverDirty = !!d.cover;
     storedSceneIds = new Set();
     await flush();
     closeLib();
@@ -1979,6 +2316,8 @@ async function duplicateProject(id) {
     if (a instanceof Blob) await dbOp('put', 'a:' + nid, a);
     const pl = await dbOp('get', 'pl:' + id).catch(() => null);
     if (pl instanceof Blob) await dbOp('put', 'pl:' + nid, pl);
+    const cv = await dbOp('get', 'cv:' + id).catch(() => null);
+    if (cv instanceof Blob) await dbOp('put', 'cv:' + nid, cv);
     const n = JSON.parse(JSON.stringify(d));
     n.title = (d.title || '') + t('def.copySuffix');
     await dbOp('put', 'p:' + nid, n);
@@ -1995,6 +2334,7 @@ async function deleteProject(id) {
     for (const s of d?.scenes || []) await dbOp('del', 'b:' + id + ':' + s.id).catch(() => {});
     await dbOp('del', 'a:' + id).catch(() => {});
     await dbOp('del', 'pl:' + id).catch(() => {});
+    await dbOp('del', 'cv:' + id).catch(() => {});
     await dbOp('del', 'p:' + id);
     library = library.filter(x => x.id != id);
     await dbOp('put', 'idx', library);
@@ -2087,8 +2427,7 @@ if (!EMBED) {
 // ───────────── walkthrough transition ─────────────
 let worldTurn = 0,
   walking = false;
-const Y_AXIS = new THREE.Vector3(0, 1, 0),
-  ease = k => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+const ease = k => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
 const fadeMesh = new THREE.Mesh(
   sphereGeo,
   new THREE.MeshBasicMaterial({
@@ -2151,7 +2490,7 @@ async function walkTo(i, h) {
       return showScene(i);
     }
     if (!gyro) {
-      const d = sphereToVec(h.u, h.v, 1).applyAxisAngle(Y_AXIS, world.rotation.y),
+      const d = sphereToVec(h.u, h.v, 1).applyQuaternion(sceneQuat()),
         ty = Math.atan2(-d.x, -d.z),
         tp = Math.max(-0.3, Math.min(0.3, Math.asin(d.y) * 0.6)),
         y0 = yaw,
@@ -2165,8 +2504,13 @@ async function walkTo(i, h) {
       });
     }
     const heading = worldTurn - yaw / (2 * PI),
-      nextTurn = arrivalHeading(from, s, h, heading) + yaw / (2 * PI);
+      nextTurn = arrivalHeading(from, s, h, heading) + yaw / (2 * PI),
+      // The next scene opens at its own start zoom; the push-in heads for it, so the zoom
+      // carries on smoothly through the cross-fade.
+      f0 = fov,
+      f1 = s.f0 || FOV0;
     fadeGroup.rotation.y = 2 * PI * nextTurn + PI / 2;
+    fadeMesh.quaternion.fromArray(s.lq || NO_TILT);
     fadeMesh.material.map = textures[s.id];
     fadeMesh.material.needsUpdate = true;
     fadeMesh.material.opacity = 0;
@@ -2174,12 +2518,14 @@ async function walkTo(i, h) {
     hotspotGroup.visible = false;
     await animate(650, k => {
       fadeMesh.material.opacity = ease(k);
-      setFov(fov - 8 - 22 * k);
+      setFov(f0 - 8 + (f1 - f0 - 22) * k);
     });
     sphereMat.map = textures[s.id];
     sphereMat.needsUpdate = true;
     worldTurn = nextTurn;
     world.rotation.y = fadeGroup.rotation.y;
+    level.quaternion.copy(fadeMesh.quaternion);
+    fov = f1;
     current = i;
     selId = null;
     buildHotspots();
@@ -2189,6 +2535,7 @@ async function walkTo(i, h) {
     await animate(550, k => setFov(fov - 30 * (1 - ease(k))));
   } finally {
     setFov(fov);
+    fadeMesh.quaternion.identity();
     fadeMesh.visible = false;
     fadeMesh.material.map = null;
     hotspotGroup.visible = true;
@@ -2419,18 +2766,22 @@ glCanvas.addEventListener('pointerup', e => {
     if (placing == 'move') Object.assign(selHotspot(), p);
     else {
       const o = scenes.find(s => s.id != scenes[current].id),
-        n = {
-          id: uid(),
-          type: placing,
-          label: '',
-          text: '',
-          to: placing == 'link' ? o?.id : undefined,
-          shape: placing == 'info' ? 'info' : 'arrow',
-          color: '#f59e0b',
-          size: 1,
-          ...hsLook[placing],
-          ...p,
-        };
+        look = { ...hsLook[placing] };
+      // The last look may name an icon of a project that is no longer open.
+      if (look.shape == 'img' && !projectIcon(look.icon)) delete look.shape;
+      if (look.shape != 'img') delete look.icon;
+      const n = {
+        id: uid(),
+        type: placing,
+        label: '',
+        text: '',
+        to: placing == 'link' ? o?.id : undefined,
+        shape: placing == 'info' ? 'info' : 'arrow',
+        color: '#f59e0b',
+        size: 1,
+        ...look,
+        ...p,
+      };
       scenes[current].hs.push(n);
       selId = n.id;
     }
@@ -2448,7 +2799,7 @@ glCanvas.addEventListener(
   'wheel',
   e => {
     e.preventDefault();
-    fov = Math.max(40, Math.min(95, fov + e.deltaY * 0.04));
+    fov = Math.max(FOV_MIN, Math.min(FOV_MAX, fov + e.deltaY * 0.04));
     camera.fov = fov;
     camera.updateProjectionMatrix();
   },
@@ -2500,6 +2851,9 @@ renderer.setAnimationLoop(time => {
   const xr = renderer.xr.isPresenting;
   // An untextured MeshBasicMaterial renders white; hide it so the empty state stays readable.
   sphere.visible = !!sphereMat.map;
+  // The level correction, seen from the scene: turn into the panorama's frame, tilt, turn back.
+  turnQuat.setFromAxisAngle(UP, world.rotation.y);
+  nadirGroup.quaternion.copy(turnQuat).multiply(level.quaternion).multiply(turnQuat.invert());
   if (!xr) {
     if (project.auto && mode == 'view' && !drag && !gyro) yaw -= dt * 0.08;
     if (gyro && gyroReady) {
@@ -2539,7 +2893,7 @@ renderer.setAnimationLoop(time => {
   const fit = xr ? 1 : Math.min(2.4, Math.max(0.9, 840 / (glCanvas.clientHeight || 600)));
   // A hotspot set to keep its size shrinks in the scene as the view zooms in, by as much as
   // the panorama grows, so it stays the size it has at the default zoom.
-  const keep = xr ? 1 : Math.tan((camera.fov * PI) / 360) / Math.tan((75 * PI) / 360);
+  const keep = xr ? 1 : Math.tan((camera.fov * PI) / 360) / Math.tan((FOV0 * PI) / 360);
   hotspotGroup.children.forEach(sp => {
     const h = sp.userData.h,
       k =
@@ -2848,11 +3202,17 @@ let nadirMesh = null,
   planOpen = false,
   placingPlan = false,
   planSrc = '';
+// The patch covers the tripod, which sits at the photo's own nadir. It doesn't turn with the
+// scene, so a logo on it keeps its orientation, but it tilts with the scene's level
+// correction (nadirGroup, set every frame) so it stays over the tripod.
+const nadirGroup = new THREE.Group(),
+  turnQuat = new THREE.Quaternion();
+scene3d.add(nadirGroup);
 function syncNadir() {
   const n = project.nadir;
   if (!n) {
     if (nadirMesh) {
-      scene3d.remove(nadirMesh);
+      nadirGroup.remove(nadirMesh);
       nadirMesh = null;
     }
     nadirSrc = '';
@@ -2861,7 +3221,7 @@ function syncNadir() {
   if (nadirSrc != n.img) {
     nadirSrc = n.img;
     if (nadirMesh) {
-      scene3d.remove(nadirMesh);
+      nadirGroup.remove(nadirMesh);
       nadirMesh = null;
     }
     const im = new Image();
@@ -2881,7 +3241,7 @@ function syncNadir() {
       );
       nadirMesh.rotation.x = -PI / 2;
       nadirMesh.renderOrder = 3;
-      scene3d.add(nadirMesh);
+      nadirGroup.add(nadirMesh);
       syncNadir();
     };
     im.src = n.img;
@@ -3132,6 +3492,7 @@ function syncExtras() {
   if (document.activeElement != $('eurl')) $('eurl').value = project.eurl || '';
   $('ecode').value = embedCode();
   syncLogo();
+  syncCover();
   if (audioEl) {
     mode == 'view' ? startAudio() : audioEl.pause();
   }
@@ -3299,6 +3660,78 @@ $('ecopy').onclick = async () => {
   }
   toast(t('msg.copied'));
 };
+// ───────────── cover ─────────────
+// The cover is a picture of the current view, taken by rendering the scene again at 16:9 into
+// an off-screen target, without hotspots. It is the background of an exported tour's start
+// screen and the project's picture in the library, both of which otherwise show the first
+// panorama squeezed flat.
+const COVER_W = 1280,
+  COVER_H = 720;
+async function captureCover() {
+  if (!scenes[current]) return;
+  const pid = projectId,
+    rt = new THREE.WebGLRenderTarget(COVER_W, COVER_H),
+    cam = camera.clone(),
+    shown = hotspotGroup.visible;
+  rt.texture.encoding = THREE.sRGBEncoding;
+  cam.aspect = COVER_W / COVER_H;
+  cam.updateProjectionMatrix();
+  const px = new Uint8Array(COVER_W * COVER_H * 4);
+  hotspotGroup.visible = false;
+  try {
+    renderer.setRenderTarget(rt);
+    renderer.render(scene3d, cam);
+    renderer.readRenderTargetPixels(rt, 0, 0, COVER_W, COVER_H, px);
+  } finally {
+    renderer.setRenderTarget(null);
+    hotspotGroup.visible = shown;
+    rt.dispose();
+  }
+  // WebGL reads rows from the bottom up.
+  const c = document.createElement('canvas'),
+    ctx = c.getContext('2d'),
+    im = ctx.createImageData(COVER_W, COVER_H),
+    row = COVER_W * 4;
+  c.width = COVER_W;
+  c.height = COVER_H;
+  for (let y = 0; y < COVER_H; y++)
+    im.data.set(px.subarray((COVER_H - 1 - y) * row, (COVER_H - y) * row), y * row);
+  ctx.putImageData(im, 0, 0);
+  const blob = await canvasBlob(c, 'image/jpeg', 0.85);
+  if (!blob) throw new Error('encode');
+  // Another project may have been opened while the picture was encoding.
+  if (pid != projectId) return false;
+  freeURL(project.cover?.img);
+  project.cover = { img: objURL(blob), blob, t: Date.now() };
+  coverDirty = true;
+  save();
+  syncCover();
+  return true;
+}
+function syncCover() {
+  if (EMBED) return;
+  const c = project.cover,
+    im = $('cvimg');
+  im.hidden = !c;
+  if (c) im.src = c.img;
+  else im.removeAttribute('src');
+  $('cvrm').disabled = !c;
+}
+if (!EMBED) {
+  $('cvset').onclick = () => {
+    captureCover().then(
+      ok => ok && toast(t('msg.coverSet')),
+      () => toast(t('msg.imgFail'))
+    );
+  };
+  $('cvrm').onclick = () => {
+    freeURL(project.cover?.img);
+    delete project.cover;
+    coverDirty = true;
+    save();
+    syncCover();
+  };
+}
 // ───────────── logo ─────────────
 // A logo sits in a corner of the stage, over every scene, as a plain <img>: it stays sharp
 // at any size and needs nothing from the 3D scene. Corners are physical (tl, tr, bl, br),
@@ -3350,7 +3783,7 @@ let logoSrc = '';
 // Raster logos are decoded with createImageBitmap, which rejects a damaged file instead of
 // drawing the part it could read, and re-encoded as PNG at up to 800 px on the long side so
 // their transparency survives. SVG is stored as it is and stays sharp at every size.
-async function readLogo(f) {
+async function readLogo(f, max = LOGO_MAX_PX) {
   if (f.type == 'image/svg+xml') {
     const url = objURL(f);
     try {
@@ -3374,7 +3807,7 @@ async function readLogo(f) {
   const im = await createImageBitmap(f),
     w = im.width,
     h = im.height,
-    k = Math.min(1, LOGO_MAX_PX / Math.max(w, h)),
+    k = Math.min(1, max / Math.max(w, h)),
     canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.round(w * k));
   canvas.height = Math.max(1, Math.round(h * k));
@@ -3607,7 +4040,7 @@ glCanvas.addEventListener('pointermove', e => {
     const [a, b] = [...pointers.values()],
       d = Math.hypot(a.x - b.x, a.y - b.y);
     if (d > 0) {
-      fov = Math.max(40, Math.min(95, (pinch.f * pinch.d) / d));
+      fov = Math.max(FOV_MIN, Math.min(FOV_MAX, (pinch.f * pinch.d) / d));
       camera.fov = fov;
       camera.updateProjectionMatrix();
     }
@@ -3642,13 +4075,13 @@ glCanvas.addEventListener('keydown', e => {
       break;
     case '+':
     case '=':
-      fov = Math.max(40, fov - 5);
+      fov = Math.max(FOV_MIN, fov - 5);
       camera.fov = fov;
       camera.updateProjectionMatrix();
       break;
     case '-':
     case '_':
-      fov = Math.min(95, fov + 5);
+      fov = Math.min(FOV_MAX, fov + 5);
       camera.fov = fov;
       camera.updateProjectionMatrix();
       break;
@@ -3764,7 +4197,7 @@ if (!EMBED) {
     $('stt').textContent = project.title || '';
     $('std').textContent = project.desc || '';
     $('start').style.backgroundImage =
-      `linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.7)),url("${scenes[0].img}")`;
+      `linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.7)),url("${project.cover?.img || scenes[0].img}")`;
     $('sgo').disabled = true;
     $('sgo').textContent = t('view.loading');
     $('start').hidden = false;
