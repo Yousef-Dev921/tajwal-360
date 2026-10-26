@@ -65,7 +65,12 @@ const I18N = {
     'act.redo': 'إعادة',
     'act.redoTitle': 'إعادة (Ctrl+Shift+Z)',
     'act.preview': 'معاينة',
-    'act.export': 'تصدير الجولة',
+    'act.export': 'تصدير HTML',
+    'act.exportTitle':
+      'ملف HTML واحد يُفتح في أي مكان، حتى من الجهاز مباشرة. يناسب الجولات الصغيرة.',
+    'act.exportZip': 'تصدير كمجلد (ZIP)',
+    'act.exportZipTitle':
+      'مجلد ملفات تنشره على استضافة ويب مثل GitHub Pages أو Netlify. يُفتح أسرع ويناسب الجولات الكبيرة.',
     'act.saveCopy': 'حفظ نسخة',
     'act.import': 'استيراد',
     'act.startAngle': 'زاوية البداية',
@@ -130,6 +135,14 @@ const I18N = {
     'f.targetFind': 'ابحث عن الوجهة',
     'hint.meta':
       'يُقرأ التاريخ والموقع من بيانات الكاميرا داخل الصورة، ولا تتضمّنهما الجولة المصدَّرة إلا عند تفعيل هذا الخيار.',
+    'opt.hd': 'الاحتفاظ بنسخة عالية الدقة (\u20668192\u2069 بكسل)',
+    'hint.hd':
+      'يسري على الصور التي تُضاف بعد تفعيله. تُحفظ لكل بانوراما أعرض من \u20664096\u2069 بكسل نسختان: حتى \u20668192\u2069 لأجهزة الكمبيوتر، و\u20664096\u2069 للهواتف والأجهزة اللوحية. يحمل التصدير كمجلد النسختين، أما ملف HTML فيحمل نسخة \u20664096\u2069 وحدها.',
+    'f.hdScene': 'لهذا المشهد نسخة عالية الدقة تظهر على أجهزة الكمبيوتر.',
+    'msg.hdLeft':
+      'تُركت النسخ عالية الدقة خارج الملف لأنه كان سيتجاوز حجماً يمكن استيراده مرة أخرى، وبقيت في هذا المتصفح.',
+    'msg.exportedHd':
+      'يحمل الملف نسخ \u20664096\u2069 بكسل وحدها، فالنسخ عالية الدقة في التصدير كمجلد.',
     'f.captured': 'التُقطت:',
     'act.openMap': 'فتح الموقع على الخريطة',
     'act.planBig': 'تكبير المخطط',
@@ -238,6 +251,17 @@ const I18N = {
     'msg.needOneScene': 'أضف مشهداً واحداً على الأقل قبل التصدير.',
     'msg.preparing': 'جارٍ تجهيز الملف…',
     'msg.exported': 'نُزّلت الجولة كملف مستقل ({mb} ميجابايت).',
+    'msg.exportBig':
+      'سيبلغ حجم الملف نحو {mb} ميجابايت. الملف الواحد بهذا الحجم بطيء التحميل وقد يُغلق الصفحة على الهواتف، و«تصدير كمجلد (ZIP)» أنسب له. اضغط «تصدير HTML» مرة أخرى للمتابعة رغم ذلك.',
+    'msg.zipProgress': 'جارٍ تجهيز المجلد… \u2066{p}%\u2069',
+    'msg.zipDone':
+      'نُزّلت الجولة كمجلد مضغوط ({mb} ميجابايت). فكّ الضغط وارفع المجلد إلى استضافة ويب، فهو لا يعمل عند فتحه من الجهاز مباشرة.',
+    'msg.zipLimit':
+      'الجولة أكبر من أن تُحفظ في ملف ZIP واحد، إذ تتجاوز 4 جيجابايت. قسّمها إلى مشروعين.',
+    'view.fileProto':
+      'هذه الجولة مجلد ملفات، ولا تعمل عند فتحها من الجهاز مباشرة لأن المتصفح يمنع عرض الصور من الملفات المحلية. ارفع المجلد كما هو إلى استضافة ويب مثل GitHub Pages أو Netlify، أو شغّل خادماً محلياً داخله بالأمر \u2066python3 -m http.server\u2069 ثم افتح \u2066http://localhost:8000\u2069',
+    'zip.readme':
+      'جولة افتراضية من Tajwal 360\n\nافتح index.html من خادم ويب، لا من الجهاز مباشرة، لأن المتصفح يمنع عرض الصور من الملفات المحلية.\n\nللنشر: ارفع هذا المجلد كما هو إلى أي استضافة ملفات ثابتة، مثل GitHub Pages أو Netlify أو Cloudflare Pages، مع الإبقاء على ترتيب المجلدات.\n\nللمعاينة على هذا الجهاز: افتح الطرفية داخل هذا المجلد وشغّل\n    python3 -m http.server 8000\nثم افتح http://localhost:8000 في المتصفح.',
     'msg.exportFail':
       'تعذّر التصدير. افتح الموقع عبر https (مثل GitHub Pages) أو من خادم محلي، فالتصدير لا يعمل عند فتح الملف مباشرةً من الجهاز.',
     'msg.northSet': 'حُدّد اتجاه الشمال لهذا المشهد، وظهرت البوصلة في الزاوية.',
@@ -266,6 +290,15 @@ const I18N = {
       'اضغط على المخطط لتحديد موقع هذا المشهد. كبّر المخطط وحرّكه أولاً لتحديد أدق.',
     'msg.audioBig': 'حجم الملف الصوتي أكبر من 8 ميجابايت. اختر ملفاً أصغر.',
     'msg.audioAdded': 'أُضيفت الموسيقى.',
+    'f.sceneAudio': 'صوت المشهد',
+    'hint.sceneAudio':
+      'يُشغَّل عند دخول الزائر هذا المشهد ويتوقف عند مغادرته، وتنخفض الموسيقى الخلفية أثناءه. الحد الأقصى 8 ميجابايت.',
+    'f.loop': 'تكرار',
+    'f.delay': 'التأخير قبل التشغيل',
+    'f.sec': '{n} ث',
+    'act.listen': 'استماع',
+    'act.stop': 'إيقاف',
+    'msg.sceneAudioAdded': 'أُضيف صوت المشهد.',
     'msg.logoAdded': 'أُضيف الشعار. اسحبه داخل البانوراما إلى الزاوية التي تريدها.',
     'msg.logoOpaque':
       'أُضيف الشعار، لكن خلفيته غير شفافة فسيظهر داخل مستطيل. ملف PNG بخلفية شفافة يعطي نتيجة أنظف.',
@@ -303,7 +336,12 @@ const I18N = {
     'act.redo': 'Redo',
     'act.redoTitle': 'Redo (Ctrl+Shift+Z)',
     'act.preview': 'Preview',
-    'act.export': 'Export tour',
+    'act.export': 'Export HTML',
+    'act.exportTitle':
+      'One HTML file that opens anywhere, even straight from disk. Best for small tours.',
+    'act.exportZip': 'Export as folder (ZIP)',
+    'act.exportZipTitle':
+      'A folder of files to publish on a web host such as GitHub Pages or Netlify. Opens faster and suits large tours.',
     'act.saveCopy': 'Save a copy',
     'act.import': 'Import',
     'act.startAngle': 'Start angle',
@@ -368,6 +406,14 @@ const I18N = {
     'f.targetFind': 'Find a destination',
     'hint.meta':
       'Both are read from the camera data in each photo. An exported tour includes them only while this is on.',
+    'opt.hd': 'Keep high-resolution panoramas (8192 px)',
+    'hint.hd':
+      'Applies to images added from now on. Each panorama wider than 4096 px keeps two copies: up to 8192 px for desktops, and 4096 px for phones and tablets. The folder export carries both; the HTML file carries the 4096 px copy only.',
+    'f.hdScene': 'This scene has a high-resolution copy, shown on desktops.',
+    'msg.hdLeft':
+      'The high-resolution copies were left out, since the file would be too large to import again; they stay in this browser.',
+    'msg.exportedHd':
+      'It carries the 4096 px copies only; the high-resolution ones are in the folder export.',
     'f.captured': 'Captured:',
     'act.openMap': 'Open this location on a map',
     'act.planBig': 'Enlarge plan',
@@ -465,6 +511,17 @@ const I18N = {
     'msg.needOneScene': 'Add at least one scene before exporting.',
     'msg.preparing': 'Preparing the file…',
     'msg.exported': 'Tour downloaded as a single file ({mb} MB).',
+    'msg.exportBig':
+      'The file would be about {mb} MB. A single file this large loads slowly and can crash the page on phones, so “Export as folder (ZIP)” suits it better. Click “Export HTML” again to go ahead anyway.',
+    'msg.zipProgress': 'Packing the folder… {p}%',
+    'msg.zipDone':
+      'Tour downloaded as a ZIP folder ({mb} MB). Unzip it and upload the folder to a web host; it doesn’t open straight from disk.',
+    'msg.zipLimit':
+      'This tour is too large for one ZIP file: it would pass 4 GB. Split it into two projects.',
+    'view.fileProto':
+      'This tour is a folder of files and doesn’t work when opened straight from disk, because browsers block panoramas loaded from local files. Upload the folder as it is to a web host such as GitHub Pages or Netlify, or run a local server inside it with python3 -m http.server and open http://localhost:8000',
+    'zip.readme':
+      'Tajwal 360 virtual tour\n\nOpen index.html from a web server, not straight from disk: browsers block panoramas loaded from local files.\n\nTo publish, upload this folder as it is to any static web host, such as GitHub Pages, Netlify or Cloudflare Pages. Keep the folder structure.\n\nTo preview on this computer, open a terminal in this folder and run\n    python3 -m http.server 8000\nthen open http://localhost:8000 in a browser.',
     'msg.exportFail':
       'Export failed. Open the site over https (GitHub Pages, for example) or from a local server. Export doesn’t work when the page is opened straight from disk.',
     'msg.northSet': 'North set for this scene. The compass now shows in the corner.',
@@ -494,6 +551,15 @@ const I18N = {
     'msg.planClick': 'Click the plan to place this scene. Zoom and pan first for a precise spot.',
     'msg.audioBig': 'The audio file is over 8 MB. Choose a smaller one.',
     'msg.audioAdded': 'Music added.',
+    'f.sceneAudio': 'Scene audio',
+    'hint.sceneAudio':
+      'Plays when the visitor enters this scene and stops when they leave; the background music is lowered meanwhile. 8 MB maximum.',
+    'f.loop': 'Loop',
+    'f.delay': 'Delay before playing',
+    'f.sec': '{n} s',
+    'act.listen': 'Listen',
+    'act.stop': 'Stop',
+    'msg.sceneAudioAdded': 'Scene audio added.',
     'msg.logoAdded': 'Logo added. Drag it on the panorama to the corner you want.',
     'msg.logoOpaque':
       'Logo added, but its background isn’t transparent, so it will show as a rectangle. A PNG with a transparent background looks cleaner.',
@@ -654,11 +720,14 @@ const dbOp = (m, k, v) =>
 function dataToBlob(u) {
   const i = u.indexOf(','),
     h = u.slice(0, i),
-    bin = atob(u.slice(i + 1)),
+    type = h.slice(5).split(';')[0] || 'application/octet-stream';
+  // An imported SVG logo can be a URL-encoded data: URL rather than base64.
+  if (!/;base64$/i.test(h)) return new Blob([decodeURIComponent(u.slice(i + 1))], { type });
+  const bin = atob(u.slice(i + 1)),
     n = bin.length,
     a = new Uint8Array(n);
   for (let x = 0; x < n; x++) a[x] = bin.charCodeAt(x);
-  return new Blob([a], { type: (h.match(/:(.*?);/) || [, 'application/octet-stream'])[1] });
+  return new Blob([a], { type });
 }
 const toDataURL = b =>
   new Promise((res, rej) => {
@@ -677,6 +746,7 @@ let library = [],
   projectId = null,
   dirtyScenes = new Set(),
   storedSceneIds = new Set(),
+  storedSnd = new Map(), // scene id → the clip Blob in storage
   audioDirty = false,
   planDirty = false,
   coverDirty = false,
@@ -694,6 +764,15 @@ const save = () => {
 // the loading bar up for good. Wait for load, which is reliable, then cap decode.
 // Thumbnails only draw the image to a canvas, so they skip decode() altogether.
 const DECODE_TIMEOUT_MS = 6000;
+const decodeImg = im =>
+  new Promise(res => {
+    const k = setTimeout(() => res(im), DECODE_TIMEOUT_MS),
+      fin = () => {
+        clearTimeout(k);
+        res(im);
+      };
+    (im.decode ? im.decode() : Promise.resolve()).then(fin, fin);
+  });
 function loadImg(src, decode = true) {
   return new Promise((res, rej) => {
     const im = new Image();
@@ -701,13 +780,7 @@ function loadImg(src, decode = true) {
     const ready = () => {
       if (started) return;
       started = true;
-      if (!decode) return res(im);
-      const k = setTimeout(() => res(im), DECODE_TIMEOUT_MS),
-        fin = () => {
-          clearTimeout(k);
-          res(im);
-        };
-      (im.decode ? im.decode() : Promise.resolve()).then(fin, fin);
+      res(decode ? decodeImg(im) : im);
     };
     im.onload = ready;
     im.onerror = () => rej(new Error('image'));
@@ -725,17 +798,32 @@ const makeTexture = im => {
 };
 // A panorama takes width × height × 4 bytes of GPU memory, 32 MB at 4096 × 2048, and Safari
 // on iOS reloads a page that holds much more than about 600 MB. Only the scenes most recently
-// shown or preloaded stay resident; older ones are released and decoded again if revisited.
-const TEXTURE_CACHE = navigator.maxTouchPoints > 0 ? 4 : 8;
+// shown or preloaded stay resident, within a budget of pixels: eight 4096 panoramas, or four
+// on a touch device. An 8192 panorama counts as four. Older ones are released and decoded
+// again if revisited.
+const TOUCH = navigator.maxTouchPoints > 0,
+  PANO_PX = 4096 * 2048,
+  TEX_BUDGET = (TOUCH ? 4 : 8) * PANO_PX;
 let texOrder = [], // scene ids, least recently used first
   walkTarget = null;
 const texLoads = {};
-// Marks a scene's texture as just used, then releases the oldest ones over the limit. The
+// A scene added with high resolution on has an 8192 copy (hd) beside its 4096 one (img).
+// Desktops whose GPU takes an 8192 texture show it; phones and tablets never decode it.
+const useHD = () => !TOUCH && renderer.capabilities.maxTextureSize >= 8192,
+  sceneSrc = s => (s.hd && useHD() ? s.hd : s.img);
+const texPx = k => {
+  const im = textures[k]?.image;
+  return im ? (im.naturalWidth || im.width) * (im.naturalHeight || im.height) : 0;
+};
+// What a scene costs in the budget: its texture if loaded, else the most it can take.
+const sceneCost = s => texPx(s.id) || (s.hd && useHD() ? 4 : 1) * PANO_PX;
+// Marks a scene's texture as just used, then releases the oldest ones over the budget. The
 // current scene, a walk in progress and anything on screen are never released.
 function useTexture(id) {
   texOrder = texOrder.filter(x => x != id);
   texOrder.push(id);
-  for (let i = 0; texOrder.length > TEXTURE_CACHE && i < texOrder.length; ) {
+  let used = texOrder.reduce((n, k) => n + texPx(k), 0);
+  for (let i = 0; used > TEX_BUDGET && i < texOrder.length; ) {
     const k = texOrder[i],
       tex = textures[k];
     if (
@@ -748,25 +836,66 @@ function useTexture(id) {
       i++;
       continue;
     }
+    used -= texPx(k);
     texOrder.splice(i, 1);
     tex?.dispose();
     delete textures[k];
   }
 }
+// Decoding holds a whole bitmap in memory, 32 MB at 4096 and 128 MB at 8192, so decodes take
+// turns: one at a time on a touch device, two elsewhere. Only the decode waits its turn, not
+// the download, so a slow file doesn't hold up the others. A scene the visitor is waiting
+// for (urgent) goes to the front of the queue, ahead of preloads.
+const DECODES = TOUCH ? 1 : 2,
+  decodeQueue = [],
+  urgentIds = new Set();
+let decoding = 0;
+const decodeTurn = id =>
+  new Promise(r => {
+    if (decoding < DECODES) {
+      decoding++;
+      r();
+    } else decodeQueue[urgentIds.has(id) ? 'unshift' : 'push']({ id, r });
+  });
+function decodeDone() {
+  const n = decodeQueue.shift();
+  if (n) n.r();
+  else decoding--;
+}
 // One decode per scene, however many callers ask for it at once.
-function loadTexture(s) {
+function loadTexture(s, urgent) {
   if (textures[s.id]) {
     useTexture(s.id);
     return Promise.resolve(textures[s.id]);
   }
-  if (!texLoads[s.id])
-    texLoads[s.id] = loadImg(s.img)
+  if (urgent) {
+    urgentIds.add(s.id);
+    // Already queued as a preload: move it up.
+    const i = decodeQueue.findIndex(x => x.id == s.id);
+    if (i > 0) decodeQueue.unshift(...decodeQueue.splice(i, 1));
+  }
+  if (!texLoads[s.id]) {
+    const p = loadImg(sceneSrc(s), false)
+      .then(im =>
+        decodeTurn(s.id)
+          .then(() => decodeImg(im))
+          .finally(decodeDone)
+      )
       .then(im => {
+        // Another project was opened meanwhile; a duplicate shares scene ids.
+        if (texLoads[s.id] !== p) throw new Error('stale');
         textures[s.id] = makeTexture(im);
         useTexture(s.id);
         return textures[s.id];
       })
-      .finally(() => delete texLoads[s.id]);
+      .finally(() => {
+        if (texLoads[s.id] === p) {
+          delete texLoads[s.id];
+          urgentIds.delete(s.id);
+        }
+      });
+    texLoads[s.id] = p;
+  }
   return texLoads[s.id];
 }
 function dropTexture(id) {
@@ -801,9 +930,20 @@ async function libraryThumb(src) {
     return null;
   }
 }
+// A scene clip's name and options, without its bytes.
+const sndOpts = ({ src, blob, ...o }) => o;
 // Project document without image bytes, so autosave stays a few KB per write.
 function toDoc(Q) {
-  const d = { ...Q, v: SCHEMA, scenes: (Q.scenes || []).map(({ img, blob, ...r }) => r) };
+  const d = {
+    ...Q,
+    v: SCHEMA,
+    // hd: 1 records that the scene has a high-resolution master under its own key.
+    scenes: (Q.scenes || []).map(({ img, blob, hd, hdBlob, ...r }) => {
+      // The scene's clip is stored under its own key too; the document keeps its options.
+      if (r.snd) r.snd = sndOpts(r.snd);
+      return hdBlob ? { ...r, hd: 1 } : r;
+    }),
+  };
   if (Q.audio) d.audio = { name: Q.audio.name, vol: Q.audio.vol };
   else delete d.audio;
   // The plan image is stored on its own; the document only records that there is one.
@@ -830,6 +970,7 @@ async function flush() {
     for (const sid of [...dirtyScenes]) {
       const s = Q.scenes.find(x => x.id == sid);
       if (s && s.blob) await dbOp('put', 'b:' + id + ':' + sid, s.blob);
+      if (s && s.hdBlob) await dbOp('put', 'h:' + id + ':' + sid, s.hdBlob);
       dirtyScenes.delete(sid);
     }
     // Taken now rather than cleared after the write: opening another project during the
@@ -860,10 +1001,28 @@ async function flush() {
       }
       throw x;
     }
+    // Scene clips are written when they differ from what storage holds, which also covers
+    // a clip that undo or redo brings back.
+    const held = storedSnd;
+    for (const s of Q.scenes) {
+      const b = s.snd?.blob || null;
+      if (b === (held.get(s.id) || null)) continue;
+      if (b) await dbOp('put', 'sa:' + id + ':' + s.id, b);
+      else await dbOp('del', 'sa:' + id + ':' + s.id).catch(() => {});
+      b ? held.set(s.id, b) : held.delete(s.id);
+    }
     await dbOp('put', 'p:' + id, toDoc(Q));
     const live = new Set(Q.scenes.map(s => s.id));
+    for (const [sid] of held)
+      if (!live.has(sid)) {
+        await dbOp('del', 'sa:' + id + ':' + sid).catch(() => {});
+        held.delete(sid);
+      }
     for (const sid of storedSceneIds)
-      if (!live.has(sid)) await dbOp('del', 'b:' + id + ':' + sid).catch(() => {});
+      if (!live.has(sid)) {
+        await dbOp('del', 'b:' + id + ':' + sid).catch(() => {});
+        await dbOp('del', 'h:' + id + ':' + sid).catch(() => {});
+      }
     storedSceneIds = live;
     let e = library.find(x => x.id == id);
     if (!e) {
@@ -947,6 +1106,18 @@ async function loadProject(id) {
         s.img = '';
       }
     }
+    if (s.hd) {
+      const b = s.img && (await dbOp('get', 'h:' + id + ':' + s.id).catch(() => null));
+      if (b instanceof Blob) {
+        s.hdBlob = b;
+        s.hd = objURL(b);
+      } else delete s.hd;
+    }
+    if (s.snd) {
+      const b = s.img && (await dbOp('get', 'sa:' + id + ':' + s.id).catch(() => null));
+      if (b instanceof Blob) s.snd = { ...s.snd, src: objURL(b), blob: b };
+      else delete s.snd;
+    }
     if (!Array.isArray(s.hs)) s.hs = [];
   }
   doc.scenes = doc.scenes.filter(s => s.img);
@@ -991,7 +1162,11 @@ async function loadProject(id) {
   return doc;
 }
 function revokeProject(Q) {
-  (Q?.scenes || []).forEach(s => freeURL(s.img));
+  (Q?.scenes || []).forEach(s => {
+    freeURL(s.img);
+    freeURL(s.hd);
+    freeURL(s.snd?.src);
+  });
   freeURL(Q?.audio?.src);
   freeURL(Q?.plan?.img);
   freeURL(Q?.cover?.img);
@@ -1468,13 +1643,15 @@ async function showScene(i) {
   placing = null;
   $('pop').hidden = true;
   hideVrPanel();
+  // The last scene's clip stops now, not once this one has loaded.
+  if (clip && clip.id != s.id) endClip();
   if (!textures[s.id]) {
     busy(1);
     try {
-      await loadTexture(s);
+      await loadTexture(s, true);
     } catch (e) {
       busy(-1);
-      toast(t('msg.sceneFail'));
+      if (scenes[i] === s) toast(t('msg.sceneFail'));
       return;
     }
     busy(-1);
@@ -1608,6 +1785,7 @@ async function addFiles(files) {
       failedNames.push(f.name);
       continue;
     }
+    let hdBlob = null;
     try {
       const im = await createImageBitmap(f),
         flat = Math.abs(im.width / im.height - 2) > 0.15,
@@ -1626,11 +1804,32 @@ async function addFiles(files) {
         ctx.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
         flatNames.push(f.name);
       } else {
+        // With high resolution on, a panorama wider than 4096 also keeps a master of up to
+        // 8192, and the 4096 copy is drawn from that master: halving gives a cleaner result
+        // than a single large step down. iOS refuses a canvas this size, so there the master
+        // is skipped and the scene keeps its 4096 copy only.
+        let src = im;
+        if (project.hd && im.width > 4096) {
+          const m = document.createElement('canvas'),
+            k = Math.min(1, 8192 / im.width);
+          m.width = Math.round(im.width * k);
+          m.height = Math.round(im.height * k);
+          const mx = m.getContext('2d');
+          mx?.drawImage(im, 0, 0, m.width, m.height);
+          // A browser over its canvas limit can hand back no context, or one that silently
+          // draws nothing; a decoded photo is opaque, so a transparent middle gives it away.
+          if (mx?.getImageData(m.width >> 1, m.height >> 1, 1, 1).data[3] == 255) {
+            hdBlob = await canvasBlob(m, 'image/jpeg', 0.86);
+            if (hdBlob) src = m;
+          }
+        }
         const k = Math.min(1, 4096 / im.width);
         canvas.width = Math.round(im.width * k);
         canvas.height = Math.round(im.height * k);
-        ctx.drawImage(im, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+        if (src != im) src.width = src.height = 0; // let the 128 MB master go now
       }
+      im.close();
       const blob = await canvasBlob(canvas, 'image/jpeg', 0.86),
         sid = uid();
       scenes.push({
@@ -1638,6 +1837,7 @@ async function addFiles(files) {
         name: f.name.replace(/\.[^.]+$/, ''),
         img: objURL(blob),
         blob,
+        ...(hdBlob && { hd: objURL(hdBlob), hdBlob }),
         th: sceneThumb(canvas),
         u0: flat ? 0.5 : 0,
         p0: 0,
@@ -2099,6 +2299,7 @@ function syncMeta() {
   }
   if (EMBED) return;
   $('metaon').checked = !!project.meta;
+  $('shd').hidden = !s?.hd;
   $('scap').hidden = !has;
   if (has)
     $('scap').textContent =
@@ -2168,6 +2369,11 @@ $('ptitle').oninput = e => {
 };
 $('auto').onchange = e => {
   project.auto = e.target.checked;
+  save();
+};
+$('hdon').onchange = e => {
+  if (e.target.checked) project.hd = true;
+  else delete project.hd;
   save();
 };
 // Left out of the project while off.
@@ -2355,38 +2561,90 @@ const fileName = ext =>
 // Portable form of a project: images become base64 here only, for export and
 // for saving a .json file. Never for storage. A published tour leaves out the capture date
 // and position unless the author chose to show them, so they don't travel unseen.
-async function toPortable(Q, forTour) {
-  const out = toDoc(Q);
+// put(blob, name) decides how a file travels: as a data: URL by default, or, for the folder
+// export, as a file in the ZIP whose relative path takes its place. name is a path without
+// an extension, unique within the tour.
+// A .json backup is one string, and browsers can't build or read one much past 500 MB. The
+// high-resolution masters are the bulk of a large project, so they go into the file only
+// while it stays under JSON_HD_MAX; otherwise the file keeps the 4096 copies and says so.
+const JSON_HD_MAX = 300 * 1048576;
+async function toPortable(Q, forTour, put) {
+  const out = toDoc(Q),
+    zip = !!put,
+    hdBytes = (Q.scenes || []).reduce(
+      (n, s) => n + (s.hdBlob?.size || 0) + (s.blob?.size || 0) + (s.snd?.blob?.size || 0),
+      0
+    ),
+    withHd = zip || (!forTour && (hdBytes * 4) / 3 < JSON_HD_MAX),
+    // Small images the document carries inline (icons, nadir, logo) become files too.
+    inline = (u, name) => (zip ? put(dataToBlob(u), name) : u);
+  put = put || toDataURL;
   out.scenes = [];
   for (const s of Q.scenes) {
-    const { blob, ...r } = s;
+    const { blob, hdBlob, hd, ...r } = s;
     if (forTour && !Q.meta) {
       delete r.taken;
       delete r.gps;
     }
-    out.scenes.push({ ...r, img: blob ? await toDataURL(blob) : s.img });
+    // The tour's scene grid loads thumbnails lazily, as files of their own.
+    if (zip && r.th) r.th = await inline(r.th, 'thumbs/' + s.id);
+    // The single file carries the 4096 copies only: at 8192 it would grow about fourfold.
+    if (hdBlob && withHd) r.hd = await put(hdBlob, 'scenes/' + s.id + '-hd');
+    if (r.snd)
+      r.snd = {
+        ...sndOpts(r.snd),
+        src: r.snd.blob ? await put(r.snd.blob, 'audio/' + s.id, r.snd.name) : r.snd.src,
+      };
+    out.scenes.push({ ...r, img: blob ? await put(blob, 'scenes/' + s.id) : s.img });
   }
   if (Q.audio)
     out.audio = {
       name: Q.audio.name,
       vol: Q.audio.vol,
-      src: Q.audio.blob ? await toDataURL(Q.audio.blob) : Q.audio.src,
+      src: Q.audio.blob ? await put(Q.audio.blob, 'audio/music', Q.audio.name) : Q.audio.src,
     };
-  if (Q.plan) out.plan = { img: Q.plan.blob ? await toDataURL(Q.plan.blob) : Q.plan.img };
-  if (Q.cover) out.cover = { img: Q.cover.blob ? await toDataURL(Q.cover.blob) : Q.cover.img };
+  if (Q.plan) out.plan = { img: Q.plan.blob ? await put(Q.plan.blob, 'plan') : Q.plan.img };
+  if (Q.cover) out.cover = { img: Q.cover.blob ? await put(Q.cover.blob, 'cover') : Q.cover.img };
   // The editor keeps every icon uploaded to a project; a file carries only those in use.
   const used = new Set(Q.scenes.flatMap(s => s.hs.filter(h => h.shape == 'img').map(h => h.icon)));
-  out.icons = (Q.icons || []).filter(ic => used.has(ic.id));
+  out.icons = [];
+  for (const ic of Q.icons || [])
+    if (used.has(ic.id)) out.icons.push({ ...ic, img: await inline(ic.img, 'icons/' + ic.id) });
   if (!out.icons.length) delete out.icons;
+  if (zip && Q.nadir) out.nadir = { ...Q.nadir, img: await inline(Q.nadir.img, 'nadir') };
+  if (zip && Q.logo) out.logo = { ...Q.logo, img: await inline(Q.logo.img, 'logo') };
+  if (forTour) delete out.hd; // an editor setting
   out.lang = LANG; // an exported tour renders in the language its author was using
+  // Not a field of the file: tells the caller the masters were left out.
+  if (!forTour && !withHd && Q.scenes.some(s => s.hdBlob))
+    Object.defineProperty(out, 'hdLeft', { value: true });
   return out;
 }
 const portableProject = () => toPortable(project);
+// What the single file would weigh: base64 grows every byte by a third, on top of about
+// 750 KB of code. Past EXPORT_BIG_MB the author is pointed to the folder export first.
+const EXPORT_BIG_MB = 100;
+function exportEstimate() {
+  let n = 0;
+  for (const s of scenes) n += (s.blob?.size || 0) + (s.snd?.blob?.size || 0);
+  n += (project.audio?.blob?.size || 0) + (project.plan?.blob?.size || 0);
+  n += project.cover?.blob?.size || 0;
+  return (n * 4) / 3 + 8e5;
+}
+let expArmed = 0;
 $('exp').onclick = async () => {
   if (!scenes.length) {
     toast(t('msg.needOneScene'));
     return;
   }
+  const mb = exportEstimate() / 1048576;
+  // A large file takes a second click, once the author has read what it will weigh.
+  if (mb > EXPORT_BIG_MB && Date.now() - expArmed > 15000) {
+    expArmed = Date.now();
+    toast(t('msg.exportBig', { mb: Math.round(mb) }), 15000);
+    return;
+  }
+  expArmed = 0;
   toast(t('msg.preparing'), 60000);
   try {
     const [css, three, app, data] = await Promise.all([
@@ -2398,10 +2656,193 @@ $('exp').onclick = async () => {
     const html = `<!DOCTYPE html><html lang="${LANG}" dir="${isRTL() ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${EXPORT_CSP}"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(project.title)}</title><style>${css}</style><noscript><style>#xload{display:none}</style></noscript></head><body><div id="xload" role="status"><b dir="auto">${esc(project.title)}</b><i></i><span>${esc(t('view.loading'))}</span></div><div id="root" class="view">${SHELL}</div><script>${three}<\/script><script>window.__TOUR__=${JSON.stringify(data).replace(/</g, '\\u003c')};${app}<\/script></body></html>`;
     const bytes = saveFile(fileName('.html'), html, 'text/html');
     editCount = 0;
-    toast(t('msg.exported', { mb: (bytes / 1048576).toFixed(1) }));
+    const hdNote = scenes.some(s => s.hdBlob) ? ' ' + t('msg.exportedHd') : '';
+    toast(t('msg.exported', { mb: (bytes / 1048576).toFixed(1) }) + hdNote, hdNote ? 9000 : 0);
   } catch (e) {
     toast(t('msg.exportFail'), 9000);
   }
+};
+// ───────────── folder (ZIP) export ─────────────
+// The folder tour loads each panorama as its own file, so a large tour costs no more to open
+// than the scenes a visitor actually sees, and nothing is inflated by base64. Layout:
+//   index.html        the page, with its own content security policy
+//   tour/             style.css, three.min.js, app.js (cached by the browser between visits)
+//                     and data.js, the tour document, which sets window.__TOUR__ exactly as
+//                     the single file does, so the viewer has one code path for both
+//   scenes/, audio/, icons/, plan, cover, nadir, logo   the media, as binary files
+// data.js is a script rather than JSON so the page needs no fetch() and no connect-src.
+// file: lets the scripts run when the folder is opened from disk, whichever way a browser
+// reads 'self' for a file, so the page can explain that it needs a web server; a hosted page
+// can't load file: URLs anyway.
+const ZIP_CSP =
+  "default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; " +
+  "img-src 'self' data:; media-src 'self'; base-uri 'none'; form-action 'none'";
+const FAVICON = document.querySelector('link[rel=icon]')?.getAttribute('href') || '';
+// File extensions by type, so a static host serves each file with the right Content-Type.
+const EXT = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/svg+xml': 'svg',
+  'audio/mpeg': 'mp3',
+  'audio/mp3': 'mp3',
+  'audio/mp4': 'm4a',
+  'audio/x-m4a': 'm4a',
+  'audio/aac': 'aac',
+  'audio/ogg': 'ogg',
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+  'audio/webm': 'webm',
+  'audio/flac': 'flac',
+};
+// A ZIP written by hand. Every entry is STORED, since JPEG and compressed audio don't shrink
+// any further, with its CRC-32 and a UTF-8 name, followed by the central directory. The
+// archive is a Blob made of the files' own Blobs between small headers: the browser can leave
+// the images where they already are (on disk, for blobs read from IndexedDB) rather than
+// copy them into one huge buffer, and the CRC is computed over 4 MB slices. Without ZIP64 an
+// archive holds at most 65,535 entries and 4 GiB; a 143-scene tour at 8192 px comes to about
+// 2 GB, so a tour past either limit is refused, before any file is read.
+const CRC_TABLE = (() => {
+  const T = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    T[n] = c;
+  }
+  return T;
+})();
+function crc32(a, c) {
+  for (let i = 0, n = a.length; i < n; i++) c = CRC_TABLE[(c ^ a[i]) & 255] ^ (c >>> 8);
+  return c;
+}
+const ZIP_SLICE = 4 << 20;
+// files: [{ name, data: Blob or string }]. progress(done, total) runs after each file.
+async function zipBlob(files, progress) {
+  const enc = new TextEncoder(),
+    items = files.map(f => ({
+      name: enc.encode(f.name),
+      b: f.data instanceof Blob ? f.data : new Blob([f.data]),
+    })),
+    total = items.reduce((n, x) => n + 30 + 46 + 2 * x.name.length + x.b.size, 22);
+  if (items.length > 0xffff || total > 0xffffffff) throw new Error('zip-limit');
+  const d = new Date(),
+    time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1),
+    date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate(),
+    parts = [],
+    dir = [];
+  let off = 0;
+  for (let i = 0; i < items.length; i++) {
+    const { name, b } = items[i];
+    let c = 0xffffffff;
+    for (let p = 0; p < b.size; p += ZIP_SLICE)
+      c = crc32(new Uint8Array(await b.slice(p, p + ZIP_SLICE).arrayBuffer()), c);
+    c = (c ^ 0xffffffff) >>> 0;
+    // Local header, then the same fields again in the central directory.
+    const L = new DataView(new ArrayBuffer(30)),
+      C = new DataView(new ArrayBuffer(46)),
+      common = (v, o) => {
+        v.setUint16(o, 20, true); // version needed: 2.0
+        v.setUint16(o + 2, 0x0800, true); // bit 11: the name is UTF-8
+        v.setUint16(o + 4, 0, true); // method: STORE
+        v.setUint16(o + 6, time, true);
+        v.setUint16(o + 8, date, true);
+        v.setUint32(o + 10, c, true);
+        v.setUint32(o + 14, b.size, true);
+        v.setUint32(o + 18, b.size, true);
+        v.setUint16(o + 22, name.length, true);
+      };
+    L.setUint32(0, 0x04034b50, true);
+    common(L, 4);
+    C.setUint32(0, 0x02014b50, true);
+    C.setUint16(4, 0x0314, true); // made by Unix, 2.0, so the mode below applies
+    common(C, 6);
+    C.setUint32(38, 0o100644 << 16, true); // a regular file, rw-r--r--
+    C.setUint32(42, off, true);
+    parts.push(L.buffer, name, b);
+    dir.push(C.buffer, name);
+    off += 30 + name.length + b.size;
+    progress?.(i + 1, items.length);
+  }
+  const size = dir.reduce((n, x) => n + x.byteLength, 0),
+    E = new DataView(new ArrayBuffer(22));
+  E.setUint32(0, 0x06054b50, true);
+  E.setUint16(8, items.length, true);
+  E.setUint16(10, items.length, true);
+  E.setUint32(12, size, true);
+  E.setUint32(16, off, true);
+  return new Blob([...parts, ...dir, E.buffer], { type: 'application/zip' });
+}
+// Builds the folder tour's file list and the page that loads it.
+async function folderTour() {
+  const files = [],
+    taken = new Set(),
+    put = (b, name, orig) => {
+      // Ids from an imported file can hold anything, so a name keeps only safe characters,
+      // at most 64 of them, and stays unique if two clean up the same way, case included,
+      // since macOS and Windows don't tell File.jpg from file.jpg.
+      const ext =
+        EXT[(b.type || '').split(';')[0]] ||
+        (/\.([a-z0-9]{2,5})$/i.exec(orig || '') || [])[1]?.toLowerCase() ||
+        (name.startsWith('audio/') ? 'mp3' : 'jpg');
+      const j = name.indexOf('/') + 1, // after the folder this file goes in
+        id = name
+          .slice(j)
+          .replace(/[^\w-]/g, '_')
+          .slice(0, 64),
+        base = name.slice(0, j) + id;
+      let path = base + '.' + ext;
+      for (let k = 2; taken.has(path.toLowerCase()); k++) path = base + '-' + k + '.' + ext;
+      taken.add(path.toLowerCase());
+      files.push({ name: path, data: b });
+      return path;
+    };
+  const [css, three, app, data] = await Promise.all([
+      fetchText('style.css'),
+      fetchText('vendor/three.min.js'),
+      fetchText('app.js'),
+      toPortable(project, true, put),
+    ]),
+    // A new query string on every export, so visitors don't keep last version's code.
+    v = Date.now().toString(36),
+    html = `<!DOCTYPE html><html lang="${LANG}" dir="${isRTL() ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${ZIP_CSP}"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(project.title)}</title><link rel="icon" href="${esc(FAVICON)}"><link rel="stylesheet" href="tour/style.css?v=${v}"><noscript><style>#xload{display:none}</style></noscript></head><body><div id="xload" role="status"><b dir="auto">${esc(project.title)}</b><i></i><span>${esc(t('view.loading'))}</span></div><div id="root" class="view">${SHELL}</div><script src="tour/three.min.js?v=${v}"><\/script><script src="tour/data.js?v=${v}"><\/script><script src="tour/app.js?v=${v}"><\/script></body></html>`;
+  files.unshift(
+    { name: 'index.html', data: html },
+    { name: 'tour/style.css', data: css },
+    { name: 'tour/three.min.js', data: three },
+    { name: 'tour/app.js', data: app },
+    {
+      name: 'tour/data.js',
+      data: `window.__TOUR__=${JSON.stringify(data).replace(/</g, '\\u003c')};`,
+    },
+    // Both languages, since whoever unpacks the folder may not read the tour's.
+    { name: 'README.txt', data: I18N.en['zip.readme'] + '\n\n' + I18N.ar['zip.readme'] + '\n' },
+    // GitHub Pages would otherwise run Jekyll, which drops files whose names start with _.
+    { name: '.nojekyll', data: '' }
+  );
+  return files;
+}
+$('expz').onclick = async () => {
+  if (!scenes.length) {
+    toast(t('msg.needOneScene'));
+    return;
+  }
+  toast(t('msg.preparing'), 600000);
+  busy(1);
+  try {
+    let last = -1;
+    const zip = await zipBlob(await folderTour(), (i, n) => {
+        // In steps of ten, so a screen reader isn't read every file.
+        const p = Math.floor((i / n) * 10) * 10;
+        if (p != last) toast(t('msg.zipProgress', { p: (last = p) }), 600000);
+      }),
+      bytes = saveFile(fileName('.zip'), zip, 'application/zip');
+    editCount = 0;
+    toast(t('msg.zipDone', { mb: (bytes / 1048576).toFixed(1) }), 12000);
+  } catch (e) {
+    toast(t(e.message == 'zip-limit' ? 'msg.zipLimit' : 'msg.exportFail'), 12000);
+  }
+  busy(-1);
 };
 let dragFrom = -1;
 function moveScene(a, b) {
@@ -2450,9 +2891,10 @@ $('psave').onclick = async () => {
   }
   toast(t('msg.preparingProj'), 60000);
   try {
-    saveFile(fileName('.json'), JSON.stringify(await portableProject()), 'application/json');
+    const out = await portableProject();
+    saveFile(fileName('.json'), JSON.stringify(out), 'application/json');
     editCount = 0;
-    toast(t('msg.projSaved'));
+    toast(t('msg.projSaved') + (out.hdLeft ? ' ' + t('msg.hdLeft') : ''), out.hdLeft ? 12000 : 0);
   } catch (x) {
     toast(t('msg.projSaveFail'));
   }
@@ -2503,6 +2945,15 @@ const cleanScene = s => {
     hs: (Array.isArray(s.hs) ? s.hs : []).filter(h => h && typeof h == 'object').map(cleanHotspot),
   };
   if (isDataImage(s.th)) out.th = s.th;
+  if (isDataImage(s.hd)) out.hd = s.hd;
+  // A clip, as the editor takes it: audio, 8 MB at most, with a delay of up to 30 s.
+  const a = s.snd;
+  if (a && typeof a.src == 'string' && /^data:audio\//.test(a.src) && a.src.length < 1.1e7) {
+    out.snd = { src: a.src, name: String(a.name ?? '').slice(0, 120) };
+    if (a.loop === true) out.snd.loop = true;
+    const dl = Math.round(Math.min(30, Math.max(0, num(a.delay, 0))));
+    if (dl) out.snd.delay = dl;
+  }
   if (s.n != null && Number.isFinite(+s.n)) out.n = +s.n;
   const f0 = num(s.f0, NaN);
   if (f0 >= FOV_MIN && f0 <= FOV_MAX) out.f0 = f0;
@@ -2542,6 +2993,7 @@ $('pfile').onchange = async e => {
       auto: !!raw.auto,
       walk: raw.walk !== false,
       meta: !!raw.meta,
+      ...(raw.hd === true && { hd: true }),
       ...(raw.click === true && { click: true }),
       eurl: typeof raw.eurl == 'string' ? raw.eurl : '',
       scenes: (Array.isArray(raw.scenes) ? raw.scenes : [])
@@ -2589,6 +3041,14 @@ $('pfile').onchange = async e => {
     for (const s of d.scenes) {
       s.blob = dataToBlob(s.img);
       s.img = objURL(s.blob);
+      if (s.hd) {
+        s.hdBlob = dataToBlob(s.hd);
+        s.hd = objURL(s.hdBlob);
+      }
+      if (s.snd) {
+        s.snd.blob = dataToBlob(s.snd.src);
+        s.snd.src = objURL(s.snd.blob);
+      }
     }
     if (d.audio) {
       d.audio.blob = dataToBlob(d.audio.src);
@@ -2611,6 +3071,7 @@ $('pfile').onchange = async e => {
     planDirty = !!d.plan;
     coverDirty = !!d.cover;
     storedSceneIds = new Set();
+    storedSnd = new Map();
     await flush();
     closeLib();
     toast(t('msg.imported'));
@@ -2637,6 +3098,8 @@ function setProject(id, d) {
   scenes = project.scenes;
   sphereMat.map = fadeMesh.material.map = null;
   for (const k in textures) dropTexture(k);
+  for (const k in texLoads) delete texLoads[k];
+  urgentIds.clear();
   resetHist();
   $('pdesc').value = project.desc || '';
   current = -1;
@@ -2646,10 +3109,12 @@ function setProject(id, d) {
   mode = 'edit';
   applyMigration(d);
   storedSceneIds = new Set(scenes.map(s => s.id));
+  storedSnd = new Map(scenes.filter(s => s.snd).map(s => [s.id, s.snd.blob]));
   editCount = 0;
   $('ptitle').value = project.title || '';
   $('auto').checked = !!project.auto;
   $('wk').checked = project.walk !== false;
+  $('hdon').checked = !!project.hd;
   $('ca').checked = !!project.click;
   toast('');
   if (scenes.length) showScene(0);
@@ -2689,6 +3154,10 @@ async function duplicateProject(id) {
     for (const s of d.scenes || []) {
       const b = await dbOp('get', 'b:' + id + ':' + s.id).catch(() => null);
       if (b instanceof Blob) await dbOp('put', 'b:' + nid + ':' + s.id, b);
+      const h = s.hd && (await dbOp('get', 'h:' + id + ':' + s.id).catch(() => null));
+      if (h instanceof Blob) await dbOp('put', 'h:' + nid + ':' + s.id, h);
+      const sa = s.snd && (await dbOp('get', 'sa:' + id + ':' + s.id).catch(() => null));
+      if (sa instanceof Blob) await dbOp('put', 'sa:' + nid + ':' + s.id, sa);
     }
     const a = await dbOp('get', 'a:' + id).catch(() => null);
     if (a instanceof Blob) await dbOp('put', 'a:' + nid, a);
@@ -2709,7 +3178,11 @@ async function duplicateProject(id) {
 async function deleteProject(id) {
   try {
     const d = await dbOp('get', 'p:' + id).catch(() => null);
-    for (const s of d?.scenes || []) await dbOp('del', 'b:' + id + ':' + s.id).catch(() => {});
+    for (const s of d?.scenes || []) {
+      await dbOp('del', 'b:' + id + ':' + s.id).catch(() => {});
+      await dbOp('del', 'h:' + id + ':' + s.id).catch(() => {});
+      await dbOp('del', 'sa:' + id + ':' + s.id).catch(() => {});
+    }
     await dbOp('del', 'a:' + id).catch(() => {});
     await dbOp('del', 'pl:' + id).catch(() => {});
     await dbOp('del', 'cv:' + id).catch(() => {});
@@ -2783,7 +3256,10 @@ if (!EMBED) {
           revokeProject(d);
         }
         saveFile(safeName(out.title) + '.json', JSON.stringify(out), 'application/json');
-        toast(t('msg.projFileSaved'));
+        toast(
+          t('msg.projFileSaved') + (out.hdLeft ? ' ' + t('msg.hdLeft') : ''),
+          out.hdLeft ? 12000 : 0
+        );
       } catch (x) {
         toast(t('msg.projExpFail'));
       }
@@ -2975,9 +3451,9 @@ const animate = (ms, f) =>
       };
     requestAnimationFrame(step);
   });
-async function ensureTexture(s) {
+async function ensureTexture(s, urgent) {
   try {
-    await loadTexture(s);
+    await loadTexture(s, urgent);
     return true;
   } catch (e) {
     return false;
@@ -3004,7 +3480,7 @@ async function walkTo(i, h) {
   walkTarget = s.id;
   $('pop').hidden = true;
   try {
-    if (!(await ensureTexture(s))) {
+    if (!(await ensureTexture(s, true))) {
       walking = false;
       return showScene(i);
     }
@@ -3652,19 +4128,24 @@ const busy = d => {
 function preload() {
   const s = scenes[current];
   if (!s) return;
-  // As many neighbours as the cache holds next to the current scene, so preloading one
+  // As many neighbours as fit in the budget beside the current scene, so preloading one
   // never pushes out another.
-  [...new Set((s.hs || []).filter(h => h.type == 'link').map(h => h.to))]
+  let room = TEX_BUDGET - sceneCost(s);
+  for (const n of [...new Set((s.hs || []).filter(h => h.type == 'link').map(h => h.to))]
     .map(id => scenes.find(x => x.id == id))
-    .filter(Boolean)
-    .slice(0, TEXTURE_CACHE - 1)
-    .forEach(ensureTexture);
+    .filter(Boolean)) {
+    const c = sceneCost(n);
+    if (c > room) continue;
+    room -= c;
+    ensureTexture(n);
+  }
 }
 let undoStack = [],
   undoPos = -1,
   snapTimer,
   restoring = false;
-const sceneKey = () => JSON.stringify(scenes.map(s => ({ ...s, img: 0, th: 0, blob: 0 })));
+const sceneKey = () =>
+  JSON.stringify(scenes.map(s => ({ ...s, img: 0, th: 0, blob: 0, hd: 0, hdBlob: 0 })));
 const cloneScene = s => ({
   ...s,
   hs: JSON.parse(JSON.stringify(s.hs || [])),
@@ -3779,7 +4260,9 @@ $('pdesc').oninput = e => {
 };
 $('sgo').onclick = () => {
   $('start').hidden = true;
+  gestured = true;
   startAudio();
+  syncClip();
 };
 // ───────────── nadir patch, audio, floor plan, embed code ─────────────
 async function shrinkCanvas(f, max, bg) {
@@ -3875,6 +4358,8 @@ function syncNadir() {
 }
 function syncAudio() {
   const a = project.audio;
+  $('mutei').setAttribute('href', muted ? '#i-mute' : '#i-volume');
+  $('mute').setAttribute('aria-label', t(muted ? 'act.unmuteAria' : 'act.muteAria'));
   if (!a) {
     if (audioEl) {
       audioEl.pause();
@@ -3888,13 +4373,109 @@ function syncAudio() {
     audioSrc = a.src;
     audioEl = new Audio(a.src);
     audioEl.loop = true;
-    audioEl.volume = a.vol ?? 0.6;
+    audioEl.volume = (a.vol ?? 0.6) * duck;
   }
-  $('mutei').setAttribute('href', muted ? '#i-mute' : '#i-volume');
-  $('mute').setAttribute('aria-label', t(muted ? 'act.unmuteAria' : 'act.muteAria'));
 }
 function startAudio() {
-  if (audioEl && !muted && audioEl.paused && mode == 'view') audioEl.play().catch(() => {});
+  // Where the volume can't be lowered, the music waits for a scene's clip to finish.
+  if (audioEl && !muted && audioEl.paused && mode == 'view' && (duck == 1 || volumeWorks()))
+    audioEl.play().catch(() => {});
+}
+// ── scene audio ──
+// A scene can have its own clip: it starts when the visitor enters the scene, after an
+// optional delay, and stops when they leave. Browsers only play sound after the visitor has
+// touched or clicked the page, so nothing starts before that, nor behind the start screen.
+// While a clip plays the music is lowered to DUCK of its volume, with a short fade, and
+// comes back when the clip ends or the visitor moves on. The mute button silences both.
+const DUCK = 0.25,
+  DUCK_MS = 400;
+let duck = 1, // the music's share of its own volume
+  duckTimer = 0,
+  clip = null, // the current scene's clip: { id, snd, state: 'wait' | 'play' | 'done', timer }
+  volOK = null,
+  gestured = false;
+const clipEl = new Audio();
+// Safari on iOS ignores volume: it reads back as 1 whatever is set.
+function volumeWorks() {
+  if (volOK == null) {
+    const a = new Audio();
+    a.volume = 0.5;
+    volOK = a.volume == 0.5;
+  }
+  return volOK;
+}
+function fadeMusic(to) {
+  clearInterval(duckTimer);
+  if (!volumeWorks()) {
+    duck = to;
+    if (audioEl) to < 1 ? audioEl.pause() : startAudio();
+    return;
+  }
+  const from = duck,
+    t0 = performance.now();
+  // A timer rather than animation frames, which stop while the tab is in the background.
+  duckTimer = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / DUCK_MS);
+    duck = from + (to - from) * k;
+    if (audioEl) audioEl.volume = (project.audio?.vol ?? 0.6) * duck;
+    if (k == 1) clearInterval(duckTimer);
+  }, 30);
+}
+function endClip() {
+  if (!clip) return;
+  clearTimeout(clip.timer);
+  clip = null;
+  clipEl.onended = null;
+  clipEl.pause();
+  clipEl.removeAttribute('src');
+  clipEl.load(); // let go of the file
+  fadeMusic(1);
+}
+function playClip(c) {
+  c.timer = 0;
+  if (clip !== c || muted) return;
+  c.state = 'play';
+  clipEl.src = c.snd.src;
+  clipEl.loop = !!c.snd.loop;
+  clipEl.onended = () => {
+    if (clip !== c) return;
+    c.state = 'done';
+    fadeMusic(1);
+  };
+  fadeMusic(DUCK);
+  clipEl.play().catch(() => {
+    if (clip !== c) return;
+    c.state = 'done';
+    fadeMusic(1);
+  });
+}
+// Brings the clip in line with the scene on screen, the mode and the mute button.
+function syncClip() {
+  const s = scenes[current],
+    on =
+      mode == 'view' &&
+      s?.snd &&
+      $('start').hidden &&
+      (gestured || navigator.userActivation?.hasBeenActive);
+  if (!on || clip?.id != s.id || clip.snd !== s.snd) {
+    endClip();
+    if (!on) return;
+    clip = { id: s.id, snd: s.snd, state: 'wait', timer: 0 };
+  }
+  if (muted) {
+    // Paused where it is; a clip still waiting for its delay starts the wait again.
+    clearTimeout(clip.timer);
+    clip.timer = 0;
+    clipEl.pause();
+    return;
+  }
+  if (clip.state == 'wait' && !clip.timer) {
+    const c = clip;
+    c.timer = setTimeout(() => playClip(c), (s.snd.delay || 0) * 1000);
+  } else if (clip.state == 'play' && clipEl.paused) {
+    fadeMusic(DUCK);
+    clipEl.play().catch(() => {});
+  }
 }
 function renderPlan() {
   const pl = project.plan;
@@ -4105,7 +4686,7 @@ function syncExtras() {
   syncAudio();
   renderPlan();
   fillThumbs();
-  $('mute').hidden = !project.audio;
+  $('mute').hidden = !project.audio && !scenes.some(s => s.snd);
   $('pbtn').hidden = !project.plan;
   if (document.activeElement != $('nsz')) $('nsz').value = project.nadir?.r || 25;
   if (document.activeElement != $('eurl')) $('eurl').value = project.eurl || '';
@@ -4115,14 +4696,23 @@ function syncExtras() {
   if (audioEl) {
     mode == 'view' ? startAudio() : audioEl.pause();
   }
+  syncClip();
+  syncSceneAudio();
 }
-addEventListener('pointerdown', startAudio);
+const onGesture = () => {
+  gestured = true;
+  startAudio();
+  syncClip();
+};
+addEventListener('pointerdown', onGesture);
+addEventListener('keydown', onGesture);
 $('mute').onclick = () => {
   muted = !muted;
   if (audioEl) {
     muted ? audioEl.pause() : startAudio();
   }
   syncAudio();
+  syncClip();
 };
 $('pbtn').onclick = () => {
   planOpen = !planOpen;
@@ -4192,6 +4782,75 @@ $('nsz').oninput = e => {
     save();
     syncNadir();
   }
+};
+// The scene's clip in the editor: upload, remove, loop, delay and a button to listen to it.
+// Removing a clip doesn't revoke its URL, since undo can bring the clip back.
+let saPrev = null; // { id, el } while the author listens to a clip
+function stopListening() {
+  if (!saPrev) return;
+  saPrev.el.pause();
+  saPrev = null;
+  syncSceneAudio();
+}
+function syncSceneAudio() {
+  if (EMBED) return;
+  const s = scenes[current],
+    a = s?.snd;
+  if (saPrev && (mode != 'edit' || saPrev.id != s?.id || saPrev.snd !== a)) stopListening();
+  $('sactl').hidden = !a;
+  $('sarm').disabled = !a;
+  if (!a) return;
+  $('saname').textContent = a.name;
+  $('saloop').checked = !!a.loop;
+  if (document.activeElement != $('sadl')) $('sadl').value = a.delay || 0;
+  $('sadlv').value = t('f.sec', { n: a.delay || 0 });
+  $('saplay').setAttribute('aria-pressed', !!saPrev);
+  $('saplayi').setAttribute('href', saPrev ? '#i-stop' : '#i-play');
+  setText($('saplayt'), t(saPrev ? 'act.stop' : 'act.listen'));
+}
+// Options change by replacing the object, so undo snapshots keep their own.
+const setSnd = o => {
+  const s = scenes[current];
+  if (!s?.snd) return;
+  s.snd = { ...s.snd, ...o };
+  for (const k in o) if (!o[k]) delete s.snd[k]; // loop and delay are left out at their defaults
+  save();
+  syncSceneAudio();
+};
+$('safile').onchange = e => {
+  const f = e.target.files[0],
+    s = scenes[current];
+  e.target.value = '';
+  if (!f || !s) return;
+  if (f.size > 8e6) {
+    toast(t('msg.audioBig'));
+    return;
+  }
+  // Some systems hand over audio with no type; it is played and served as audio all the same.
+  const b = /^audio\//.test(f.type) ? f : new Blob([f], { type: 'audio/mpeg' });
+  s.snd = { ...s.snd, src: objURL(b), blob: b, name: f.name.slice(0, 120) };
+  save();
+  syncExtras();
+  toast(t('msg.sceneAudioAdded'));
+};
+$('sarm').onclick = () => {
+  const s = scenes[current];
+  if (!s?.snd) return;
+  delete s.snd;
+  save();
+  syncExtras();
+};
+$('saloop').onchange = e => setSnd({ loop: e.target.checked });
+$('sadl').oninput = e => setSnd({ delay: +e.target.value });
+$('saplay').onclick = () => {
+  const s = scenes[current];
+  if (saPrev) return stopListening();
+  if (!s?.snd) return;
+  saPrev = { id: s.id, snd: s.snd, el: new Audio(s.snd.src) };
+  saPrev.el.loop = !!s.snd.loop;
+  saPrev.el.onended = stopListening;
+  saPrev.el.play().catch(stopListening);
+  syncSceneAudio();
 };
 $('afile').onchange = e => {
   const f = e.target.files[0];
@@ -4796,6 +5455,7 @@ if (!EMBED) {
           scenes = project.scenes;
           applyMigration(d);
           storedSceneIds = new Set(scenes.map(s => s.id));
+          storedSnd = new Map(scenes.filter(s => s.snd).map(s => [s.id, s.snd.blob]));
         }
       }
       if (!projectId) {
@@ -4811,6 +5471,7 @@ if (!EMBED) {
   $('pdesc').value = project.desc || '';
   $('auto').checked = !!project.auto;
   $('wk').checked = project.walk !== false;
+  $('hdon').checked = !!project.hd;
   $('ca').checked = !!project.click;
   resetHist();
   if (EMBED && scenes.length) {
@@ -4821,6 +5482,19 @@ if (!EMBED) {
     $('sgo').disabled = true;
     $('sgo').textContent = t('view.loading');
     $('start').hidden = false;
+    // A folder tour opened from disk: browsers such as Chrome refuse to hand a file:// image
+    // to WebGL, so every scene would fail. Say why, in both languages, and how to open it.
+    if (location.protocol == 'file:' && !/^data:/.test(scenes[0].img)) {
+      $('sgo').hidden = true;
+      $('std').textContent = t('view.fileProto');
+      const o = isRTL() ? 'en' : 'ar',
+        p = document.createElement('p');
+      p.lang = o;
+      p.dir = o == 'ar' ? 'rtl' : 'ltr';
+      p.textContent = I18N[o]['view.fileProto'];
+      $('std').after(p);
+      return;
+    }
   }
   ui();
   resize();
