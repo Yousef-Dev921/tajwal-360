@@ -2,7 +2,7 @@
 
 A 360° virtual tour builder that runs entirely in the browser. Images stay on the
 machine that opened the page, and a finished tour exports as one self-contained HTML
-file you can put on any host.
+file, or as a folder of files for a large tour, that you can put on any host.
 
 **[Open the studio →](https://yousef-dev921.github.io/tajwal-360/)**
 
@@ -117,12 +117,63 @@ that isn't granted it says once per session that the browser may clear the work.
 ### Projects
 - A project library with thumbnails and timestamps.
 - Autosave that reports failures instead of hiding them.
-- Export to a standalone HTML tour, or save and import projects as `.json`.
+- Export to a standalone HTML tour or to a folder (ZIP) for a web host, and save and
+  import projects as `.json`. See [Exporting a tour](#exporting-a-tour).
 
 ## Try it
 
 [`samples/`](samples/) holds three CC0 panoramas. Drop them on the editor to build a
 tour without needing your own 360° photos.
+
+## Exporting a tour
+
+There are two exports, side by side in the panel.
+
+**Export HTML** writes one file with everything inside it: code, styles and every image as
+base64. It opens anywhere, straight from disk included, which suits a small tour sent by
+email. Base64 adds a third to every image and the browser has to read the whole file before
+the first scene shows, so the editor estimates the size first. Past 100 MB it says how large
+the file would be and suggests the folder export; a second click exports it anyway.
+
+**Export as folder (ZIP)** writes a ZIP that unpacks to:
+
+```
+index.html          the page, with its own content security policy
+README.txt          how to publish and preview it, in English and Arabic
+tour/style.css      the same code as the editor, cached by the browser between visits
+tour/three.min.js
+tour/app.js
+tour/data.js        the tour document; it sets window.__TOUR__ as the single file does
+scenes/<id>.jpg     one file per panorama
+audio/music.<ext>   background music
+icons/<id>.png      custom icons, only those in use
+plan.<ext>, cover.jpg, nadir.png, logo.<ext>
+```
+
+Images stay binary, so the folder is about a quarter smaller than the single file, and a
+visitor downloads only the scenes they visit, plus the neighbours the viewer preloads. The
+viewer is the same `app.js` with the same code path: in the folder, a scene's `img` is a
+relative path instead of a `data:` URL. `data.js` is a script rather than JSON so the page
+needs no `fetch()`, and the page's policy allows scripts, styles, images and media from the
+folder's own origin only. Scene thumbnails are left out, since only the editor shows them.
+File names come from scene and icon ids, cleaned to letters, digits, `-` and `_`.
+
+The ZIP is written by the editor itself, without a library: each file is stored
+uncompressed (JPEG and compressed audio don't shrink), with its CRC-32 and a UTF-8 name.
+It is assembled from the images' own `Blob`s, so a 150-scene export holds about 60 MB of
+JavaScript memory at its peak rather than the whole archive. Without ZIP64 a ZIP holds at most
+65,535 files and 4 GB; a tour past either limit is refused with a message before anything
+is read. 143 scenes at 4096 px come to roughly 400 MB.
+
+**The folder must be served over HTTP.** Opened straight from disk, Chrome and Firefox
+refuse to hand `file://` images to WebGL, so the page says so, in both languages, instead of
+failing silently. Upload the unpacked folder as it is to GitHub Pages, Netlify, Cloudflare
+Pages or any static host. To preview it on your own machine, run this inside the folder and
+open http://localhost:8000:
+
+```bash
+python3 -m http.server 8000
+```
 
 ## How projects are stored
 
@@ -252,7 +303,8 @@ GitHub Pages, Cloudflare Pages and Netlify all provide it on free tiers.
 - The editor page carries a strict content security policy: scripts load only from the
   site itself, and nothing can be sent to another server.
 - An exported tour gets its own policy that blocks every network request. It works
-  offline and cannot report anything back to anyone.
+  offline and cannot report anything back to anyone. A folder tour may load files from its
+  own origin only: no other site, no `fetch()`, no inline scripts.
 - An imported `.json` file is treated as untrusted. Only well-formed fields are kept,
   images must be `data:` URLs, and every value is escaped before it reaches the page.
 - The embed code generator accepts only `http` and `https` addresses.
@@ -266,8 +318,10 @@ are announced through `aria-live`, and `prefers-reduced-motion` is respected.
 
 ## Limitations
 
-- An exported tour carries about 750 KB of fixed code, mostly Three.js, before any
-  imagery, and embeds panoramas as base64. A 15-scene tour reaches tens of megabytes.
+- A single-file export carries about 750 KB of fixed code, mostly Three.js, before any
+  imagery, and embeds panoramas as base64. A 15-scene tour reaches tens of megabytes; use
+  the folder export for anything larger.
+- A folder tour doesn't open from disk; it needs a web server, even a local one.
 - Autosave does not work in private browsing. The editor says so rather than failing
   quietly.
 - Safari may evict site storage after a period without visits. Keep `.json` backups.
@@ -279,7 +333,6 @@ are announced through `aria-live`, and `prefers-reduced-motion` is respected.
 
 ## Roadmap
 
-- ZIP export with binary images, to cut tour size.
 - Sharper panoramas: 8192 px for desktops and 4096 px for phones, chosen per device. It
   waits on ZIP export, since a single HTML file with 8192 px images grows about fourfold.
 - A trimmed viewer bundle that leaves out editor code.
