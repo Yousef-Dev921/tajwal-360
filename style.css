@@ -888,6 +888,7 @@ canvas {
   display: block;
   font-size: var(--tLg);
   margin-bottom: var(--s2);
+  white-space: pre-line; /* a label keeps the lines it shows on the panorama */
 }
 #pop p {
   margin: 0 0 var(--s3);

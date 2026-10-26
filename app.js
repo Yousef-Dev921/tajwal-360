@@ -7,6 +7,13 @@ const esc = s =>
     /[&<>"]/g,
     c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]
   );
+// A hotspot label can run over several lines; lists and titles show it on one.
+const oneLine = s =>
+  String(s ?? '')
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean)
+    .join(' ');
 const uid = () => Math.random().toString(36).slice(2, 9),
   EMBED = window.__TOUR__,
   textures = {};
@@ -130,6 +137,19 @@ const I18N = {
     'shape.pin': 'دبوس',
     'shape.star': 'نجمة',
     'shape.info': 'معلومات',
+    'shape.none': 'نص فقط',
+    'f.labelPh': 'اضغط Enter لبدء سطر جديد',
+    'f.textSize': 'حجم النص',
+    'f.labelBox': 'خلفية داكنة خلف النص',
+    'f.rotation': 'اتجاه السهم',
+    'f.keepSize': 'حجم ثابت على الشاشة عند التكبير',
+    'act.copy': 'نسخ',
+    'act.copyTitle': 'انسخ النقطة لتلصقها في مشهد آخر (Ctrl+C)',
+    'act.dup': 'تكرار',
+    'act.dupTitle': 'أضف نسخة من النقطة بجانبها (Ctrl+D)',
+    'act.paste': 'لصق النقطة',
+    'act.pasteTitle': 'ألصق النقطة المنسوخة حيث تنظر (Ctrl+V)',
+    'msg.hsCopied': 'نُسخت النقطة. انتقل إلى مشهد آخر واضغط «لصق النقطة» أو Ctrl+V لتظهر حيث تنظر.',
     'lib.title': 'مكتبة المشاريع',
     'lib.new': 'مشروع جديد',
     'lib.open': 'فتح',
@@ -317,6 +337,20 @@ const I18N = {
     'shape.pin': 'Pin',
     'shape.star': 'Star',
     'shape.info': 'Info',
+    'shape.none': 'Text only',
+    'f.labelPh': 'Press Enter to start a new line',
+    'f.textSize': 'Text size',
+    'f.labelBox': 'Dark background behind the text',
+    'f.rotation': 'Arrow direction',
+    'f.keepSize': 'Same size on screen when zooming',
+    'act.copy': 'Copy',
+    'act.copyTitle': 'Copy the hotspot to paste into another scene (Ctrl+C)',
+    'act.dup': 'Duplicate',
+    'act.dupTitle': 'Add a copy of the hotspot next to it (Ctrl+D)',
+    'act.paste': 'Paste hotspot',
+    'act.pasteTitle': 'Paste the copied hotspot where you are looking (Ctrl+V)',
+    'msg.hsCopied':
+      'Hotspot copied. Go to another scene and use “Paste hotspot” or Ctrl+V to place it where you are looking.',
     'lib.title': 'Project library',
     'lib.new': 'New project',
     'lib.open': 'Open',
@@ -899,7 +933,17 @@ new ResizeObserver(resize).observe($('stage'));
 // ───────────── hotspot sprites ─────────────
 // Arabic, Hebrew and related scripts. Canvas text needs its direction set explicitly.
 const RTL_TEXT = /[\u0590-\u08ff\ufb1d-\ufdff\ufe70-\ufeff]/;
+// The glyph on a filled icon (the arrow's chevron, the "i", the pin's eye) is white, or dark
+// on a light fill such as white, where white would vanish. Relative luminance, WCAG formula.
+function glyphInk(color) {
+  const c = [1, 3, 5].map(i => {
+    const v = parseInt(color.slice(i, i + 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.45 ? '#13131c' : '#fff';
+}
 function drawIcon(ctx, shape, color) {
+  const ink = glyphInk(color);
   ctx.lineCap = ctx.lineJoin = 'round';
   ctx.lineWidth = 10;
   ctx.strokeStyle = '#fff';
@@ -925,7 +969,7 @@ function drawIcon(ctx, shape, color) {
     ctx.bezierCurveTo(62, -70, 80, -5, 0, 70);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = ink;
     ctx.beginPath();
     ctx.arc(0, -18, 18, 0, 7);
     ctx.fill();
@@ -942,7 +986,7 @@ function drawIcon(ctx, shape, color) {
     ctx.arc(0, 0, 68, 0, 7);
     ctx.fill();
     ctx.stroke();
-    ctx.strokeStyle = ctx.fillStyle = '#fff';
+    ctx.strokeStyle = ctx.fillStyle = ink;
     if (shape == 'info') {
       ctx.font = '800 84px Georgia,serif';
       ctx.textAlign = 'center';
@@ -958,40 +1002,112 @@ function drawIcon(ctx, shape, color) {
     }
   }
 }
-function makeHotspotSprite(h) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 320;
-  const ctx = canvas.getContext('2d');
-  ctx.translate(256, 100);
-  if (mode == 'edit' && selId == h.id) {
-    ctx.setLineDash([14, 12]);
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(0, 0, 98, 0, 7);
-    ctx.stroke();
-    ctx.setLineDash([]);
+// Breaks text into the lines the author typed, wrapping any line wider than max pixels at
+// word boundaries. Trailing empty lines are dropped.
+function wrapLines(ctx, text, max) {
+  const lines = [];
+  for (const para of String(text || '').split('\n')) {
+    let l = '';
+    for (const w of para.split(/\s+/).filter(Boolean)) {
+      const n = l ? l + ' ' + w : w;
+      if (ctx.measureText(n).width > max && l) {
+        lines.push(l);
+        l = w;
+      } else l = n;
+    }
+    lines.push(l);
   }
-  drawIcon(ctx, h.shape, h.color);
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  if (h.label) {
-    ctx.font = '700 40px system-ui,Tahoma,Arial';
+  while (lines.length && !lines[lines.length - 1]) lines.pop();
+  return lines;
+}
+// A hotspot is drawn on a canvas at HS_PX canvas pixels per world unit. The icon fills a
+// 200 px square; the label sits under it, or alone for a text-only hotspot ('none'), in up
+// to HS_MAX_LINES lines of at most HS_LABEL_W px. Without a box the label gets a dark outline,
+// so white text stays readable on a bright wall.
+const HS_PX = 512 / 70,
+  HS_ICON = 200,
+  HS_LABEL_W = 900,
+  HS_MAX_LINES = 6;
+function makeHotspotSprite(h) {
+  const canvas = document.createElement('canvas'),
+    ctx = canvas.getContext('2d'),
+    icon = h.shape != 'none',
+    // Without an icon, size alone scales the text.
+    fs = Math.round(40 * (icon ? h.ts || 1 : 1)),
+    lh = Math.round(fs * 1.3),
+    font = `700 ${fs}px system-ui,Tahoma,Arial`;
+  ctx.font = font;
+  let lines = wrapLines(ctx, h.label, HS_LABEL_W);
+  if (lines.length > HS_MAX_LINES)
+    lines = [...lines.slice(0, HS_MAX_LINES - 1), lines[HS_MAX_LINES - 1] + '…'];
+  // A text-only hotspot with no text yet still needs something to click and drag.
+  if (!icon && !lines.length) lines = ['…'];
+  const pad = Math.round(fs * 0.5),
+    tw = lines.length
+      ? Math.min(HS_LABEL_W, Math.max(...lines.map(l => ctx.measureText(l).width)))
+      : 0,
+    bw = lines.length ? tw + pad * 2 : 0,
+    bh = lines.length ? lines.length * lh + pad : 0,
+    gap = icon && lines.length ? 8 : 0,
+    W = Math.ceil(Math.max(icon ? 2 * HS_ICON + 112 : 0, bw + 24)),
+    H = Math.ceil((icon ? HS_ICON + 8 : 0) + gap + bh + (icon ? 0 : 24)),
+    cx = W / 2,
+    cy = icon ? HS_ICON / 2 : H / 2,
+    top = icon ? HS_ICON + 8 + gap : 12;
+  canvas.width = W;
+  canvas.height = H;
+  const sel = mode == 'edit' && selId == h.id;
+  if (icon) {
+    ctx.translate(cx, cy);
+    if (sel) {
+      ctx.setLineDash([14, 12]);
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(0, 0, 98, 0, 7);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    if (h.shape == 'arrow') ctx.rotate(((h.rot || 0) * PI) / 180);
+    drawIcon(ctx, h.shape, h.color);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  if (lines.length) {
+    const x = cx - bw / 2;
+    if (h.box !== false) {
+      ctx.fillStyle = 'rgba(0,0,0,.6)';
+      ctx.fillRect(x, top, bw, bh);
+    }
+    if (sel && !icon) {
+      ctx.setLineDash([14, 12]);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#fff';
+      ctx.strokeRect(x - 6, top - 6, bw + 12, bh + 12);
+      ctx.setLineDash([]);
+    }
+    ctx.font = font;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    const w = Math.min(500, ctx.measureText(h.label).width + 40);
-    ctx.fillStyle = 'rgba(0,0,0,.6)';
-    ctx.fillRect(256 - w / 2, 208, w, 60);
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(4, fs * 0.16);
+    ctx.strokeStyle = 'rgba(0,0,0,.85)';
     ctx.fillStyle = '#fff';
-    ctx.direction = RTL_TEXT.test(h.label) ? 'rtl' : 'ltr';
-    ctx.fillText(h.label, 256, 252, w - 30);
+    lines.forEach((l, i) => {
+      const y = top + pad / 2 + lh * (i + 0.5);
+      ctx.direction = RTL_TEXT.test(l) ? 'rtl' : 'ltr';
+      if (h.box === false) ctx.strokeText(l, cx, y, HS_LABEL_W);
+      ctx.fillText(l, cx, y, HS_LABEL_W);
+    });
   }
   const tex = new THREE.CanvasTexture(canvas);
   tex.encoding = THREE.sRGBEncoding;
   const sprite = new THREE.Sprite(
     new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true })
   );
-  sprite.center.set(0.5, 1 - 100 / 320);
+  // Anchored on the icon, or on the middle of the text when there is no icon.
+  sprite.center.set(0.5, 1 - cy / H);
+  sprite.userData.w = W / HS_PX;
+  sprite.userData.hgt = H / HS_PX;
   sprite.renderOrder = 10;
   return sprite;
 }
@@ -1239,12 +1355,19 @@ function renderHotspotList() {
   $('hlist').innerHTML = (scenes[current]?.hs || [])
     .map(
       h =>
-        `<button data-id="${esc(h.id)}" class="${h.id == selId ? 'on' : ''}">${h.type == 'link' ? '<svg class="ic flip"><use href="#i-link"/></svg>' : '<svg class="ic"><use href="#i-info"/></svg>'}<span dir="auto">${esc(h.label || t(h.type == 'link' ? 'hs.link' : 'hs.info'))}</span></button>`
+        `<button data-id="${esc(h.id)}" class="${h.id == selId ? 'on' : ''}">${h.type == 'link' ? '<svg class="ic flip"><use href="#i-link"/></svg>' : '<svg class="ic"><use href="#i-info"/></svg>'}<span dir="auto">${esc(oneLine(h.label) || t(h.type == 'link' ? 'hs.link' : 'hs.info'))}</span></button>`
     )
     .join('');
 }
+// The look of the last link and the last info hotspot the author styled. A new hotspot of
+// the same kind starts from it, so a tour of many scenes needs its arrows styled only once.
+// Held for the session only.
+const LOOK = ['shape', 'color', 'size', 'ts', 'box', 'fix'],
+  hsLook = { link: null, info: null };
 const updateHotspot = o => {
-  Object.assign(selHotspot(), o);
+  const h = selHotspot();
+  Object.assign(h, o);
+  hsLook[h.type] = Object.fromEntries(LOOK.filter(k => h[k] !== undefined).map(k => [k, h[k]]));
   buildHotspots();
   renderHotspotList();
   save();
@@ -1261,9 +1384,10 @@ function renderHotspotProps() {
     p.innerHTML = '';
     return;
   }
-  const shp = ['arrow', 'ring', 'dot', 'pin', 'star', 'info'];
+  const rng = (id, key, min, max, step, v, out) =>
+    `<label id="${id}w"><span class="lrow"><span>${t(key)}</span><output id="${id}v" dir="ltr">${out}</output></span><input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${esc(v)}"></label>`;
   p.innerHTML =
-    `<label>${t('f.label')}<input id="pl" dir="auto" value="${esc(h.label)}"></label>` +
+    `<label>${t('f.label')}<textarea id="pl" rows="2" dir="auto" placeholder="${esc(t('f.labelPh'))}">${esc(h.label)}</textarea></label>` +
     (h.type == 'link'
       ? `<label>${t('f.target')}<select id="pt">${scenes
           .filter(s => s.id != scenes[current].id)
@@ -1273,24 +1397,107 @@ function renderHotspotProps() {
           )
           .join('')}</select></label>`
       : `<label>${t('f.text')}<textarea id="px" rows="3" dir="auto">${esc(h.text)}</textarea></label>`) +
-    `<label>${t('f.shape')}<select id="ps">${shp.map(k => `<option value="${k}" ${k == h.shape ? 'selected' : ''}>${esc(t('shape.' + k))}</option>`).join('')}</select></label>
-  <label>${t('f.color')}<input id="pc" type="color" value="${esc(h.color)}"></label>
-  <label>${t('f.size')}<input id="pz" type="range" min=".5" max="2.5" step=".1" value="${esc(h.size)}"></label>
-  <p id="hint3">${t('hint.dragHs')}</p><button id="pd" class="dng">${t('act.delHs')}</button>`;
+    `<label>${t('f.shape')}<select id="ps">${SHAPES.map(k => `<option value="${k}" ${k == h.shape ? 'selected' : ''}>${esc(t('shape.' + k))}</option>`).join('')}</select></label>
+  ${rng('pr', 'f.rotation', -180, 180, 5, h.rot || 0, (h.rot || 0) + '°')}
+  <label id="pcw">${t('f.color')}<input id="pc" type="color" value="${esc(h.color)}"></label>
+  ${rng('pz', 'f.size', 0.5, 2.5, 0.1, h.size, '×' + h.size)}
+  ${rng('pf', 'f.textSize', 0.6, 2, 0.1, h.ts || 1, '×' + (h.ts || 1))}
+  <label class="opt"><input type="checkbox" id="pb" ${h.box !== false ? 'checked' : ''}><span>${t('f.labelBox')}</span></label>
+  <label class="opt"><input type="checkbox" id="pk" ${h.fix ? 'checked' : ''}><span>${t('f.keepSize')}</span></label>
+  <p id="hint3">${t('hint.dragHs')}</p>
+  <div class="row"><button id="pdup" title="${esc(t('act.dupTitle'))}"><svg class="ic"><use href="#i-dup"/></svg><span>${t('act.dup')}</span></button><button id="pcopy" title="${esc(t('act.copyTitle'))}"><svg class="ic"><use href="#i-copy"/></svg><span>${t('act.copy')}</span></button></div>
+  <button id="pd" class="dng">${t('act.delHs')}</button>`;
+  // Only an arrow has a direction, a text-only hotspot has no icon to colour, and its size
+  // already sets the text size.
+  const fit = () => {
+    const s = selHotspot()?.shape;
+    $('prw').hidden = s != 'arrow';
+    $('pcw').hidden = $('pfw').hidden = s == 'none';
+  };
+  fit();
   bind('pl', 'input', e => updateHotspot({ label: e.target.value }));
   bind('pt', 'change', e => updateHotspot({ to: e.target.value }));
   bind('px', 'input', e => updateHotspot({ text: e.target.value }));
-  bind('ps', 'change', e => updateHotspot({ shape: e.target.value }));
-  bind('pc', 'input', e => updateHotspot({ color: e.target.value }));
-  bind('pz', 'input', e => updateHotspot({ size: +e.target.value }));
-  bind('pd', 'click', () => {
-    scenes[current].hs = scenes[current].hs.filter(x => x.id != selId);
-    selId = null;
-    buildHotspots();
-    ui();
-    save();
+  bind('ps', 'change', e => {
+    updateHotspot({ shape: e.target.value });
+    fit();
   });
+  bind('pc', 'input', e => updateHotspot({ color: e.target.value }));
+  bind('pr', 'input', e => {
+    updateHotspot({ rot: +e.target.value });
+    $('prv').value = e.target.value + '°';
+  });
+  bind('pz', 'input', e => {
+    updateHotspot({ size: +e.target.value });
+    $('pzv').value = '×' + e.target.value;
+  });
+  bind('pf', 'input', e => {
+    updateHotspot({ ts: +e.target.value });
+    $('pfv').value = '×' + e.target.value;
+  });
+  bind('pb', 'change', e => updateHotspot({ box: e.target.checked }));
+  bind('pk', 'change', e => updateHotspot({ fix: e.target.checked }));
+  bind('pd', 'click', deleteHotspot);
+  bind('pdup', 'click', duplicateHotspot);
+  bind('pcopy', 'click', copyHotspot);
 }
+// ── copy, paste, duplicate ──
+// A copied hotspot keeps its look and text, so a styled arrow or a note can be repeated across
+// a long tour. It is held in memory only, and survives switching scenes and projects.
+let hsClip = null;
+function deleteHotspot() {
+  if (!selHotspot()) return;
+  scenes[current].hs = scenes[current].hs.filter(x => x.id != selId);
+  selId = null;
+  buildHotspots();
+  ui();
+  save();
+}
+function copyHotspot() {
+  const h = selHotspot();
+  if (!h) return;
+  hsClip = { h: JSON.parse(JSON.stringify(h)), from: scenes[current].id };
+  syncPaste();
+  toast(t('msg.hsCopied'));
+}
+// The direction the camera faces, in panorama coordinates.
+function viewUV() {
+  const d = new THREE.Vector3();
+  camera.getWorldDirection(d);
+  return vecToUV(d);
+}
+// Adds a copy of h to the current scene at p. A link can't lead to the scene it sits in: one
+// pasted into its own destination leads back to the scene it was copied from, which is what
+// a return arrow needs, and one whose destination is gone leads to the first other scene.
+function addHotspotCopy(h, from, p) {
+  const s = scenes[current];
+  if (!s) return;
+  const n = { ...JSON.parse(JSON.stringify(h)), id: uid(), ...p };
+  if (n.type == 'link') {
+    const ok = id => id && id != s.id && scenes.some(x => x.id == id);
+    if (!ok(n.to)) n.to = ok(from) ? from : scenes.find(x => x.id != s.id)?.id;
+    if (!n.to) {
+      toast(t('msg.needTwoScenes'));
+      return;
+    }
+  }
+  s.hs.push(n);
+  selId = n.id;
+  placing = null;
+  buildHotspots();
+  ui();
+  save();
+}
+const pasteHotspot = () => hsClip && addHotspotCopy(hsClip.h, hsClip.from, viewUV());
+// The duplicate lands a little to one side, so it doesn't hide the original.
+function duplicateHotspot() {
+  const h = selHotspot();
+  if (h) addHotspotCopy(h, scenes[current].id, { u: (h.u + 0.02) % 1, v: h.v });
+}
+function syncPaste() {
+  $('hpaste').hidden = !hsClip;
+}
+$('hpaste').onclick = pasteHotspot;
 // The capture time is the camera's local clock with no zone, so it is formatted as UTC to
 // show exactly what the camera recorded.
 function fmtTaken(s) {
@@ -1590,22 +1797,32 @@ $('psave').onclick = async () => {
 };
 // An imported file is untrusted. Keep only well-formed fields with the expected types,
 // so nothing unexpected reaches the markup or an exported tour.
-const SHAPES = ['arrow', 'ring', 'dot', 'pin', 'star', 'info'];
+const SHAPES = ['arrow', 'ring', 'dot', 'pin', 'star', 'info', 'none'];
 const num = (v, fallback) => (Number.isFinite(+v) && v !== null && v !== '' ? +v : fallback);
 const clamp01 = v => Math.min(1, Math.max(0, v));
 const isDataImage = v => typeof v == 'string' && v.startsWith('data:image/');
-const cleanHotspot = h => ({
-  id: String(h.id || uid()),
-  type: h.type == 'info' ? 'info' : 'link',
-  to: h.type == 'info' || h.to == null ? undefined : String(h.to),
-  label: String(h.label ?? ''),
-  text: String(h.text ?? ''),
-  shape: SHAPES.includes(h.shape) ? h.shape : 'arrow',
-  color: /^#[0-9a-f]{6}$/i.test(h.color) ? h.color : '#f59e0b',
-  size: Math.min(2.5, Math.max(0.5, num(h.size, 1))),
-  u: clamp01(num(h.u, 0.5)),
-  v: clamp01(num(h.v, 0.5)),
-});
+const cleanHotspot = h => {
+  const out = {
+    id: String(h.id || uid()),
+    type: h.type == 'info' ? 'info' : 'link',
+    to: h.type == 'info' || h.to == null ? undefined : String(h.to),
+    label: String(h.label ?? ''),
+    text: String(h.text ?? ''),
+    shape: SHAPES.includes(h.shape) ? h.shape : 'arrow',
+    color: /^#[0-9a-f]{6}$/i.test(h.color) ? h.color : '#f59e0b',
+    size: Math.min(2.5, Math.max(0.5, num(h.size, 1))),
+    u: clamp01(num(h.u, 0.5)),
+    v: clamp01(num(h.v, 0.5)),
+  };
+  // Optional, and left out at their defaults so older files and older builds match.
+  const rot = (((Math.round(num(h.rot, 0)) % 360) + 540) % 360) - 180; // -180 to 179
+  if (rot) out.rot = rot;
+  const ts = Math.min(2, Math.max(0.6, num(h.ts, 1)));
+  if (ts != 1) out.ts = ts;
+  if (h.box === false) out.box = false;
+  if (h.fix === true) out.fix = true;
+  return out;
+};
 const cleanScene = s => {
   const out = {
     id: String(s.id || uid()),
@@ -1908,6 +2125,19 @@ async function ensureTexture(s) {
     return false;
   }
 }
+// Where the visitor faces on arriving in scene s from scene from through hotspot h, as a
+// panorama u. heading is the u they face in the scene they are leaving. In order:
+// - both scenes have a north set: keep the compass heading;
+// - s has a link back to from: that link points behind the visitor, so face the opposite
+//   way, turned by as much as they were looking away from h. Return links are common and
+//   need no setup, so most tours keep their sense of direction without a north;
+// - otherwise: the start angle of s.
+function arrivalHeading(from, s, h, heading) {
+  if (from.n != null && s.n != null) return s.n + (heading - from.n);
+  const back = s.hs.find(x => x.type == 'link' && x.to == from.id);
+  if (back) return back.u + 0.5 + (heading - h.u);
+  return s.u0 || 0;
+}
 async function walkTo(i, h) {
   if (walking || i == current) return;
   const s = scenes[i],
@@ -1934,11 +2164,8 @@ async function walkTo(i, h) {
         setFov(fov - 8 * k);
       });
     }
-    // Keep the visitor's compass heading when both scenes have a north set;
-    // otherwise land on the next scene's start angle.
     const heading = worldTurn - yaw / (2 * PI),
-      target = from.n != null && s.n != null ? s.n + (heading - from.n) : s.u0 || 0,
-      nextTurn = target + yaw / (2 * PI);
+      nextTurn = arrivalHeading(from, s, h, heading) + yaw / (2 * PI);
     fadeGroup.rotation.y = 2 * PI * nextTurn + PI / 2;
     fadeMesh.material.map = textures[s.id];
     fadeMesh.material.needsUpdate = true;
@@ -2059,18 +2286,28 @@ const hotspotAt = e => {
     ),
     camera
   );
-  const x = raycaster.intersectObjects(hotspotGroup.children, false);
+  const x = raycaster.intersectObjects(
+    mode == 'view' ? liveHotspots() : hotspotGroup.children,
+    false
+  );
   return x.length ? x[0].object.userData.h : null;
 };
+// In the tour, a plain text note can't be clicked, so it mustn't catch a click or a gaze meant
+// for a hotspot behind it.
+const liveHotspots = () => hotspotGroup.children.filter(c => !inert(c.userData.h));
 const pickXR = (o, d) => {
   raycaster.set(o, d);
   const x = raycaster.intersectObjects(
-    vrPanel.visible ? [...hotspotGroup.children, vrPanelBody, vrPanelClose] : hotspotGroup.children,
+    vrPanel.visible ? [...liveHotspots(), vrPanelBody, vrPanelClose] : liveHotspots(),
     false
   );
   return x.length ? x[0].object : null;
 };
+// A text-only note with nothing more to say is a label on the scene, not a button: in the
+// tour it doesn't react to the pointer or to gaze, since a popup would only repeat it.
+const inert = h => !!h && h.type == 'info' && h.shape == 'none' && !(h.text || '').trim();
 function activate(h) {
+  if (inert(h)) return;
   if (h.type == 'link') {
     const k = scenes.findIndex(s => s.id == h.to);
     if (k >= 0) project.walk !== false && !renderer.xr.isPresenting ? walkTo(k, h) : showScene(k);
@@ -2191,6 +2428,7 @@ glCanvas.addEventListener('pointerup', e => {
           shape: placing == 'info' ? 'info' : 'arrow',
           color: '#f59e0b',
           size: 1,
+          ...hsLook[placing],
           ...p,
         };
       scenes[current].hs.push(n);
@@ -2299,14 +2537,18 @@ renderer.setAnimationLoop(time => {
   // Hotspots are sized against the stage height so they stay easy to hit on a phone
   // without dominating a large monitor. In a headset the world-space size applies.
   const fit = xr ? 1 : Math.min(2.4, Math.max(0.9, 840 / (glCanvas.clientHeight || 600)));
+  // A hotspot set to keep its size shrinks in the scene as the view zooms in, by as much as
+  // the panorama grows, so it stays the size it has at the default zoom.
+  const keep = xr ? 1 : Math.tan((camera.fov * PI) / 360) / Math.tan((75 * PI) / 360);
   hotspotGroup.children.forEach(sp => {
     const h = sp.userData.h,
       k =
         fit *
         (h.size || 1) *
+        (h.fix ? keep : 1) *
         (sp == gazeTarget || sp.userData.h == hovered ? 1.2 : 1) *
         (sp == gazeTarget ? 1 + (gazeTime / need) * 0.3 : 1);
-    sp.scale.set(70 * k, 43.75 * k, 1);
+    sp.scale.set(sp.userData.w * k, sp.userData.hgt * k, 1);
   });
   renderer.render(scene3d, camera);
 });
@@ -2403,23 +2645,11 @@ function showVrPanel(h) {
   ctx.textAlign = rtl ? 'right' : 'left';
   ctx.fillStyle = '#fff';
   ctx.font = '700 56px system-ui,Tahoma,Arial';
-  ctx.fillText(h.label || t('hs.info'), ax, 110, 780);
+  ctx.fillText(oneLine(h.label) || t('hs.info'), ax, 110, 780);
   ctx.font = '400 40px system-ui,Tahoma,Arial';
   ctx.fillStyle = '#e5e7eb';
   // Each line the author typed starts a new line here too, and long ones wrap.
-  const lines = [];
-  for (const para of (h.text || '').split('\n')) {
-    let l = '';
-    for (const w of para.split(/\s+/).filter(Boolean)) {
-      const n = l ? l + ' ' + w : w;
-      if (ctx.measureText(n).width > 900 && l) {
-        lines.push(l);
-        l = w;
-      } else l = n;
-    }
-    lines.push(l);
-  }
-  while (lines.length && !lines[lines.length - 1]) lines.pop();
+  const lines = wrapLines(ctx, h.text, 900);
   lines
     .slice(0, 8)
     .forEach((s, i) => ctx.fillText(i == 7 && lines.length > 8 ? s + '…' : s, ax, 190 + i * 54));
@@ -2537,7 +2767,7 @@ const undo = () => {
 $('undo').onclick = undo;
 $('redo').onclick = redo;
 addEventListener('keydown', e => {
-  if (EMBED || mode != 'edit' || !(e.ctrlKey || e.metaKey)) return;
+  if (EMBED || mode != 'edit' || !$('libm').hidden || !(e.ctrlKey || e.metaKey)) return;
   const tg = e.target.tagName;
   if (tg == 'INPUT' || tg == 'TEXTAREA' || tg == 'SELECT') return;
   const k = e.key.toLowerCase();
@@ -2547,7 +2777,28 @@ addEventListener('keydown', e => {
   } else if (k == 'y') {
     e.preventDefault();
     redo();
+  } else if (k == 'c' && selHotspot() && !String(getSelection())) {
+    // Text the user selected on the page copies as usual.
+    e.preventDefault();
+    copyHotspot();
+  } else if (k == 'v' && hsClip && scenes[current]) {
+    e.preventDefault();
+    pasteHotspot();
+  } else if (k == 'd' && selHotspot()) {
+    e.preventDefault();
+    duplicateHotspot();
   }
+});
+// Delete or Backspace removes the selected hotspot, from the panorama or the hotspot list
+// but not from a text field. Undo brings it back.
+addEventListener('keydown', e => {
+  if (EMBED || mode != 'edit' || !$('libm').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key != 'Delete' && e.key != 'Backspace') return;
+  const tg = e.target;
+  if (!(tg == document.body || tg == glCanvas || tg.closest?.('#hlist, #hprops button'))) return;
+  if (!selHotspot()) return;
+  e.preventDefault();
+  deleteHotspot();
 });
 $('pdesc').oninput = e => {
   project.desc = e.target.value;

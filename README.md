@@ -36,8 +36,22 @@ that isn't granted it says once per session that the browser may clear the work.
 - Load several panoramas at once, by file picker or drag-and-drop. Anything wider than
   4096px is downscaled; anything that is not roughly 2:1 is placed as a flat panel
   instead of being stretched across the sphere.
-- Link hotspots and info hotspots, in six shapes, with adjustable colour and size.
-  Drag a hotspot in the panorama to move it.
+- Link hotspots and info hotspots, in six shapes or as text only, with adjustable colour
+  and size. Drag a hotspot in the panorama to move it.
+- Labels run over several lines and have their own text size, on a dark box or with an
+  outline only. A text-only info hotspot with no further text is a plain note on the
+  scene, for naming a wall, a material or a defect; in the tour it doesn't react to
+  clicks, since a popup would only repeat it.
+- An arrow can point in any direction, in 5° steps.
+- A hotspot can keep its size on screen when the view zooms, instead of growing with the
+  panorama.
+- Copy a hotspot (Ctrl+C) and paste it into any scene (Ctrl+V), where it appears in the
+  middle of the view; duplicate it beside itself (Ctrl+D); remove it with Delete. A link
+  pasted into its own destination turns into a link back to the scene it came from, which
+  is what a return arrow needs.
+- A new hotspot takes the look of the last one of its kind that was edited, so a tour of
+  many scenes needs its arrows styled once.
+- Glyphs on light icon colours, such as white, are drawn dark so they stay visible.
 - 60 steps of undo and redo.
 - Scene thumbnails, drag-to-reorder, rename and delete.
 - A company logo in any corner of the tour, over every scene, with adjustable size and
@@ -71,7 +85,11 @@ that isn't granted it says once per session that the browser may clear the work.
 
 ### Viewing
 - Walkthrough transitions: the camera turns toward the hotspot, pushes in, then
-  cross-fades to the next scene while preserving heading.
+  cross-fades to the next scene while preserving heading. When both scenes have a north
+  direction, the compass heading carries over. Otherwise, when the next scene has a link
+  back, the visitor arrives facing away from it, turned by as much as they were looking
+  away from the hotspot they took; so return links keep the sense of direction with no
+  setup. Failing both, the next scene opens at its start angle.
 - A start screen built from the first scene.
 - Neighbouring scenes are preloaded.
 - At most 8 panoramas (4 on touch devices) stay in GPU memory; older ones are released and
@@ -143,7 +161,8 @@ whichever way the project was opened.
     "hs": [{
       "id": "x1", "type": "link", "to": "<sceneId>",
       "label": "", "text": "", "shape": "arrow",
-      "color": "#4f46e5", "size": 1, "u": 0.84, "v": 0.6
+      "color": "#4f46e5", "size": 1, "u": 0.84, "v": 0.6,
+      "rot": 90, "ts": 1.2, "box": false, "fix": true
     }]
   }]
 }
@@ -155,6 +174,12 @@ whichever way the project was opened.
   on import and keeps its own setting.
 - Hotspot `u` and `v` are equirectangular coordinates from 0 to 1: `u` horizontally
   from the left edge, `v` vertically from the top.
+- A hotspot `label` may contain line breaks. `shape` is one of `arrow`, `ring`, `dot`,
+  `pin`, `star`, `info` or `none` (text only). The last four hotspot fields are optional
+  and left out at their defaults: `rot` turns an arrow by -180 to 179 degrees, clockwise;
+  `ts` scales the label text, 0.6 to 2; `box: false` draws the label with an outline
+  instead of a dark box; `fix: true` keeps the hotspot's size on screen when zooming. A
+  build that predates them ignores them, and shows a text-only hotspot as an arrow.
 - `u0` and `p0` are the scene's starting yaw and pitch; `n` is its north offset.
 - `pp` is the scene's position on the floor plan, also 0 to 1.
 - `taken` is the camera's local capture time, with no time zone, and `gps` the position in
@@ -233,6 +258,8 @@ are announced through `aria-live`, and `prefers-reduced-motion` is respected.
 ## Roadmap
 
 - ZIP export with binary images, to cut tour size.
+- Sharper panoramas: 8192 px for desktops and 4096 px for phones, chosen per device. It
+  waits on ZIP export, since a single HTML file with 8192 px images grows about fourfold.
 - A trimmed viewer bundle that leaves out editor code.
 - Direct-to-disk saving through the File System Access API.
 - Per-scene audio and a view cone on the floor plan.
