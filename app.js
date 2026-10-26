@@ -139,6 +139,8 @@ const I18N = {
     'hint.hd':
       'يسري على الصور التي تُضاف بعد تفعيله. تُحفظ لكل بانوراما أعرض من \u20664096\u2069 بكسل نسختان: حتى \u20668192\u2069 لأجهزة الكمبيوتر، و\u20664096\u2069 للهواتف والأجهزة اللوحية. يحمل التصدير كمجلد النسختين، أما ملف HTML فيحمل نسخة \u20664096\u2069 وحدها.',
     'f.hdScene': 'لهذا المشهد نسخة عالية الدقة تظهر على أجهزة الكمبيوتر.',
+    'msg.hdLeft':
+      'تُركت النسخ عالية الدقة خارج الملف لأنه كان سيتجاوز حجماً يمكن استيراده مرة أخرى، وبقيت في هذا المتصفح.',
     'msg.exportedHd':
       'يحمل الملف نسخ \u20664096\u2069 بكسل وحدها، فالنسخ عالية الدقة في التصدير كمجلد.',
     'f.captured': 'التُقطت:',
@@ -398,6 +400,8 @@ const I18N = {
     'hint.hd':
       'Applies to images added from now on. Each panorama wider than 4096 px keeps two copies: up to 8192 px for desktops, and 4096 px for phones and tablets. The folder export carries both; the HTML file carries the 4096 px copy only.',
     'f.hdScene': 'This scene has a high-resolution copy, shown on desktops.',
+    'msg.hdLeft':
+      'The high-resolution copies were left out, since the file would be too large to import again; they stay in this browser.',
     'msg.exportedHd':
       'It carries the 4096 px copies only; the high-resolution ones are in the folder export.',
     'f.captured': 'Captured:',
@@ -696,11 +700,14 @@ const dbOp = (m, k, v) =>
 function dataToBlob(u) {
   const i = u.indexOf(','),
     h = u.slice(0, i),
-    bin = atob(u.slice(i + 1)),
+    type = h.slice(5).split(';')[0] || 'application/octet-stream';
+  // An imported SVG logo can be a URL-encoded data: URL rather than base64.
+  if (!/;base64$/i.test(h)) return new Blob([decodeURIComponent(u.slice(i + 1))], { type });
+  const bin = atob(u.slice(i + 1)),
     n = bin.length,
     a = new Uint8Array(n);
   for (let x = 0; x < n; x++) a[x] = bin.charCodeAt(x);
-  return new Blob([a], { type: (h.match(/:(.*?);/) || [, 'application/octet-stream'])[1] });
+  return new Blob([a], { type });
 }
 const toDataURL = b =>
   new Promise((res, rej) => {
@@ -737,6 +744,15 @@ const save = () => {
 // the loading bar up for good. Wait for load, which is reliable, then cap decode.
 // Thumbnails only draw the image to a canvas, so they skip decode() altogether.
 const DECODE_TIMEOUT_MS = 6000;
+const decodeImg = im =>
+  new Promise(res => {
+    const k = setTimeout(() => res(im), DECODE_TIMEOUT_MS),
+      fin = () => {
+        clearTimeout(k);
+        res(im);
+      };
+    (im.decode ? im.decode() : Promise.resolve()).then(fin, fin);
+  });
 function loadImg(src, decode = true) {
   return new Promise((res, rej) => {
     const im = new Image();
@@ -744,13 +760,7 @@ function loadImg(src, decode = true) {
     const ready = () => {
       if (started) return;
       started = true;
-      if (!decode) return res(im);
-      const k = setTimeout(() => res(im), DECODE_TIMEOUT_MS),
-        fin = () => {
-          clearTimeout(k);
-          res(im);
-        };
-      (im.decode ? im.decode() : Promise.resolve()).then(fin, fin);
+      res(decode ? decodeImg(im) : im);
     };
     im.onload = ready;
     im.onerror = () => rej(new Error('image'));
@@ -813,17 +823,19 @@ function useTexture(id) {
   }
 }
 // Decoding holds a whole bitmap in memory, 32 MB at 4096 and 128 MB at 8192, so decodes take
-// turns: one at a time on a touch device, two elsewhere. A scene the visitor is waiting for
-// (urgent) goes to the front of the queue, ahead of preloads.
+// turns: one at a time on a touch device, two elsewhere. Only the decode waits its turn, not
+// the download, so a slow file doesn't hold up the others. A scene the visitor is waiting
+// for (urgent) goes to the front of the queue, ahead of preloads.
 const DECODES = TOUCH ? 1 : 2,
-  decodeQueue = [];
+  decodeQueue = [],
+  urgentIds = new Set();
 let decoding = 0;
-const decodeTurn = (id, urgent) =>
+const decodeTurn = id =>
   new Promise(r => {
     if (decoding < DECODES) {
       decoding++;
       r();
-    } else decodeQueue[urgent ? 'unshift' : 'push']({ id, r });
+    } else decodeQueue[urgentIds.has(id) ? 'unshift' : 'push']({ id, r });
   });
 function decodeDone() {
   const n = decodeQueue.shift();
@@ -837,19 +849,33 @@ function loadTexture(s, urgent) {
     return Promise.resolve(textures[s.id]);
   }
   if (urgent) {
+    urgentIds.add(s.id);
     // Already queued as a preload: move it up.
     const i = decodeQueue.findIndex(x => x.id == s.id);
     if (i > 0) decodeQueue.unshift(...decodeQueue.splice(i, 1));
   }
-  if (!texLoads[s.id])
-    texLoads[s.id] = decodeTurn(s.id, urgent)
-      .then(() => loadImg(sceneSrc(s)).finally(decodeDone))
+  if (!texLoads[s.id]) {
+    const p = loadImg(sceneSrc(s), false)
+      .then(im =>
+        decodeTurn(s.id)
+          .then(() => decodeImg(im))
+          .finally(decodeDone)
+      )
       .then(im => {
+        // Another project was opened meanwhile; a duplicate shares scene ids.
+        if (texLoads[s.id] !== p) throw new Error('stale');
         textures[s.id] = makeTexture(im);
         useTexture(s.id);
         return textures[s.id];
       })
-      .finally(() => delete texLoads[s.id]);
+      .finally(() => {
+        if (texLoads[s.id] === p) {
+          delete texLoads[s.id];
+          urgentIds.delete(s.id);
+        }
+      });
+    texLoads[s.id] = p;
+  }
   return texLoads[s.id];
 }
 function dropTexture(id) {
@@ -1450,13 +1476,15 @@ async function showScene(i) {
   placing = null;
   $('pop').hidden = true;
   hideVrPanel();
+  // The last scene's clip stops now, not once this one has loaded.
+  if (clip && clip.id != s.id) endClip();
   if (!textures[s.id]) {
     busy(1);
     try {
       await loadTexture(s, true);
     } catch (e) {
       busy(-1);
-      toast(t('msg.sceneFail'));
+      if (scenes[i] === s) toast(t('msg.sceneFail'));
       return;
     }
     busy(-1);
@@ -1619,9 +1647,14 @@ async function addFiles(files) {
             k = Math.min(1, 8192 / im.width);
           m.width = Math.round(im.width * k);
           m.height = Math.round(im.height * k);
-          m.getContext('2d').drawImage(im, 0, 0, m.width, m.height);
-          hdBlob = await canvasBlob(m, 'image/jpeg', 0.86);
-          if (hdBlob) src = m;
+          const mx = m.getContext('2d');
+          mx?.drawImage(im, 0, 0, m.width, m.height);
+          // A browser over its canvas limit can hand back no context, or one that silently
+          // draws nothing; a decoded photo is opaque, so a transparent middle gives it away.
+          if (mx?.getImageData(m.width >> 1, m.height >> 1, 1, 1).data[3] == 255) {
+            hdBlob = await canvasBlob(m, 'image/jpeg', 0.86);
+            if (hdBlob) src = m;
+          }
         }
         const k = Math.min(1, 4096 / im.width);
         canvas.width = Math.round(im.width * k);
@@ -2325,9 +2358,18 @@ const fileName = ext =>
 // put(blob, name) decides how a file travels: as a data: URL by default, or, for the folder
 // export, as a file in the ZIP whose relative path takes its place. name is a path without
 // an extension, unique within the tour.
+// A .json backup is one string, and browsers can't build or read one much past 500 MB. The
+// high-resolution masters are the bulk of a large project, so they go into the file only
+// while it stays under JSON_HD_MAX; otherwise the file keeps the 4096 copies and says so.
+const JSON_HD_MAX = 300 * 1048576;
 async function toPortable(Q, forTour, put) {
   const out = toDoc(Q),
     zip = !!put,
+    hdBytes = (Q.scenes || []).reduce(
+      (n, s) => n + (s.hdBlob?.size || 0) + (s.blob?.size || 0) + (s.snd?.blob?.size || 0),
+      0
+    ),
+    withHd = zip || (!forTour && (hdBytes * 4) / 3 < JSON_HD_MAX),
     // Small images the document carries inline (icons, nadir, logo) become files too.
     inline = (u, name) => (zip ? put(dataToBlob(u), name) : u);
   put = put || toDataURL;
@@ -2338,14 +2380,14 @@ async function toPortable(Q, forTour, put) {
       delete r.taken;
       delete r.gps;
     }
-    // Scene thumbnails only show in the editor's scene list.
-    if (zip) delete r.th;
+    // The tour's scene grid loads thumbnails lazily, as files of their own.
+    if (zip && r.th) r.th = await inline(r.th, 'thumbs/' + s.id);
     // The single file carries the 4096 copies only: at 8192 it would grow about fourfold.
-    if (hdBlob && (zip || !forTour)) r.hd = await put(hdBlob, 'scenes/' + s.id + '-hd');
+    if (hdBlob && withHd) r.hd = await put(hdBlob, 'scenes/' + s.id + '-hd');
     if (r.snd)
       r.snd = {
         ...sndOpts(r.snd),
-        src: r.snd.blob ? await put(r.snd.blob, 'audio/' + s.id) : r.snd.src,
+        src: r.snd.blob ? await put(r.snd.blob, 'audio/' + s.id, r.snd.name) : r.snd.src,
       };
     out.scenes.push({ ...r, img: blob ? await put(blob, 'scenes/' + s.id) : s.img });
   }
@@ -2353,7 +2395,7 @@ async function toPortable(Q, forTour, put) {
     out.audio = {
       name: Q.audio.name,
       vol: Q.audio.vol,
-      src: Q.audio.blob ? await put(Q.audio.blob, 'audio/music') : Q.audio.src,
+      src: Q.audio.blob ? await put(Q.audio.blob, 'audio/music', Q.audio.name) : Q.audio.src,
     };
   if (Q.plan) out.plan = { img: Q.plan.blob ? await put(Q.plan.blob, 'plan') : Q.plan.img };
   if (Q.cover) out.cover = { img: Q.cover.blob ? await put(Q.cover.blob, 'cover') : Q.cover.img };
@@ -2367,6 +2409,9 @@ async function toPortable(Q, forTour, put) {
   if (zip && Q.logo) out.logo = { ...Q.logo, img: await inline(Q.logo.img, 'logo') };
   if (forTour) delete out.hd; // an editor setting
   out.lang = LANG; // an exported tour renders in the language its author was using
+  // Not a field of the file: tells the caller the masters were left out.
+  if (!forTour && !withHd && Q.scenes.some(s => s.hdBlob))
+    Object.defineProperty(out, 'hdLeft', { value: true });
   return out;
 }
 const portableProject = () => toPortable(project);
@@ -2526,14 +2571,23 @@ async function zipBlob(files, progress) {
 async function folderTour() {
   const files = [],
     taken = new Set(),
-    put = (b, name) => {
+    put = (b, name, orig) => {
       // Ids from an imported file can hold anything, so a name keeps only safe characters,
-      // and stays unique if two of them clean up the same way.
-      const ext = EXT[(b.type || '').split(';')[0]] || (/^audio\//.test(b.type) ? 'mp3' : 'jpg');
-      let base = name.replace(/[^\w\/-]/g, '_'),
-        path = base + '.' + ext;
-      for (let k = 2; taken.has(path); k++) path = base + '-' + k + '.' + ext;
-      taken.add(path);
+      // at most 64 of them, and stays unique if two clean up the same way, case included,
+      // since macOS and Windows don't tell File.jpg from file.jpg.
+      const ext =
+        EXT[(b.type || '').split(';')[0]] ||
+        (/\.([a-z0-9]{2,5})$/i.exec(orig || '') || [])[1]?.toLowerCase() ||
+        (name.startsWith('audio/') ? 'mp3' : 'jpg');
+      const j = name.indexOf('/') + 1, // after the folder this file goes in
+        id = name
+          .slice(j)
+          .replace(/[^\w-]/g, '_')
+          .slice(0, 64),
+        base = name.slice(0, j) + id;
+      let path = base + '.' + ext;
+      for (let k = 2; taken.has(path.toLowerCase()); k++) path = base + '-' + k + '.' + ext;
+      taken.add(path.toLowerCase());
       files.push({ name: path, data: b });
       return path;
     };
@@ -2556,7 +2610,9 @@ async function folderTour() {
       data: `window.__TOUR__=${JSON.stringify(data).replace(/</g, '\\u003c')};`,
     },
     // Both languages, since whoever unpacks the folder may not read the tour's.
-    { name: 'README.txt', data: I18N.en['zip.readme'] + '\n\n' + I18N.ar['zip.readme'] + '\n' }
+    { name: 'README.txt', data: I18N.en['zip.readme'] + '\n\n' + I18N.ar['zip.readme'] + '\n' },
+    // GitHub Pages would otherwise run Jekyll, which drops files whose names start with _.
+    { name: '.nojekyll', data: '' }
   );
   return files;
 }
@@ -2629,9 +2685,10 @@ $('psave').onclick = async () => {
   }
   toast(t('msg.preparingProj'), 60000);
   try {
-    saveFile(fileName('.json'), JSON.stringify(await portableProject()), 'application/json');
+    const out = await portableProject();
+    saveFile(fileName('.json'), JSON.stringify(out), 'application/json');
     editCount = 0;
-    toast(t('msg.projSaved'));
+    toast(t('msg.projSaved') + (out.hdLeft ? ' ' + t('msg.hdLeft') : ''), out.hdLeft ? 12000 : 0);
   } catch (x) {
     toast(t('msg.projSaveFail'));
   }
@@ -2831,6 +2888,8 @@ function setProject(id, d) {
   scenes = project.scenes;
   sphereMat.map = fadeMesh.material.map = null;
   for (const k in textures) dropTexture(k);
+  for (const k in texLoads) delete texLoads[k];
+  urgentIds.clear();
   resetHist();
   $('pdesc').value = project.desc || '';
   current = -1;
@@ -2987,7 +3046,10 @@ if (!EMBED) {
           revokeProject(d);
         }
         saveFile(safeName(out.title) + '.json', JSON.stringify(out), 'application/json');
-        toast(t('msg.projFileSaved'));
+        toast(
+          t('msg.projFileSaved') + (out.hdLeft ? ' ' + t('msg.hdLeft') : ''),
+          out.hdLeft ? 12000 : 0
+        );
       } catch (x) {
         toast(t('msg.projExpFail'));
       }

@@ -185,6 +185,7 @@ the file would be and suggests the folder export; a second click exports it anyw
 ```
 index.html          the page, with its own content security policy
 README.txt          how to publish and preview it, in English and Arabic
+.nojekyll           stops GitHub Pages running Jekyll, which drops files starting with _
 tour/style.css      the same code as the editor, cached by the browser between visits
 tour/three.min.js
 tour/app.js
@@ -193,6 +194,7 @@ scenes/<id>.jpg     one file per panorama
 audio/music.<ext>   background music
 audio/<id>.<ext>    each scene's audio clip
 icons/<id>.png      custom icons, only those in use
+thumbs/<id>.jpg     scene thumbnails for the scene grid, loaded when it opens
 plan.<ext>, cover.jpg, nadir.png, logo.<ext>
 ```
 
@@ -201,8 +203,8 @@ visitor downloads only the scenes they visit, plus the neighbours the viewer pre
 viewer is the same `app.js` with the same code path: in the folder, a scene's `img` is a
 relative path instead of a `data:` URL. `data.js` is a script rather than JSON so the page
 needs no `fetch()`, and the page's policy allows scripts, styles, images and media from the
-folder's own origin only. Scene thumbnails are left out, since only the editor shows them.
-File names come from scene and icon ids, cleaned to letters, digits, `-` and `_`.
+folder's own origin only. File names come from scene and icon ids, cleaned to letters,
+digits, `-` and `_`, cut to 64 characters, and kept unique without regard to case.
 
 The ZIP is written by the editor itself, without a library: each file is stored
 uncompressed (JPEG and compressed audio don't shrink), with its CRC-32 and a UTF-8 name.
@@ -386,6 +388,9 @@ are announced through `aria-live`, and `prefers-reduced-motion` is respected.
   imagery, and embeds panoramas as base64. A 15-scene tour reaches tens of megabytes; use
   the folder export for anything larger.
 - A folder tour doesn't open from disk; it needs a web server, even a local one.
+- A `.json` backup is a single string, which browsers can't build or read much past 500 MB.
+  When the high-resolution masters would push the file past 300 MB, they are left out of it
+  (the editor says so) and stay in the browser; the folder export still carries them.
 - High resolution can't be added to images already in a project, since they were stored at
   4096 px; add them again with the option on. Safari on iPhone and iPad refuses a canvas of
   8192 × 4096, so images added there keep the 4096 px copy only.
