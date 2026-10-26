@@ -1340,10 +1340,15 @@ canvas {
   color: var(--fg);
   font-variant-numeric: tabular-nums;
 }
-#lctl {
+#lctl,
+#sau,
+#sactl {
   display: flex;
   flex-direction: column;
   gap: var(--s2);
+}
+#saname {
+  overflow-wrap: anywhere;
 }
 
 /* An exported tour is one large file, and nothing runs until all of it has arrived. This
