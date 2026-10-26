@@ -1217,13 +1217,24 @@ const HS_PX = 512 / 70,
 // it as perspective does; it is drawn FLOOR_K times larger to make up for that. Close to the
 // horizon it would flatten to a line, so it is kept 5° below it.
 const FLOOR_K = 1.33,
-  FLOOR_V = 0.5 + 5 / 180,
+  FLOOR_SIN = Math.sin((5 * PI) / 180),
   FLOOR_GEO = new THREE.PlaneGeometry(1, 1);
 const onFloor = h => !!h.fl && h.shape != 'none';
-// Keeps a floor hotspot below the horizon. Returns whether it had to move.
-const floorClamp = h => {
-  if (!onFloor(h) || h.v >= FLOOR_V) return false;
-  h.v = FLOOR_V;
+// Keeps a floor hotspot 5° below the horizon of a scene levelled by lq, the current scene's
+// by default, moving it straight down to there if it is higher. Returns whether it had to
+// move; with dry set it only says so. The horizon is the corrected one, which the decal lies
+// against: on a photo tilted by more than 5°, the photo's own would let it rise above it.
+const floorClamp = (h, lq = scenes[current]?.lq, dry) => {
+  if (!onFloor(h)) return false;
+  const q = new THREE.Quaternion().fromArray(lq || NO_TILT),
+    d = sphereToVec(h.u, h.v, 1).applyQuaternion(q);
+  if (d.y <= -FLOOR_SIN + 1e-9) return false;
+  if (dry) return true;
+  const k = Math.sqrt(1 - FLOOR_SIN * FLOOR_SIN) / (Math.hypot(d.x, d.z) || 1);
+  if (!d.x && !d.z) d.x = 1; // straight up: any way down will do
+  d.set(d.x * k, -FLOOR_SIN, d.z * k).applyQuaternion(q.invert());
+  h.u = (Math.atan2(d.z, d.x) / (2 * PI) + 1) % 1;
+  h.v = Math.acos(Math.max(-1, Math.min(1, d.y))) / PI;
   return true;
 };
 // A text-only hotspot is its own label, so it is always shown.
@@ -1344,7 +1355,7 @@ function makeHotspotSprite(h) {
     e.lW = c.width;
     e.lH = c.height;
     // A label shown on hover starts hidden, in the tour; nothing is hovered after a rebuild.
-    e.a = mode == 'view' && hoverLabel(h) ? 0 : 1;
+    e.a = mode == 'view' && hoverLabel(h) && h !== hovered ? 0 : 1;
   }
   return e;
 }
@@ -1400,7 +1411,9 @@ function buildHotspots() {
     c.material.dispose();
   });
   hotspotGroup.clear();
-  gazeTarget = hovered = null;
+  gazeTarget = null;
+  // A redraw, such as a custom icon finishing decoding, leaves a hovered hotspot hovered.
+  if (!scenes[current]?.hs.includes(hovered)) hovered = null;
   hsParts = (scenes[current]?.hs || []).map(h => {
     const e = makeHotspotSprite(h);
     [e.dc, e.ic, e.lb].forEach(o => {
@@ -1744,15 +1757,19 @@ function renderHotspotProps() {
     // A floor spot is made to lie on the floor, so choosing one lays it down, unless that would
     // move it; the checkbox stands it up again.
     if (o.shape == 'none') o.fl = undefined;
-    else if (o.shape == 'spot' && h.shape != 'spot' && h.v >= FLOOR_V) o.fl = true;
+    else if (
+      o.shape == 'spot' &&
+      h.shape != 'spot' &&
+      !floorClamp({ ...h, ...o, fl: true }, undefined, 1)
+    )
+      o.fl = true;
     updateHotspot(o);
     fit();
   });
   bind('pfl', 'change', e => {
-    const o = { fl: e.target.checked || undefined },
-      moved = o.fl && selHotspot().v < FLOOR_V;
-    if (moved) o.v = FLOOR_V;
-    updateHotspot(o);
+    const o = { ...selHotspot(), fl: e.target.checked || undefined },
+      moved = floorClamp(o);
+    updateHotspot({ fl: o.fl, u: o.u, v: o.v });
     if (moved) toast(t('msg.floorClamp'));
   });
   bind('plp', 'change', e =>
@@ -2300,10 +2317,7 @@ const cleanHotspot = h => {
   if (h.fix === true) out.fix = true;
   if (h.lp == 't' || h.lp == 'l' || h.lp == 'r') out.lp = h.lp;
   if (h.hov === true) out.hov = true;
-  if (h.fl === true && out.shape != 'none') {
-    out.fl = true;
-    floorClamp(out);
-  }
+  if (h.fl === true && out.shape != 'none') out.fl = true; // kept off the horizon by cleanScene
   // A custom icon is named by its id in the project's icon list; the import checks it exists.
   if (out.shape == 'img') {
     if (typeof h.icon == 'string' && h.icon) out.icon = h.icon;
@@ -2333,6 +2347,7 @@ const cleanScene = s => {
         .toArray()
         .map(v => Math.round(v * 1e6) / 1e6);
   }
+  out.hs.forEach(h => floorClamp(h, out.lq));
   if (s.pp && typeof s.pp == 'object')
     out.pp = { x: clamp01(num(s.pp.x, 0.5)), y: clamp01(num(s.pp.y, 0.5)) };
   if (typeof s.taken == 'string' && TAKEN.test(s.taken)) out.taken = s.taken;
@@ -2951,9 +2966,14 @@ glCanvas.addEventListener('pointerup', e => {
   const h = hotspotAt(e);
   if (mode == 'view') {
     // Touch has no hover, so the first tap on a hotspot whose label shows on hover shows it,
-    // as hovering would, and a second tap within PEEK_MS opens it.
+    // as hovering would, and a second tap within PEEK_MS opens it. A pen that hovers has
+    // already shown it.
     const hid =
-      h && e.pointerType != 'mouse' && hoverLabel(h) && hsParts.some(x => x.h === h && x.lb);
+      h &&
+      e.pointerType != 'mouse' &&
+      h !== hovered &&
+      hoverLabel(h) &&
+      hsParts.some(x => x.h === h && x.lb);
     if (hid && peek?.h !== h) peek = { h, until: performance.now() + PEEK_MS };
     else {
       peek = null;
@@ -3077,10 +3097,9 @@ renderer.setAnimationLoop(time => {
     camera.getWorldDirection(d);
     gz = pickXR(o, d);
   }
-  if (gz !== gazeTarget) {
-    gazeTarget = gz;
-    gazeTime = 0;
-  }
+  // An icon and its label are one target, so the dwell carries on across them.
+  if ((gz?.userData.h || gz) !== (gazeTarget?.userData.h || gazeTarget)) gazeTime = 0;
+  gazeTarget = gz;
   const hz = gz && gz.userData.h,
     need = hz && hz.type == 'info' ? 3 : 1.6;
   if (gz && (hz || gz === vrPanelClose)) {
