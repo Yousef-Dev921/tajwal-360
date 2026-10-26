@@ -1132,6 +1132,37 @@ canvas {
   right: 5%;
   object-position: right center;
 }
+#cvimg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--r2);
+  border: 1px solid var(--bd);
+}
+#cvimg[hidden] {
+  display: none;
+}
+#lvl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+/* Vertical lines to straighten a scene against, over the panorama while levelling. */
+#guides {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 calc(12.5% - 1px),
+    rgba(255, 255, 255, 0.55) calc(12.5% - 1px) 12.5%
+  );
+}
+#guides[hidden] {
+  display: none;
+}
 .lrow {
   display: flex;
   justify-content: space-between;
