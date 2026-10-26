@@ -122,6 +122,12 @@ const I18N = {
     'opt.meta': 'إظهار تاريخ التصوير وموقعه',
     'hint.meta':
       'يُقرأ التاريخ والموقع من بيانات الكاميرا داخل الصورة، ولا تتضمّنهما الجولة المصدَّرة إلا عند تفعيل هذا الخيار.',
+    'opt.hd': 'الاحتفاظ بنسخة عالية الدقة (\u20668192\u2069 بكسل)',
+    'hint.hd':
+      'يسري على الصور التي تُضاف بعد تفعيله. تُحفظ لكل بانوراما أعرض من \u20664096\u2069 بكسل نسختان: حتى \u20668192\u2069 لأجهزة الكمبيوتر، و\u20664096\u2069 للهواتف والأجهزة اللوحية. يحمل التصدير كمجلد النسختين، أما ملف HTML فيحمل نسخة \u20664096\u2069 وحدها.',
+    'f.hdScene': 'لهذا المشهد نسخة عالية الدقة تظهر على أجهزة الكمبيوتر.',
+    'msg.exportedHd':
+      'يحمل الملف نسخ \u20664096\u2069 بكسل وحدها، فالنسخ عالية الدقة في التصدير كمجلد.',
     'f.captured': 'التُقطت:',
     'act.openMap': 'فتح الموقع على الخريطة',
     'act.planBig': 'تكبير المخطط',
@@ -353,6 +359,12 @@ const I18N = {
     'opt.meta': 'Show capture date and location',
     'hint.meta':
       'Both are read from the camera data in each photo. An exported tour includes them only while this is on.',
+    'opt.hd': 'Keep high-resolution panoramas (8192 px)',
+    'hint.hd':
+      'Applies to images added from now on. Each panorama wider than 4096 px keeps two copies: up to 8192 px for desktops, and 4096 px for phones and tablets. The folder export carries both; the HTML file carries the 4096 px copy only.',
+    'f.hdScene': 'This scene has a high-resolution copy, shown on desktops.',
+    'msg.exportedHd':
+      'It carries the 4096 px copies only; the high-resolution ones are in the folder export.',
     'f.captured': 'Captured:',
     'act.openMap': 'Open this location on a map',
     'act.planBig': 'Enlarge plan',
@@ -711,17 +723,32 @@ const makeTexture = im => {
 };
 // A panorama takes width × height × 4 bytes of GPU memory, 32 MB at 4096 × 2048, and Safari
 // on iOS reloads a page that holds much more than about 600 MB. Only the scenes most recently
-// shown or preloaded stay resident; older ones are released and decoded again if revisited.
-const TEXTURE_CACHE = navigator.maxTouchPoints > 0 ? 4 : 8;
+// shown or preloaded stay resident, within a budget of pixels: eight 4096 panoramas, or four
+// on a touch device. An 8192 panorama counts as four. Older ones are released and decoded
+// again if revisited.
+const TOUCH = navigator.maxTouchPoints > 0,
+  PANO_PX = 4096 * 2048,
+  TEX_BUDGET = (TOUCH ? 4 : 8) * PANO_PX;
 let texOrder = [], // scene ids, least recently used first
   walkTarget = null;
 const texLoads = {};
-// Marks a scene's texture as just used, then releases the oldest ones over the limit. The
+// A scene added with high resolution on has an 8192 copy (hd) beside its 4096 one (img).
+// Desktops whose GPU takes an 8192 texture show it; phones and tablets never decode it.
+const useHD = () => !TOUCH && renderer.capabilities.maxTextureSize >= 8192,
+  sceneSrc = s => (s.hd && useHD() ? s.hd : s.img);
+const texPx = k => {
+  const im = textures[k]?.image;
+  return im ? (im.naturalWidth || im.width) * (im.naturalHeight || im.height) : 0;
+};
+// What a scene costs in the budget: its texture if loaded, else the most it can take.
+const sceneCost = s => texPx(s.id) || (s.hd && useHD() ? 4 : 1) * PANO_PX;
+// Marks a scene's texture as just used, then releases the oldest ones over the budget. The
 // current scene, a walk in progress and anything on screen are never released.
 function useTexture(id) {
   texOrder = texOrder.filter(x => x != id);
   texOrder.push(id);
-  for (let i = 0; texOrder.length > TEXTURE_CACHE && i < texOrder.length; ) {
+  let used = texOrder.reduce((n, k) => n + texPx(k), 0);
+  for (let i = 0; used > TEX_BUDGET && i < texOrder.length; ) {
     const k = texOrder[i],
       tex = textures[k];
     if (
@@ -734,19 +761,44 @@ function useTexture(id) {
       i++;
       continue;
     }
+    used -= texPx(k);
     texOrder.splice(i, 1);
     tex?.dispose();
     delete textures[k];
   }
 }
+// Decoding holds a whole bitmap in memory, 32 MB at 4096 and 128 MB at 8192, so decodes take
+// turns: one at a time on a touch device, two elsewhere. A scene the visitor is waiting for
+// (urgent) goes to the front of the queue, ahead of preloads.
+const DECODES = TOUCH ? 1 : 2,
+  decodeQueue = [];
+let decoding = 0;
+const decodeTurn = (id, urgent) =>
+  new Promise(r => {
+    if (decoding < DECODES) {
+      decoding++;
+      r();
+    } else decodeQueue[urgent ? 'unshift' : 'push']({ id, r });
+  });
+function decodeDone() {
+  const n = decodeQueue.shift();
+  if (n) n.r();
+  else decoding--;
+}
 // One decode per scene, however many callers ask for it at once.
-function loadTexture(s) {
+function loadTexture(s, urgent) {
   if (textures[s.id]) {
     useTexture(s.id);
     return Promise.resolve(textures[s.id]);
   }
+  if (urgent) {
+    // Already queued as a preload: move it up.
+    const i = decodeQueue.findIndex(x => x.id == s.id);
+    if (i > 0) decodeQueue.unshift(...decodeQueue.splice(i, 1));
+  }
   if (!texLoads[s.id])
-    texLoads[s.id] = loadImg(s.img)
+    texLoads[s.id] = decodeTurn(s.id, urgent)
+      .then(() => loadImg(sceneSrc(s)).finally(decodeDone))
       .then(im => {
         textures[s.id] = makeTexture(im);
         useTexture(s.id);
@@ -789,7 +841,14 @@ async function libraryThumb(src) {
 }
 // Project document without image bytes, so autosave stays a few KB per write.
 function toDoc(Q) {
-  const d = { ...Q, v: SCHEMA, scenes: (Q.scenes || []).map(({ img, blob, ...r }) => r) };
+  const d = {
+    ...Q,
+    v: SCHEMA,
+    // hd: 1 records that the scene has a high-resolution master under its own key.
+    scenes: (Q.scenes || []).map(({ img, blob, hd, hdBlob, ...r }) =>
+      hdBlob ? { ...r, hd: 1 } : r
+    ),
+  };
   if (Q.audio) d.audio = { name: Q.audio.name, vol: Q.audio.vol };
   else delete d.audio;
   // The plan image is stored on its own; the document only records that there is one.
@@ -816,6 +875,7 @@ async function flush() {
     for (const sid of [...dirtyScenes]) {
       const s = Q.scenes.find(x => x.id == sid);
       if (s && s.blob) await dbOp('put', 'b:' + id + ':' + sid, s.blob);
+      if (s && s.hdBlob) await dbOp('put', 'h:' + id + ':' + sid, s.hdBlob);
       dirtyScenes.delete(sid);
     }
     // Taken now rather than cleared after the write: opening another project during the
@@ -849,7 +909,10 @@ async function flush() {
     await dbOp('put', 'p:' + id, toDoc(Q));
     const live = new Set(Q.scenes.map(s => s.id));
     for (const sid of storedSceneIds)
-      if (!live.has(sid)) await dbOp('del', 'b:' + id + ':' + sid).catch(() => {});
+      if (!live.has(sid)) {
+        await dbOp('del', 'b:' + id + ':' + sid).catch(() => {});
+        await dbOp('del', 'h:' + id + ':' + sid).catch(() => {});
+      }
     storedSceneIds = live;
     let e = library.find(x => x.id == id);
     if (!e) {
@@ -933,6 +996,13 @@ async function loadProject(id) {
         s.img = '';
       }
     }
+    if (s.hd) {
+      const b = s.img && (await dbOp('get', 'h:' + id + ':' + s.id).catch(() => null));
+      if (b instanceof Blob) {
+        s.hdBlob = b;
+        s.hd = objURL(b);
+      } else delete s.hd;
+    }
     if (!Array.isArray(s.hs)) s.hs = [];
   }
   doc.scenes = doc.scenes.filter(s => s.img);
@@ -977,7 +1047,10 @@ async function loadProject(id) {
   return doc;
 }
 function revokeProject(Q) {
-  (Q?.scenes || []).forEach(s => freeURL(s.img));
+  (Q?.scenes || []).forEach(s => {
+    freeURL(s.img);
+    freeURL(s.hd);
+  });
   freeURL(Q?.audio?.src);
   freeURL(Q?.plan?.img);
   freeURL(Q?.cover?.img);
@@ -1306,7 +1379,7 @@ async function showScene(i) {
   if (!textures[s.id]) {
     busy(1);
     try {
-      await loadTexture(s);
+      await loadTexture(s, true);
     } catch (e) {
       busy(-1);
       toast(t('msg.sceneFail'));
@@ -1443,6 +1516,7 @@ async function addFiles(files) {
       failedNames.push(f.name);
       continue;
     }
+    let hdBlob = null;
     try {
       const im = await createImageBitmap(f),
         flat = Math.abs(im.width / im.height - 2) > 0.15,
@@ -1461,11 +1535,27 @@ async function addFiles(files) {
         ctx.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
         flatNames.push(f.name);
       } else {
+        // With high resolution on, a panorama wider than 4096 also keeps a master of up to
+        // 8192, and the 4096 copy is drawn from that master: halving gives a cleaner result
+        // than a single large step down. iOS refuses a canvas this size, so there the master
+        // is skipped and the scene keeps its 4096 copy only.
+        let src = im;
+        if (project.hd && im.width > 4096) {
+          const m = document.createElement('canvas'),
+            k = Math.min(1, 8192 / im.width);
+          m.width = Math.round(im.width * k);
+          m.height = Math.round(im.height * k);
+          m.getContext('2d').drawImage(im, 0, 0, m.width, m.height);
+          hdBlob = await canvasBlob(m, 'image/jpeg', 0.86);
+          if (hdBlob) src = m;
+        }
         const k = Math.min(1, 4096 / im.width);
         canvas.width = Math.round(im.width * k);
         canvas.height = Math.round(im.height * k);
-        ctx.drawImage(im, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+        if (src != im) src.width = src.height = 0; // let the 128 MB master go now
       }
+      im.close();
       const blob = await canvasBlob(canvas, 'image/jpeg', 0.86),
         sid = uid();
       scenes.push({
@@ -1473,6 +1563,7 @@ async function addFiles(files) {
         name: f.name.replace(/\.[^.]+$/, ''),
         img: objURL(blob),
         blob,
+        ...(hdBlob && { hd: objURL(hdBlob), hdBlob }),
         th: sceneThumb(canvas),
         u0: flat ? 0.5 : 0,
         p0: 0,
@@ -1778,6 +1869,7 @@ function syncMeta() {
   }
   if (EMBED) return;
   $('metaon').checked = !!project.meta;
+  $('shd').hidden = !s?.hd;
   $('scap').hidden = !has;
   if (has)
     $('scap').textContent =
@@ -1836,6 +1928,11 @@ $('ptitle').oninput = e => {
 };
 $('auto').onchange = e => {
   project.auto = e.target.checked;
+  save();
+};
+$('hdon').onchange = e => {
+  if (e.target.checked) project.hd = true;
+  else delete project.hd;
   save();
 };
 $('metaon').onchange = e => {
@@ -2026,13 +2123,15 @@ async function toPortable(Q, forTour, put) {
   put = put || toDataURL;
   out.scenes = [];
   for (const s of Q.scenes) {
-    const { blob, ...r } = s;
+    const { blob, hdBlob, hd, ...r } = s;
     if (forTour && !Q.meta) {
       delete r.taken;
       delete r.gps;
     }
     // Scene thumbnails only show in the editor's scene list.
     if (zip) delete r.th;
+    // The single file carries the 4096 copies only: at 8192 it would grow about fourfold.
+    if (hdBlob && (zip || !forTour)) r.hd = await put(hdBlob, 'scenes/' + s.id + '-hd');
     out.scenes.push({ ...r, img: blob ? await put(blob, 'scenes/' + s.id) : s.img });
   }
   if (Q.audio)
@@ -2051,6 +2150,7 @@ async function toPortable(Q, forTour, put) {
   if (!out.icons.length) delete out.icons;
   if (zip && Q.nadir) out.nadir = { ...Q.nadir, img: await inline(Q.nadir.img, 'nadir') };
   if (zip && Q.logo) out.logo = { ...Q.logo, img: await inline(Q.logo.img, 'logo') };
+  if (forTour) delete out.hd; // an editor setting
   out.lang = LANG; // an exported tour renders in the language its author was using
   return out;
 }
@@ -2090,7 +2190,8 @@ $('exp').onclick = async () => {
     const html = `<!DOCTYPE html><html lang="${LANG}" dir="${isRTL() ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${EXPORT_CSP}"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>${esc(project.title)}</title><style>${css}</style><noscript><style>#xload{display:none}</style></noscript></head><body><div id="xload" role="status"><b dir="auto">${esc(project.title)}</b><i></i><span>${esc(t('view.loading'))}</span></div><div id="root" class="view">${SHELL}</div><script>${three}<\/script><script>window.__TOUR__=${JSON.stringify(data).replace(/</g, '\\u003c')};${app}<\/script></body></html>`;
     const bytes = saveFile(fileName('.html'), html, 'text/html');
     editCount = 0;
-    toast(t('msg.exported', { mb: (bytes / 1048576).toFixed(1) }));
+    const hdNote = scenes.some(s => s.hdBlob) ? ' ' + t('msg.exportedHd') : '';
+    toast(t('msg.exported', { mb: (bytes / 1048576).toFixed(1) }) + hdNote, hdNote ? 9000 : 0);
   } catch (e) {
     toast(t('msg.exportFail'), 9000);
   }
@@ -2363,6 +2464,7 @@ const cleanScene = s => {
     hs: (Array.isArray(s.hs) ? s.hs : []).filter(h => h && typeof h == 'object').map(cleanHotspot),
   };
   if (isDataImage(s.th)) out.th = s.th;
+  if (isDataImage(s.hd)) out.hd = s.hd;
   if (s.n != null && Number.isFinite(+s.n)) out.n = +s.n;
   const f0 = num(s.f0, NaN);
   if (f0 >= FOV_MIN && f0 <= FOV_MAX) out.f0 = f0;
@@ -2401,6 +2503,7 @@ $('pfile').onchange = async e => {
       auto: !!raw.auto,
       walk: raw.walk !== false,
       meta: !!raw.meta,
+      ...(raw.hd === true && { hd: true }),
       eurl: typeof raw.eurl == 'string' ? raw.eurl : '',
       scenes: (Array.isArray(raw.scenes) ? raw.scenes : [])
         .filter(s => s && isDataImage(s.img))
@@ -2447,6 +2550,10 @@ $('pfile').onchange = async e => {
     for (const s of d.scenes) {
       s.blob = dataToBlob(s.img);
       s.img = objURL(s.blob);
+      if (s.hd) {
+        s.hdBlob = dataToBlob(s.hd);
+        s.hd = objURL(s.hdBlob);
+      }
     }
     if (d.audio) {
       d.audio.blob = dataToBlob(d.audio.src);
@@ -2508,6 +2615,7 @@ function setProject(id, d) {
   $('ptitle').value = project.title || '';
   $('auto').checked = !!project.auto;
   $('wk').checked = project.walk !== false;
+  $('hdon').checked = !!project.hd;
   toast('');
   if (scenes.length) showScene(0);
   else {
@@ -2546,6 +2654,8 @@ async function duplicateProject(id) {
     for (const s of d.scenes || []) {
       const b = await dbOp('get', 'b:' + id + ':' + s.id).catch(() => null);
       if (b instanceof Blob) await dbOp('put', 'b:' + nid + ':' + s.id, b);
+      const h = s.hd && (await dbOp('get', 'h:' + id + ':' + s.id).catch(() => null));
+      if (h instanceof Blob) await dbOp('put', 'h:' + nid + ':' + s.id, h);
     }
     const a = await dbOp('get', 'a:' + id).catch(() => null);
     if (a instanceof Blob) await dbOp('put', 'a:' + nid, a);
@@ -2566,7 +2676,10 @@ async function duplicateProject(id) {
 async function deleteProject(id) {
   try {
     const d = await dbOp('get', 'p:' + id).catch(() => null);
-    for (const s of d?.scenes || []) await dbOp('del', 'b:' + id + ':' + s.id).catch(() => {});
+    for (const s of d?.scenes || []) {
+      await dbOp('del', 'b:' + id + ':' + s.id).catch(() => {});
+      await dbOp('del', 'h:' + id + ':' + s.id).catch(() => {});
+    }
     await dbOp('del', 'a:' + id).catch(() => {});
     await dbOp('del', 'pl:' + id).catch(() => {});
     await dbOp('del', 'cv:' + id).catch(() => {});
@@ -2691,9 +2804,9 @@ const animate = (ms, f) =>
       };
     requestAnimationFrame(step);
   });
-async function ensureTexture(s) {
+async function ensureTexture(s, urgent) {
   try {
-    await loadTexture(s);
+    await loadTexture(s, urgent);
     return true;
   } catch (e) {
     return false;
@@ -2720,7 +2833,7 @@ async function walkTo(i, h) {
   walkTarget = s.id;
   $('pop').hidden = true;
   try {
-    if (!(await ensureTexture(s))) {
+    if (!(await ensureTexture(s, true))) {
       walking = false;
       return showScene(i);
     }
@@ -3268,19 +3381,24 @@ const busy = d => {
 function preload() {
   const s = scenes[current];
   if (!s) return;
-  // As many neighbours as the cache holds next to the current scene, so preloading one
+  // As many neighbours as fit in the budget beside the current scene, so preloading one
   // never pushes out another.
-  [...new Set((s.hs || []).filter(h => h.type == 'link').map(h => h.to))]
+  let room = TEX_BUDGET - sceneCost(s);
+  for (const n of [...new Set((s.hs || []).filter(h => h.type == 'link').map(h => h.to))]
     .map(id => scenes.find(x => x.id == id))
-    .filter(Boolean)
-    .slice(0, TEXTURE_CACHE - 1)
-    .forEach(ensureTexture);
+    .filter(Boolean)) {
+    const c = sceneCost(n);
+    if (c > room) continue;
+    room -= c;
+    ensureTexture(n);
+  }
 }
 let undoStack = [],
   undoPos = -1,
   snapTimer,
   restoring = false;
-const sceneKey = () => JSON.stringify(scenes.map(s => ({ ...s, img: 0, th: 0, blob: 0 })));
+const sceneKey = () =>
+  JSON.stringify(scenes.map(s => ({ ...s, img: 0, th: 0, blob: 0, hd: 0, hdBlob: 0 })));
 const cloneScene = s => ({
   ...s,
   hs: JSON.parse(JSON.stringify(s.hs || [])),
@@ -4427,6 +4545,7 @@ if (!EMBED) {
   $('pdesc').value = project.desc || '';
   $('auto').checked = !!project.auto;
   $('wk').checked = project.walk !== false;
+  $('hdon').checked = !!project.hd;
   resetHist();
   if (EMBED && scenes.length) {
     $('stt').textContent = project.title || '';
