@@ -36,13 +36,18 @@ that isn't granted it says once per session that the browser may clear the work.
 - Load several panoramas at once, by file picker or drag-and-drop. Anything wider than
   4096px is downscaled; anything that is not roughly 2:1 is placed as a flat panel
   instead of being stretched across the sphere.
-- Link hotspots and info hotspots, in six shapes or as text only, with adjustable colour
-  and size. Drag a hotspot in the panorama to move it.
+- Link hotspots and info hotspots, in seven shapes (including a floor spot, a marker lying
+  on the floor with a soft beam of light), as text only, or with an icon of your own.
+  Colour and size are adjustable. Drag a hotspot in the panorama to move it.
+- Your own icons: PNG, WebP, GIF, JPEG or SVG, up to 2 MB, kept in the project as PNG at
+  up to 256px with their transparency. SVG is drawn into a PNG on upload too, because a
+  vector image drawn onto a canvas can stop that canvas being uploaded to the GPU in some
+  browsers. A saved or exported file carries only the icons in use.
 - Labels run over several lines and have their own text size, on a dark box or with an
   outline only. A text-only info hotspot with no further text is a plain note on the
   scene, for naming a wall, a material or a defect; in the tour it doesn't react to
   clicks, since a popup would only repeat it.
-- An arrow can point in any direction, in 5° steps.
+- An arrow or a custom icon can point in any direction, in 5° steps.
 - A hotspot can keep its size on screen when the view zooms, instead of growing with the
   panorama.
 - Copy a hotspot (Ctrl+C) and paste it into any scene (Ctrl+V), where it appears in the
@@ -68,7 +73,16 @@ that isn't granted it says once per session that the browser may clear the work.
   map link, only when "Show capture date and location" is on, and an exported tour leaves
   them out entirely while it is off. Altitude is not read: camera GPS heights are too rough
   to put next to survey levels.
-- Per-scene start angle and north direction.
+- Per-scene start view and north direction. The start view keeps the zoom too, and it
+  comes back exactly as it was set, level correction or not.
+- Level correction for a photo shot off level. Each press of the rotate buttons turns the
+  scene by a quarter of a degree about the direction you face, laid flat on the horizon,
+  so it tilts without spinning; holding a button keeps turning, and guide lines show
+  over the panorama. Straighten a vertical edge in front, then one a quarter turn away.
+  The hotspots and the tripod patch turn with the photo, so they stay on what they mark.
+- A cover image: the current view, taken at 1280 × 720 without hotspots. It is the
+  background of the exported tour's start screen and the project's picture in the
+  library, which otherwise show the first panorama squeezed flat.
 - Generated `<iframe>` embed code.
 
 ### Interface
@@ -121,6 +135,7 @@ IndexedDB database `vrtour`, object store `k`:
 | `b:<id>:<sceneId>` | Panorama as a binary `Blob` |
 | `a:<id>` | Audio track as a `Blob` |
 | `pl:<id>` | Floor plan image as a `Blob` |
+| `cv:<id>` | Cover image as a `Blob` |
 | `last` | Most recently opened project |
 
 Keeping images out of the document is what makes autosave cheap. Autosave runs on
@@ -144,6 +159,8 @@ whichever way the project was opened.
   "nadir": { "img": "data:image/png;base64,...", "r": 25 },
   "audio": { "src": "data:audio/mpeg;base64,...", "name": "track.mp3", "vol": 0.6 },
   "plan":  { "img": "data:image/jpeg;base64,..." },
+  "cover": { "img": "data:image/jpeg;base64,..." },
+  "icons": [{ "id": "k3", "name": "door", "img": "data:image/png;base64,...", "ar": 1 }],
   "logo":  { "img": "data:image/png;base64,...", "pos": "tr", "size": 14, "op": 1, "ar": 4 },
   "eurl": "https://...",
   "auto": false,
@@ -154,7 +171,8 @@ whichever way the project was opened.
     "name": "Entrance",
     "img": "data:image/jpeg;base64,...",
     "th":  "data:image/jpeg;base64,...",
-    "u0": 0.8, "p0": 0, "n": 0.25,
+    "u0": 0.8, "p0": 0, "n": 0.25, "f0": 60,
+    "lq": [0.0262, 0, 0, 0.9997],
     "pp": { "x": 0.4, "y": 0.6 },
     "taken": "2026-10-20T09:14:37",
     "gps": { "lat": 24.7136111, "lon": 46.6752778 },
@@ -174,13 +192,17 @@ whichever way the project was opened.
   on import and keeps its own setting.
 - Hotspot `u` and `v` are equirectangular coordinates from 0 to 1: `u` horizontally
   from the left edge, `v` vertically from the top.
-- A hotspot `label` may contain line breaks. `shape` is one of `arrow`, `ring`, `dot`,
-  `pin`, `star`, `info` or `none` (text only). The last four hotspot fields are optional
+- A hotspot `label` may contain line breaks. `shape` is one of `arrow`, `spot`, `ring`,
+  `dot`, `pin`, `star`, `info`, `none` (text only) or `img`, which names one of the root
+  `icons` in an `icon` field; on import, a hotspot whose icon is missing becomes an arrow.
+  The last four hotspot fields are optional
   and left out at their defaults: `rot` turns an arrow by -180 to 179 degrees, clockwise;
   `ts` scales the label text, 0.6 to 2; `box: false` draws the label with an outline
   instead of a dark box; `fix: true` keeps the hotspot's size on screen when zooming. A
   build that predates them ignores them, and shows a text-only hotspot as an arrow.
-- `u0` and `p0` are the scene's starting yaw and pitch; `n` is its north offset.
+- `u0` and `p0` are the scene's starting yaw and pitch; `n` is its north offset. `f0`,
+  optional, is its starting zoom as a vertical field of view from 40 to 95 degrees
+  (75 when absent). `lq`, optional, is its level correction as a quaternion `[x, y, z, w]`.
 - `pp` is the scene's position on the floor plan, also 0 to 1.
 - `taken` is the camera's local capture time, with no time zone, and `gps` the position in
   decimal degrees. Both are optional. `meta` decides whether the tour shows them; an
