@@ -23,7 +23,7 @@
 <meta property="og:image:alt" content="محرر Tajwal 360 وفيه بانوراما مفتوحة وقائمة المشاهد">
 <title data-i18n="doc.title">Tajwal 360 — استوديو الجولات الافتراضية</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='4' y1='4' x2='28' y2='28' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%23818cf8'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='12.4' fill='none' stroke='url(%23g)' stroke-width='2.6'/%3E%3Cellipse cx='16' cy='16' rx='12.4' ry='4.9' fill='none' stroke='url(%23g)' stroke-width='1.8' opacity='.45'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='url(%23g)'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=4.7">
+<link rel="stylesheet" href="style.css?v=4.8">
 <script src="boot.js?v=4.5"></script>
 </head>
 <body>
@@ -39,6 +39,7 @@
   <circle cx="16" cy="16" r="3.2" fill="url(#brandG)" stroke="none"/>
  </symbol>
  <symbol id="i-library" viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></symbol>
+ <symbol id="i-grid" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="9.5" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><rect x="16" y="9.5" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><rect x="9.5" y="16" width="5" height="5" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/></g></symbol>
  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></symbol>
@@ -116,7 +117,9 @@
 
   <div class="gp">
     <p class="lb" data-i18n="sec.scenes">المشاهد</p>
+    <input id="sfilt" type="search" hidden dir="auto" autocomplete="off" data-i18n-placeholder="nav.filterPh" placeholder="ابحث باسم المشهد" data-i18n-aria="nav.filterAria" aria-label="تصفية المشاهد بالاسم">
     <div id="scenes"></div>
+    <p class="hint" id="snone" hidden data-i18n="nav.none">لا يوجد مشهد يطابق البحث.</p>
     <p class="hint" id="shint" data-i18n="hint.reorder">اسحب المشهد لتغيير ترتيبه.</p>
   </div>
 
@@ -165,6 +168,8 @@
     <div class="bd">
       <label class="opt"><input type="checkbox" id="auto"><span data-i18n="opt.autorotate">دوران تلقائي</span></label>
       <label class="opt"><input type="checkbox" id="wk" checked><span data-i18n="opt.walk">انتقال سلس بين المشاهد</span></label>
+      <label class="opt"><input type="checkbox" id="ca"><span data-i18n="opt.click">النقر في أي مكان للانتقال</span></label>
+      <p class="hint" data-i18n="hint.click">في الجولة، تنقل النقرة التي لا تصيب أي نقطة إلى نقطة الانتقال الأقرب إلى اتجاهها. تكبر تلك النقطة تحت المؤشر قبل النقر، فيرى الزائر إلى أين سيذهب.</p>
       <label class="opt"><input type="checkbox" id="metaon"><span data-i18n="opt.meta">إظهار تاريخ التصوير وموقعه</span></label>
       <p class="hint" data-i18n="hint.meta">يُقرأ التاريخ والموقع من بيانات الكاميرا داخل الصورة، ولا تتضمّنهما الجولة المصدَّرة إلا عند تفعيل هذا الخيار.</p>
     </div>
@@ -295,7 +300,20 @@
     <div class="sc"><h1 id="stt" dir="auto"></h1><p id="std" dir="auto"></p><button id="sgo" data-i18n="view.start">ابدأ الجولة</button></div>
   </div>
 
-  <div id="sb"></div>
+  <nav id="sb" data-i18n-aria="nav.bar" aria-label="التنقّل بين المشاهد"></nav>
+
+  <div id="sgm" hidden>
+    <div id="sgb" role="dialog" aria-modal="true" aria-labelledby="sgt">
+      <header>
+        <b id="sgt" data-i18n="nav.all">كل المشاهد</b>
+        <span id="sgn" aria-live="polite"></span>
+        <button id="sgx" data-i18n-aria="act.close" aria-label="إغلاق"><svg class="ic"><use href="#i-close"/></svg></button>
+        <input id="sgf" type="search" dir="auto" autocomplete="off" data-i18n-placeholder="nav.filterPh" placeholder="ابحث باسم المشهد" data-i18n-aria="nav.filterAria" aria-label="تصفية المشاهد بالاسم">
+      </header>
+      <div id="sgl" role="group" aria-labelledby="sgt"></div>
+      <p id="sge" hidden data-i18n="nav.none">لا يوجد مشهد يطابق البحث.</p>
+    </div>
+  </div>
 
   <noscript><div class="nojs"><span>تحتاج هذه الصفحة إلى JavaScript. فعّله، أو افتح الصفحة في متصفح حديث مثل Safari أو Chrome.</span><span dir="ltr" lang="en">This page needs JavaScript. Turn it on, or open the page in a current browser such as Safari or Chrome.</span></div></noscript>
 
@@ -322,6 +340,6 @@
 </div>
 
 <script src="vendor/three.min.js?v=2.0"></script>
-<script src="app.js?v=4.7"></script>
+<script src="app.js?v=4.8"></script>
 </body>
 </html>

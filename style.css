@@ -702,6 +702,15 @@ label.pri {
   font-weight: 650;
 }
 
+/* a field whose label sits apart from its control: the destination and its search */
+.fld {
+  display: grid;
+  gap: var(--s1);
+}
+#snone {
+  padding: var(--s2) 0;
+}
+
 #hprops {
   display: flex;
   flex-direction: column;
@@ -867,6 +876,161 @@ canvas {
   background: var(--ac);
   color: var(--af);
   border-color: var(--ac);
+}
+/* the grid button, which shows where you are, and in a long tour previous and next.
+   In a short tour the grid button stays at the start of the strip while it scrolls. */
+#sb .sbg {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  font-variant-numeric: tabular-nums;
+}
+#sb .sbn {
+  min-width: 34px;
+  padding: 0;
+}
+@media (pointer: coarse) {
+  #sb button {
+    min-height: 44px;
+  }
+  #sb .sbn {
+    min-width: 44px;
+  }
+}
+
+/* ───────────────────────── scene grid ───────────────────────── */
+#sgm {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  padding: calc(env(safe-area-inset-top, 0px) + var(--s3)) var(--s3)
+    calc(env(safe-area-inset-bottom, 0px) + var(--s3));
+  background: var(--ov);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+  animation: fade var(--mo2) var(--ez);
+}
+#sgb {
+  flex: 1;
+  min-width: 0;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--pn);
+  color: var(--fg);
+  border: 1px solid var(--bd);
+  border-radius: var(--r4);
+  box-shadow: var(--sh3);
+  overflow: hidden;
+  animation: rise var(--mo3) var(--ez);
+}
+#sgb header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--bd);
+}
+#sgt {
+  font-size: var(--tLg);
+  letter-spacing: -0.01em;
+}
+#sgn {
+  color: var(--mu);
+  font-size: var(--tSm);
+  font-variant-numeric: tabular-nums;
+}
+#sgx {
+  margin-inline-start: auto;
+  min-width: var(--ctl);
+  padding: 0;
+  border-radius: var(--rp);
+}
+#sgf {
+  flex-basis: 100%;
+}
+#sgl {
+  position: relative; /* the cells' offsetTop is measured from here */
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: var(--s4);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  /* auto rows in a box of fixed height would share out its height and crush the cells */
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: var(--s3);
+}
+#sgl button {
+  position: relative;
+  display: grid;
+  align-content: start;
+  justify-content: stretch;
+  gap: 0;
+  padding: 0;
+  min-height: 0;
+  overflow: hidden;
+  text-align: start;
+  border-radius: var(--r2);
+  border: 1px solid var(--bd);
+  background: var(--pn2);
+}
+#sgl button:hover {
+  border-color: var(--bds);
+  box-shadow: var(--sh2);
+}
+#sgl img,
+#sgl .ph {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2/1;
+  object-fit: cover;
+  background: var(--pn3);
+}
+/* long survey names get two lines */
+#sgl .nm {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  padding: var(--s1) var(--s2);
+  font-size: var(--tSm);
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+/* the scene's place in the tour, as the counter counts it */
+#sgl .no {
+  position: absolute;
+  top: var(--s1);
+  inset-inline-start: var(--s1);
+  padding: 0 6px;
+  border-radius: var(--rp);
+  background: var(--gl);
+  color: #fff;
+  font-size: var(--tXs);
+  font-weight: 650;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+#sgl button.on {
+  border-color: var(--ac);
+  box-shadow: 0 0 0 2px var(--ac);
+}
+#sgl button.on .nm {
+  background: var(--ac);
+  color: var(--af);
+}
+#sge {
+  margin: 0;
+  padding: var(--s6) var(--s4);
+  text-align: center;
+  color: var(--mu);
 }
 
 #pop {
