@@ -4800,8 +4800,8 @@ if (!EMBED) {
     $('sgo').disabled = true;
     $('sgo').textContent = t('view.loading');
     $('start').hidden = false;
-    // A folder tour opened from disk: Chrome and Firefox refuse to hand a file:// image to
-    // WebGL, so every scene would fail. Say why, in both languages, and how to open it.
+    // A folder tour opened from disk: browsers such as Chrome refuse to hand a file:// image
+    // to WebGL, so every scene would fail. Say why, in both languages, and how to open it.
     if (location.protocol == 'file:' && !/^data:/.test(scenes[0].img)) {
       $('sgo').hidden = true;
       $('std').textContent = t('view.fileProto');
