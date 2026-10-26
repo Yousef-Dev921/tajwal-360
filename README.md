@@ -52,7 +52,7 @@ that isn't granted it says once per session that the browser may clear the work.
   that always faces the camera; an arrow on the floor then points along it. It follows the
   level correction, so it stays on the real floor of a straightened photo. It stays at least
   5° below the horizon, where it would flatten to a line: placing, dragging or pasting it
-  higher stops it there. Choosing the floor spot lays a hotspot down, unless it is above
+  higher stops it there. A level correction made afterwards doesn't move it. Choosing the floor spot lays a hotspot down, unless it is above
   that limit. Text-only hotspots stand.
 - A label sits below, above, left or right of its icon. The sides are those of the photo,
   not of the reading direction, so a label set to clear a door frame stays clear of it in
@@ -216,8 +216,8 @@ whichever way the project was opened.
   hotspot's size on screen when zooming; `lp` puts the label above (`t`), left (`l`) or
   right (`r`) of the icon instead of below it, on the photo's sides whatever the language;
   `hov: true` shows the label only on hover; `fl: true` lays the hotspot on the floor, and
-  is dropped on import from a text-only hotspot. A floor hotspot's `v` is at least
-  0.5 + 5/180 (5° below the horizon); import moves a higher one down to that. A build that
+  is dropped on import from a text-only hotspot. A floor hotspot sits at least 5° below the
+  horizon as levelled by the scene's `lq`; import moves a higher one straight down to that. A build that
   predates these fields ignores them, shows a text-only hotspot as an arrow, and draws a
   floor hotspot standing, with its label below.
 - `u0` and `p0` are the scene's starting yaw and pitch; `n` is its north offset. `f0`,
