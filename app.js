@@ -171,6 +171,16 @@ const I18N = {
     'f.labelBox': 'خلفية داكنة خلف النص',
     'f.rotation': 'اتجاه السهم',
     'f.keepSize': 'حجم ثابت على الشاشة عند التكبير',
+    'f.labelPos': 'موضع العنوان',
+    'lp.b': 'تحت الأيقونة',
+    'lp.t': 'فوق الأيقونة',
+    'lp.l': 'يسار الأيقونة',
+    'lp.r': 'يمين الأيقونة',
+    'f.labelHover': 'إظهار العنوان عند الإشارة إلى النقطة فقط',
+    'hint.labelHover':
+      'يبقى ظاهراً في المحرر. في الجولة يظهر عند مرور المؤشر، وعلى شاشات اللمس تُظهره اللمسة الأولى وتفتح الثانية النقطة.',
+    'f.floor': 'ممدّدة على الأرض',
+    'msg.floorClamp': 'نُقلت النقطة إلى ما تحت الأفق، فالنقطة الممدّدة على الأرض لا تعلوه.',
     'act.copy': 'نسخ',
     'act.copyTitle': 'انسخ النقطة لتلصقها في مشهد آخر (Ctrl+C)',
     'act.dup': 'تكرار',
@@ -399,6 +409,16 @@ const I18N = {
     'f.labelBox': 'Dark background behind the text',
     'f.rotation': 'Arrow direction',
     'f.keepSize': 'Same size on screen when zooming',
+    'f.labelPos': 'Label position',
+    'lp.b': 'Below the icon',
+    'lp.t': 'Above the icon',
+    'lp.l': 'Left of the icon',
+    'lp.r': 'Right of the icon',
+    'f.labelHover': 'Show the label only on hover',
+    'hint.labelHover':
+      'Always shown in the editor. In the tour it appears under the pointer; on touch screens the first tap shows it and the second opens the hotspot.',
+    'f.floor': 'Lie flat on the floor',
+    'msg.floorClamp': 'Moved below the horizon: a hotspot lying on the floor can’t sit above it.',
     'act.copy': 'Copy',
     'act.copyTitle': 'Copy the hotspot to paste into another scene (Ctrl+C)',
     'act.dup': 'Duplicate',
@@ -1041,7 +1061,7 @@ function glyphInk(color) {
   });
   return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.45 ? '#13131c' : '#fff';
 }
-function drawIcon(ctx, shape, color) {
+function drawIcon(ctx, shape, color, flat) {
   const ink = glyphInk(color);
   ctx.lineCap = ctx.lineJoin = 'round';
   ctx.lineWidth = 10;
@@ -1072,6 +1092,26 @@ function drawIcon(ctx, shape, color) {
     ctx.beginPath();
     ctx.arc(0, -18, 18, 0, 7);
     ctx.fill();
+  } else if (shape == 'spot' && flat) {
+    // The same marker seen from above, for a hotspot that lies on the floor: a disc in a soft
+    // pool of light. The floor itself gives it its perspective.
+    const g = ctx.createRadialGradient(0, 0, 56, 0, 0, 124);
+    g.addColorStop(0, color + '99');
+    g.addColorStop(1, color + '00');
+    ctx.fillStyle = g;
+    ctx.arc(0, 0, 124, 0, 7);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, 0, 76, 0, 7);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.lineWidth = 9;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, 40, 0, 7);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = ink;
+    ctx.stroke();
   } else if (shape == 'spot') {
     // A marker lying on the floor, seen in perspective, with a soft beam rising from it.
     const g = ctx.createLinearGradient(0, 0, 0, -96);
@@ -1141,10 +1181,6 @@ function wrapLines(ctx, text, max) {
   while (lines.length && !lines[lines.length - 1]) lines.pop();
   return lines;
 }
-// A hotspot is drawn on a canvas at HS_PX canvas pixels per world unit. The icon fills a
-// 200 px square; the label sits under it, or alone for a text-only hotspot ('none'), in up
-// to HS_MAX_LINES lines of at most HS_LABEL_W px. Without a box the label gets a dark outline,
-// so white text stays readable on a bright wall.
 // Custom icons are uploaded per project and kept as PNG, decoded once and drawn into every
 // hotspot that uses them. A sprite drawn before its icon has decoded is redrawn when it has.
 const ICON_MAX_PX = 256,
@@ -1185,110 +1221,241 @@ function drawCustomIcon(ctx, id) {
 }
 // Shapes that have a direction, and so a rotation.
 const TURNS = ['arrow', 'img'];
+// A hotspot is drawn on canvases at HS_PX canvas pixels per world unit: the icon in a 200 px
+// box at the middle of a HS_ICON_CV px square, and the label on a canvas of its own, in up to
+// HS_MAX_LINES lines of at most HS_LABEL_W px. Without a box the label gets a dark outline, so
+// white text stays readable on a bright wall. The label is a sprite of its own so it can fade
+// in on hover without redrawing anything, sit on any side of the icon while the hotspot stays
+// anchored on the icon's centre, and stay upright when the icon lies on the floor. A text-only
+// hotspot ('none') is its label alone, centred on the anchor.
 const HS_PX = 512 / 70,
   HS_ICON = 200,
+  HS_ICON_CV = 256,
   HS_LABEL_W = 900,
-  HS_MAX_LINES = 6;
-function makeHotspotSprite(h) {
-  const canvas = document.createElement('canvas'),
-    ctx = canvas.getContext('2d'),
-    icon = h.shape != 'none',
+  HS_MAX_LINES = 6,
+  HS_GAP = 16, // between the icon's box and the label's
+  HS_M = 12, // around the label's box, for its outline and the selection mark
+  HS_R = 380;
+// A hotspot can lie on the floor as a decal: a flat square where the sprite would be, at HS_R
+// on the hotspot's direction, level with the real floor (the level correction tilts the photo,
+// not the floor). Seen from the centre, a disc there looks exactly like one on a floor at any
+// depth, scaled with its distance, so its width matches the sprite's and lying down shortens
+// it as perspective does; it is drawn FLOOR_K times larger to make up for that. Close to the
+// horizon it would flatten to a line, so it is kept 5° below it.
+const FLOOR_K = 1.33,
+  FLOOR_SIN = Math.sin((5 * PI) / 180),
+  FLOOR_GEO = new THREE.PlaneGeometry(1, 1);
+const onFloor = h => !!h.fl && h.shape != 'none';
+// Keeps a floor hotspot 5° below the horizon of a scene levelled by lq, the current scene's
+// by default, moving it straight down to there if it is higher. Returns whether it had to
+// move; with dry set it only says so. The horizon is the corrected one, which the decal lies
+// against: on a photo tilted by more than 5°, the photo's own would let it rise above it.
+const floorClamp = (h, lq = scenes[current]?.lq, dry) => {
+  if (!onFloor(h)) return false;
+  const q = new THREE.Quaternion().fromArray(lq || NO_TILT),
+    d = sphereToVec(h.u, h.v, 1).applyQuaternion(q);
+  if (d.y <= -FLOOR_SIN + 1e-9) return false;
+  if (dry) return true;
+  const k = Math.sqrt(1 - FLOOR_SIN * FLOOR_SIN) / (Math.hypot(d.x, d.z) || 1);
+  if (!d.x && !d.z) d.x = 1; // straight up: any way down will do
+  d.set(d.x * k, -FLOOR_SIN, d.z * k).applyQuaternion(q.invert());
+  h.u = (Math.atan2(d.z, d.x) / (2 * PI) + 1) % 1;
+  h.v = Math.acos(Math.max(-1, Math.min(1, d.y))) / PI;
+  return true;
+};
+// A text-only hotspot is its own label, so it is always shown.
+const hoverLabel = h => !!h.hov && h.shape != 'none';
+const canvasTex = c => {
+  const tex = new THREE.CanvasTexture(c);
+  tex.encoding = THREE.sRGBEncoding;
+  return tex;
+};
+function hotspotIcon(h, sel, flat) {
+  const c = document.createElement('canvas'),
+    ctx = c.getContext('2d');
+  c.width = c.height = HS_ICON_CV;
+  ctx.translate(HS_ICON_CV / 2, HS_ICON_CV / 2);
+  if (sel) {
+    ctx.setLineDash([14, 12]);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(0, 0, 98, 0, 7);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  // On the floor the decal itself turns, about the vertical.
+  if (TURNS.includes(h.shape) && !flat) ctx.rotate(((h.rot || 0) * PI) / 180);
+  if (h.shape == 'img') drawCustomIcon(ctx, h.icon);
+  else drawIcon(ctx, h.shape, h.color, flat);
+  return c;
+}
+function hotspotLabel(h, sel) {
+  const icon = h.shape != 'none',
     // Without an icon, size alone scales the text.
     fs = Math.round(40 * (icon ? h.ts || 1 : 1)),
     lh = Math.round(fs * 1.3),
-    font = `700 ${fs}px system-ui,Tahoma,Arial`;
+    font = `700 ${fs}px system-ui,Tahoma,Arial`,
+    c = document.createElement('canvas'),
+    ctx = c.getContext('2d');
   ctx.font = font;
   let lines = wrapLines(ctx, h.label, HS_LABEL_W);
   if (lines.length > HS_MAX_LINES)
     lines = [...lines.slice(0, HS_MAX_LINES - 1), lines[HS_MAX_LINES - 1] + '…'];
   // A text-only hotspot with no text yet still needs something to click and drag.
   if (!icon && !lines.length) lines = ['…'];
+  if (!lines.length) return null;
   const pad = Math.round(fs * 0.5),
-    tw = lines.length
-      ? Math.min(HS_LABEL_W, Math.max(...lines.map(l => ctx.measureText(l).width)))
-      : 0,
-    bw = lines.length ? tw + pad * 2 : 0,
-    bh = lines.length ? lines.length * lh + pad : 0,
-    gap = icon && lines.length ? 8 : 0,
-    W = Math.ceil(Math.max(icon ? 2 * HS_ICON + 112 : 0, bw + 24)),
-    H = Math.ceil((icon ? HS_ICON + 8 : 0) + gap + bh + (icon ? 0 : 24)),
-    cx = W / 2,
-    cy = icon ? HS_ICON / 2 : H / 2,
-    top = icon ? HS_ICON + 8 + gap : 12;
-  canvas.width = W;
-  canvas.height = H;
-  const sel = mode == 'edit' && selId == h.id;
-  if (icon) {
-    ctx.translate(cx, cy);
-    if (sel) {
-      ctx.setLineDash([14, 12]);
-      ctx.lineWidth = 6;
-      ctx.strokeStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(0, 0, 98, 0, 7);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-    if (TURNS.includes(h.shape)) ctx.rotate(((h.rot || 0) * PI) / 180);
-    if (h.shape == 'img') drawCustomIcon(ctx, h.icon);
-    else drawIcon(ctx, h.shape, h.color);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    tw = Math.min(HS_LABEL_W, Math.max(...lines.map(l => ctx.measureText(l).width))),
+    bw = tw + pad * 2,
+    bh = lines.length * lh + pad,
+    // Beside the icon, the lines line up on the side that faces it.
+    align = (icon && { l: 'right', r: 'left' }[h.lp]) || 'center';
+  c.width = Math.ceil(bw + 2 * HS_M);
+  c.height = Math.ceil(bh + 2 * HS_M);
+  if (h.box !== false) {
+    ctx.fillStyle = 'rgba(0,0,0,.6)';
+    ctx.fillRect(HS_M, HS_M, bw, bh);
   }
-  if (lines.length) {
-    const x = cx - bw / 2;
-    if (h.box !== false) {
-      ctx.fillStyle = 'rgba(0,0,0,.6)';
-      ctx.fillRect(x, top, bw, bh);
-    }
-    if (sel && !icon) {
-      ctx.setLineDash([14, 12]);
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = '#fff';
-      ctx.strokeRect(x - 6, top - 6, bw + 12, bh + 12);
-      ctx.setLineDash([]);
-    }
-    ctx.font = font;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = Math.max(4, fs * 0.16);
-    ctx.strokeStyle = 'rgba(0,0,0,.85)';
-    ctx.fillStyle = '#fff';
-    lines.forEach((l, i) => {
-      const y = top + pad / 2 + lh * (i + 0.5);
-      ctx.direction = RTL_TEXT.test(l) ? 'rtl' : 'ltr';
-      if (h.box === false) ctx.strokeText(l, cx, y, HS_LABEL_W);
-      ctx.fillText(l, cx, y, HS_LABEL_W);
-    });
+  if (sel) {
+    ctx.setLineDash([14, 12]);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#fff';
+    ctx.strokeRect(HS_M - 6, HS_M - 6, bw + 12, bh + 12);
+    ctx.setLineDash([]);
   }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.encoding = THREE.sRGBEncoding;
-  const sprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true })
-  );
-  // Anchored on the icon, or on the middle of the text when there is no icon.
-  sprite.center.set(0.5, 1 - cy / H);
-  sprite.userData.w = W / HS_PX;
-  sprite.userData.hgt = H / HS_PX;
-  sprite.renderOrder = 10;
-  return sprite;
+  const x = align == 'right' ? HS_M + bw - pad : align == 'left' ? HS_M + pad : c.width / 2;
+  ctx.font = font;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(4, fs * 0.16);
+  ctx.strokeStyle = 'rgba(0,0,0,.85)';
+  ctx.fillStyle = '#fff';
+  lines.forEach((l, i) => {
+    const y = HS_M + pad / 2 + lh * (i + 0.5);
+    ctx.direction = RTL_TEXT.test(l) ? 'rtl' : 'ltr';
+    if (h.box === false) ctx.strokeText(l, x, y, HS_LABEL_W);
+    ctx.fillText(l, x, y, HS_LABEL_W);
+  });
+  return c;
 }
+// The objects that show hotspot h: the icon sprite ic, or on the floor the decal dc with an
+// invisible sprite ic over it that catches the pointer (a decal near the horizon is too thin
+// to hit), and the label sprite lb. Sizes are in world units at scale 1; a is the label's
+// opacity.
+function makeHotspotSprite(h) {
+  const sel = mode == 'edit' && selId == h.id,
+    e = { h, a: 1 };
+  if (h.shape != 'none') {
+    const tex = canvasTex(hotspotIcon(h, sel, onFloor(h)));
+    if (onFloor(h)) {
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      e.dc = new THREE.Mesh(
+        FLOOR_GEO,
+        new THREE.MeshBasicMaterial({
+          map: tex,
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        })
+      );
+      e.dc.renderOrder = 9;
+      e.ic = new THREE.Sprite(new THREE.SpriteMaterial());
+      e.ic.visible = false;
+    } else {
+      e.ic = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true })
+      );
+      e.ic.renderOrder = 10;
+    }
+    e.iw = HS_ICON_CV / HS_PX;
+  }
+  const c = hotspotLabel(h, sel && h.shape == 'none');
+  if (c) {
+    e.lb = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: canvasTex(c), depthTest: false, transparent: true })
+    );
+    e.lb.renderOrder = 11;
+    e.lW = c.width;
+    e.lH = c.height;
+    // A label shown on hover starts hidden in the tour, unless its hotspot is hovered or peeked.
+    e.a = mode == 'view' && hoverLabel(h) && h !== hovered && h !== peek?.h ? 0 : 1;
+  }
+  return e;
+}
+// Where the label sits around the icon's centre, as the sprite's centre: below (the default),
+// above, left or right, HS_GAP clear of the icon's box. The sides are physical, as on the
+// photo, so a label set to clear a door frame stays clear of it in either language. vs shortens
+// the box vertically, for a decal seen at an angle.
+function placeLabel(e, vs) {
+  const h = e.h,
+    side = h.shape == 'none' ? '' : h.lp || 'b',
+    hx = (HS_ICON / 2) * (e.dc ? FLOOR_K : 1),
+    off = HS_GAP - HS_M;
+  if (side == 'b') e.lb.center.set(0.5, 1 + (hx * vs + off) / e.lH);
+  else if (side == 't') e.lb.center.set(0.5, -(hx * vs + off) / e.lH);
+  else if (side == 'r') e.lb.center.set(-(hx + off) / e.lW, 0.5);
+  else if (side == 'l') e.lb.center.set(1 + (hx + off) / e.lW, 0.5);
+  else e.lb.center.set(0.5, 0.5);
+}
+// Lays decal e flat on the floor, whose up is the given direction in the panorama's frame. Its
+// top edge faces away from the viewer, so an arrow at 0° points ahead along the floor and
+// rot turns it clockwise as seen from above. Returns the sine of the angle below the horizon,
+// by which it looks shortened.
+const _fd = new THREE.Vector3(),
+  _fr = new THREE.Vector3(),
+  _fx = new THREE.Vector3(),
+  _fm = new THREE.Matrix4();
+function layDecal(e, up) {
+  const h = e.h;
+  _fd.copy(e.dc.position).normalize();
+  const s = -_fd.dot(up);
+  _fr.copy(_fd).addScaledVector(up, s);
+  if (_fr.lengthSq() < 1e-8) _fr.set(1, 0, 0).addScaledVector(up, -up.x); // straight down
+  _fr.normalize();
+  if (TURNS.includes(h.shape) && h.rot) _fr.applyAxisAngle(up, (-h.rot * PI) / 180);
+  _fx.crossVectors(_fr, up);
+  e.dc.quaternion.setFromRotationMatrix(_fm.makeBasis(_fx, _fr, up));
+  return Math.max(0, s);
+}
+const placeHotspot = e => {
+  const p = sphereToVec(e.h.u, e.h.v, HS_R);
+  [e.ic, e.dc, e.lb].forEach(o => o && o.position.copy(p));
+};
+// peek is the hotspot whose label a tap is showing on a touch screen, until a time.
+const PEEK_MS = 4000,
+  reduceMotion = matchMedia('(prefers-reduced-motion: reduce)'),
+  floorUp = new THREE.Vector3(),
+  floorQ = new THREE.Quaternion();
+let hsParts = [],
+  peek = null;
 // The scene whose hotspots are on the panorama. showScene() moves current on at once but
 // builds the next scene's hotspots only once its panorama has loaded.
 let hotspotsOf = null;
 function buildHotspots() {
   hotspotsOf = scenes[current]?.id;
   hotspotGroup.children.slice().forEach(c => {
-    c.material.map.dispose();
+    c.material.map?.dispose();
     c.material.dispose();
   });
   hotspotGroup.clear();
-  gazeTarget = hovered = null;
-  (scenes[current]?.hs || []).forEach(h => {
-    const sp = makeHotspotSprite(h);
-    sp.position.copy(sphereToVec(h.u, h.v, 380));
-    sp.userData.h = h;
-    hotspotGroup.add(sp);
+  gazeTarget = null;
+  // A redraw, such as a custom icon finishing decoding, leaves a hovered hotspot hovered and a
+  // peeked one peeked; a new scene starts with neither, and the editor has no peek.
+  if (!scenes[current]?.hs.includes(hovered)) hovered = null;
+  if (mode != 'view' || !scenes[current]?.hs.includes(peek?.h)) peek = null;
+  hsParts = (scenes[current]?.hs || []).map(h => {
+    const e = makeHotspotSprite(h);
+    [e.dc, e.ic, e.lb].forEach(o => {
+      if (!o) return;
+      o.userData.h = h;
+      o.userData.e = e;
+      hotspotGroup.add(o);
+    });
+    placeHotspot(e);
+    return e;
   });
   preload();
 }
@@ -1619,7 +1786,7 @@ function renderHotspotList() {
 // The look of the last link and the last info hotspot the author styled. A new hotspot of
 // the same kind starts from it, so a tour of many scenes needs its arrows styled only once.
 // Held for the session only.
-const LOOK = ['shape', 'icon', 'color', 'size', 'ts', 'box', 'fix'],
+const LOOK = ['shape', 'icon', 'color', 'size', 'ts', 'box', 'fix', 'lp', 'hov', 'fl'],
   hsLook = { link: null, info: null };
 const updateHotspot = o => {
   const h = selHotspot();
@@ -1681,22 +1848,37 @@ function renderHotspotProps() {
       )
       .join('')}</select></label>
   <label class="btn" for="pif"><svg class="ic"><use href="#i-image"/></svg><span>${t('act.upIcon')}</span></label><input id="pif" type="file" accept="image/png,image/webp,image/svg+xml,image/gif,image/jpeg" hidden>
+  <label class="opt" id="pflw"><input type="checkbox" id="pfl" ${h.fl ? 'checked' : ''}><span>${t('f.floor')}</span></label>
   ${rng('pr', 'f.rotation', -180, 180, 5, h.rot || 0, (h.rot || 0) + '°')}
   <label id="pcw">${t('f.color')}<input id="pc" type="color" value="${esc(h.color)}"></label>
   ${rng('pz', 'f.size', 0.5, 2.5, 0.1, h.size, '×' + h.size)}
+  <label class="opt"><input type="checkbox" id="pk" ${h.fix ? 'checked' : ''}><span>${t('f.keepSize')}</span></label>
+  <label id="plpw">${t('f.labelPos')}<select id="plp">${['b', 't', 'l', 'r']
+    .map(
+      k =>
+        `<option value="${k}" ${k == (h.lp || 'b') ? 'selected' : ''}>${esc(t('lp.' + k))}</option>`
+    )
+    .join('')}</select></label>
   ${rng('pf', 'f.textSize', 0.6, 2, 0.1, h.ts || 1, '×' + (h.ts || 1))}
   <label class="opt"><input type="checkbox" id="pb" ${h.box !== false ? 'checked' : ''}><span>${t('f.labelBox')}</span></label>
-  <label class="opt"><input type="checkbox" id="pk" ${h.fix ? 'checked' : ''}><span>${t('f.keepSize')}</span></label>
+  <label class="opt" id="phvw"><input type="checkbox" id="phv" aria-describedby="phvh" ${h.hov ? 'checked' : ''}><span>${t('f.labelHover')}</span></label>
+  <p id="phvh" class="hint">${t('hint.labelHover')}</p>
   <p id="hint3">${t('hint.dragHs')}</p>
   <div class="row"><button id="pdup" title="${esc(t('act.dupTitle'))}"><svg class="ic"><use href="#i-dup"/></svg><span>${t('act.dup')}</span></button><button id="pcopy" title="${esc(t('act.copyTitle'))}"><svg class="ic"><use href="#i-copy"/></svg><span>${t('act.copy')}</span></button></div>
   <button id="pd" class="dng">${t('act.delHs')}</button>`;
   // Only an arrow or a custom icon has a direction, neither a custom icon nor a text-only
-  // hotspot takes a colour, and a text-only hotspot's size already sets its text size.
+  // hotspot takes a colour, and a text-only hotspot's size already sets its text size. A
+  // text-only hotspot is its own label, so it can't lie down, and its label has no side and
+  // can't hide.
   const fit = () => {
-    const s = selHotspot()?.shape;
+    const h = selHotspot(),
+      s = h?.shape,
+      none = s == 'none';
     $('prw').hidden = !TURNS.includes(s);
-    $('pcw').hidden = s == 'none' || s == 'img';
-    $('pfw').hidden = s == 'none';
+    $('pcw').hidden = none || s == 'img';
+    $('pfw').hidden = $('pflw').hidden = $('plpw').hidden = $('phvw').hidden = none;
+    $('phvh').hidden = none || !h?.hov;
+    $('pfl').checked = !!h?.fl;
   };
   fit();
   bind('pl', 'input', e => updateHotspot({ label: e.target.value }));
@@ -1718,10 +1900,32 @@ function renderHotspotProps() {
   });
   bind('px', 'input', e => updateHotspot({ text: e.target.value }));
   bind('ps', 'change', e => {
-    const v = e.target.value;
-    updateHotspot(
-      v.startsWith('img:') ? { shape: 'img', icon: v.slice(4) } : { shape: v, icon: undefined }
-    );
+    const v = e.target.value,
+      h = selHotspot(),
+      o = v.startsWith('img:') ? { shape: 'img', icon: v.slice(4) } : { shape: v, icon: undefined };
+    // A floor spot is made to lie on the floor, so choosing one lays it down, unless that would
+    // move it; the checkbox stands it up again.
+    if (o.shape == 'none') o.fl = undefined;
+    else if (
+      o.shape == 'spot' &&
+      h.shape != 'spot' &&
+      !floorClamp({ ...h, ...o, fl: true }, undefined, 1)
+    )
+      o.fl = true;
+    updateHotspot(o);
+    fit();
+  });
+  bind('pfl', 'change', e => {
+    const o = { ...selHotspot(), fl: e.target.checked || undefined },
+      moved = floorClamp(o);
+    updateHotspot({ fl: o.fl, u: o.u, v: o.v });
+    if (moved) toast(t('msg.floorClamp'));
+  });
+  bind('plp', 'change', e =>
+    updateHotspot({ lp: e.target.value == 'b' ? undefined : e.target.value })
+  );
+  bind('phv', 'change', e => {
+    updateHotspot({ hov: e.target.checked || undefined });
     fit();
   });
   bind('pif', 'change', e => {
@@ -1826,7 +2030,8 @@ function viewUV() {
 function addHotspotCopy(h, from, p, icon) {
   const s = scenes[current];
   if (!s) return;
-  const n = { ...JSON.parse(JSON.stringify(h)), id: uid(), ...p };
+  const n = { ...JSON.parse(JSON.stringify(h)), id: uid(), ...p },
+    moved = floorClamp(n);
   if (n.shape == 'img' && !projectIcon(n.icon)) {
     if (icon) (project.icons || (project.icons = [])).push({ ...icon });
     else n.shape = 'arrow';
@@ -1845,6 +2050,7 @@ function addHotspotCopy(h, from, p, icon) {
   buildHotspots();
   ui();
   save();
+  if (moved) toast(t('msg.floorClamp'));
 }
 const pasteHotspot = () => hsClip && addHotspotCopy(hsClip.h, hsClip.from, viewUV(), hsClip.icon);
 // The duplicate lands a little to one side, so it doesn't hide the original.
@@ -2277,6 +2483,9 @@ const cleanHotspot = h => {
   if (ts != 1) out.ts = ts;
   if (h.box === false) out.box = false;
   if (h.fix === true) out.fix = true;
+  if (h.lp == 't' || h.lp == 'l' || h.lp == 'r') out.lp = h.lp;
+  if (h.hov === true) out.hov = true;
+  if (h.fl === true && out.shape != 'none') out.fl = true; // kept off the horizon by cleanScene
   // A custom icon is named by its id in the project's icon list; the import checks it exists.
   if (out.shape == 'img') {
     if (typeof h.icon == 'string' && h.icon) out.icon = h.icon;
@@ -2306,6 +2515,7 @@ const cleanScene = s => {
         .toArray()
         .map(v => Math.round(v * 1e6) / 1e6);
   }
+  out.hs.forEach(h => floorClamp(h, out.lq));
   if (s.pp && typeof s.pp == 'object')
     out.pp = { x: clamp01(num(s.pp.x, 0.5)), y: clamp01(num(s.pp.y, 0.5)) };
   if (typeof s.taken == 'string' && TAKEN.test(s.taken)) out.taken = s.taken;
@@ -2942,15 +3152,16 @@ const hotspotAt = e => {
     ),
     camera
   );
-  const x = raycaster.intersectObjects(
-    mode == 'view' ? liveHotspots() : hotspotGroup.children,
-    false
-  );
+  const x = raycaster.intersectObjects(mode == 'view' ? liveHotspots() : hsTargets(), false);
   return x.length ? x[0].object.userData.h : null;
 };
+// What catches the pointer: icons (on the floor, the sprite over the decal) and labels.
+const hsTargets = () => hotspotGroup.children.filter(c => c !== c.userData.e.dc);
+// What the tour shows to point at: a label shown on hover is nothing while it is hidden.
+const shownTargets = () => hsTargets().filter(c => c !== c.userData.e.lb || c.userData.e.a > 0.5);
 // In the tour, a plain text note can't be clicked, so it mustn't catch a click or a gaze meant
 // for a hotspot behind it.
-const liveHotspots = () => hotspotGroup.children.filter(c => !inert(c.userData.h));
+const liveHotspots = () => shownTargets().filter(c => !inert(c.userData.h));
 const pickXR = (o, d) => {
   raycaster.set(o, d);
   const x = raycaster.intersectObjects(
@@ -2986,10 +3197,10 @@ function aimedLink(ray) {
     .normalize();
   let best = null,
     top = AIM_COS;
-  for (const sp of hotspotGroup.children) {
-    const h = sp.userData.h;
+  // Each hotspot once, from its anchor, however many objects draw it.
+  for (const { h, ic, lb } of hsParts) {
     if (h.type != 'link' || !scenes.some(s => s.id == h.to)) continue;
-    aimDir.copy(sp.position).applyQuaternion(aimQ);
+    aimDir.copy((ic || lb).position).applyQuaternion(aimQ);
     const c = aimDir
       .setY(aimDir.y * AIM_SQUASH)
       .normalize()
@@ -3003,12 +3214,14 @@ function aimedLink(ray) {
 }
 // What a click at e takes: the hotspot under it, or in the tour with click anywhere on, the
 // link it aims at. A plain note under the pointer takes nothing, since it is there to be read.
-// While a scene loads, the hotspots shown are still the last scene's, and take nothing.
+// A label hidden until hover is not there for the visitor, so a click on it aims; the floor's
+// pick sprite stands for its decal. While a scene loads, the hotspots shown are still the last
+// scene's, and take nothing.
 function clickTarget(e, aim = true) {
   if (hotspotsOf != scenes[current]?.id) return null;
   const h = hotspotAt(e);
   if (h || !aim || !project.click || mode != 'view') return h;
-  return raycaster.intersectObjects(hotspotGroup.children, false).length
+  return raycaster.intersectObjects(shownTargets(), false).length
     ? null
     : aimedLink(raycaster.ray.direction);
 }
@@ -3046,7 +3259,7 @@ glCanvas.addEventListener('pointerdown', e => {
     if (h) {
       hsDrag = {
         h,
-        sp: hotspotGroup.children.find(c => c.userData.h === h),
+        e: hsParts.find(x => x.h === h),
         x: e.clientX,
         y: e.clientY,
         m: 0,
@@ -3066,7 +3279,7 @@ glCanvas.addEventListener('pointermove', e => {
     hsDrag.m += Math.abs(e.clientX - hsDrag.x) + Math.abs(e.clientY - hsDrag.y);
     hsDrag.x = e.clientX;
     hsDrag.y = e.clientY;
-    if (hsDrag.m >= 6 && hsDrag.sp) {
+    if (hsDrag.m >= 6 && hsDrag.e) {
       hsDrag.moved = true;
       const r = glCanvas.getBoundingClientRect();
       raycaster.setFromCamera(
@@ -3076,10 +3289,9 @@ glCanvas.addEventListener('pointermove', e => {
         ),
         camera
       );
-      const p = vecToUV(raycaster.ray.direction);
-      hsDrag.h.u = p.u;
-      hsDrag.h.v = p.v;
-      hsDrag.sp.position.copy(sphereToVec(p.u, p.v, 380));
+      Object.assign(hsDrag.h, vecToUV(raycaster.ray.direction));
+      floorClamp(hsDrag.h);
+      placeHotspot(hsDrag.e);
       glCanvas.style.cursor = 'grabbing';
     }
     return;
@@ -3120,15 +3332,31 @@ glCanvas.addEventListener('pointerup', e => {
   glCanvas.style.cursor = 'grab';
   if (!was || was.m >= 6) return;
   if (mode == 'view') {
-    // Only the main button aims; a pinch never gets here, since it clears drag.
-    const g = clickTarget(e, e.button == 0);
-    if (g) activate(g);
+    // Only the main button aims; a pinch never gets here, since it clears drag. Touch has no
+    // hover, so the first tap right on a hotspot whose label shows on hover shows it, as
+    // hovering would, and a second tap within PEEK_MS opens it; a pen that hovers has already
+    // shown it. A link taken by click anywhere is walked to at once: it grew under the pointer
+    // before the click, and the visitor aimed at the way, not at the hotspot.
+    const g = clickTarget(e, e.button == 0),
+      hid =
+        g &&
+        e.pointerType != 'mouse' &&
+        g !== hovered &&
+        hoverLabel(g) &&
+        hsParts.some(x => x.h === g && x.lb) &&
+        hotspotAt(e) === g;
+    if (hid && peek?.h !== g) peek = { h: g, until: performance.now() + PEEK_MS };
+    else {
+      peek = null;
+      if (g) activate(g);
+    }
     return;
   }
   const h = hotspotAt(e);
   if (placing) {
     const p = vecToUV(raycaster.ray.direction);
-    if (placing == 'move') Object.assign(selHotspot(), p);
+    let moved = false;
+    if (placing == 'move') moved = floorClamp(Object.assign(selHotspot(), p));
     else {
       const o = scenes.find(s => s.id != scenes[current].id),
         look = { ...hsLook[placing] };
@@ -3147,6 +3375,7 @@ glCanvas.addEventListener('pointerup', e => {
         ...look,
         ...p,
       };
+      moved = floorClamp(n);
       scenes[current].hs.push(n);
       selId = n.id;
     }
@@ -3154,6 +3383,7 @@ glCanvas.addEventListener('pointerup', e => {
     buildHotspots();
     ui();
     save();
+    if (moved) toast(t('msg.floorClamp'));
     return;
   }
   selId = h ? h.id : null;
@@ -3242,10 +3472,9 @@ renderer.setAnimationLoop(time => {
     camera.getWorldDirection(d);
     gz = pickXR(o, d);
   }
-  if (gz !== gazeTarget) {
-    gazeTarget = gz;
-    gazeTime = 0;
-  }
+  // An icon and its label are one target, so the dwell carries on across them.
+  if ((gz?.userData.h || gz) !== (gazeTarget?.userData.h || gazeTarget)) gazeTime = 0;
+  gazeTarget = gz;
   const hz = gz && gz.userData.h,
     need = hz && hz.type == 'info' ? 3 : 1.6;
   if (gz && (hz || gz === vrPanelClose)) {
@@ -3262,15 +3491,37 @@ renderer.setAnimationLoop(time => {
   // A hotspot set to keep its size shrinks in the scene as the view zooms in, by as much as
   // the panorama grows, so it stays the size it has at the default zoom.
   const keep = xr ? 1 : Math.tan((camera.fov * PI) / 360) / Math.tan((FOV0 * PI) / 360);
-  hotspotGroup.children.forEach(sp => {
-    const h = sp.userData.h,
+  if (peek && time > peek.until) peek = null;
+  // The floor's up, in the panorama's frame: the level correction tilts the photo to it.
+  const up = floorUp.copy(UP).applyQuaternion(floorQ.copy(level.quaternion).invert()),
+    fade = reduceMotion.matches ? 1 : Math.min(1, dt * 12);
+  hsParts.forEach(e => {
+    const h = e.h,
+      gazed = gazeTarget?.userData.h === h,
+      on = gazed || h === hovered || h === peek?.h,
       k =
         fit *
         (h.size || 1) *
         (h.fix ? keep : 1) *
-        (sp == gazeTarget || sp.userData.h == hovered ? 1.2 : 1) *
-        (sp == gazeTarget ? 1 + (gazeTime / need) * 0.3 : 1);
-    sp.scale.set(sp.userData.w * k, sp.userData.hgt * k, 1);
+        (on ? 1.2 : 1) *
+        (gazed ? 1 + (gazeTime / need) * 0.3 : 1);
+    let vs = 1;
+    if (e.dc) {
+      vs = layDecal(e, up);
+      const w = e.iw * k * FLOOR_K;
+      e.dc.scale.set(w, w, 1);
+      e.ic.scale.set(w, w * Math.max(vs, 0.35), 1);
+    } else if (e.ic) e.ic.scale.set(e.iw * k, e.iw * k, 1);
+    if (e.lb) {
+      // Always shown in the editor, where the author needs to see what they are placing.
+      const show = mode == 'edit' || on || !hoverLabel(h) ? 1 : 0;
+      e.a += (show - e.a) * fade;
+      if (Math.abs(show - e.a) < 0.01) e.a = show;
+      e.lb.material.opacity = e.a;
+      e.lb.visible = e.a > 0;
+      e.lb.scale.set((e.lW / HS_PX) * k, (e.lH / HS_PX) * k, 1);
+      placeLabel(e, vs);
+    }
   });
   renderer.render(scene3d, camera);
 });

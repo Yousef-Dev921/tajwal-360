@@ -48,6 +48,20 @@ that isn't granted it says once per session that the browser may clear the work.
   scene, for naming a wall, a material or a defect; in the tour it doesn't react to
   clicks, since a popup would only repeat it.
 - An arrow or a custom icon can point in any direction, in 5° steps.
+- A hotspot can lie flat on the floor, as a decal seen in perspective rather than a marker
+  that always faces the camera; an arrow on the floor then points along it. It follows the
+  level correction, so it stays on the real floor of a straightened photo. It stays at least
+  5° below the horizon, where it would flatten to a line: placing, dragging or pasting it
+  higher stops it there. A level correction made afterwards doesn't move it. Choosing the floor spot lays a hotspot down, unless it is above
+  that limit. Text-only hotspots stand.
+- A label sits below, above, left or right of its icon. The sides are those of the photo,
+  not of the reading direction, so a label set to clear a door frame stays clear of it in
+  either language.
+- A label can show only while the visitor points at its hotspot, so a busy scene stays
+  clean. On a touch screen the first tap shows the label and a second tap within four
+  seconds opens the hotspot; in a headset, looking at the hotspot shows it. With click
+  anywhere on, the link a click would take shows its label too, and a tap that misses every
+  hotspot walks at once. The editor always shows labels. A text-only hotspot is its own label, so it is always shown.
 - A hotspot can keep its size on screen when the view zooms, instead of growing with the
   panorama.
 - Copy a hotspot (Ctrl+C) and paste it into any scene (Ctrl+V), where it appears in the
@@ -205,7 +219,8 @@ whichever way the project was opened.
       "id": "x1", "type": "link", "to": "<sceneId>",
       "label": "", "text": "", "shape": "arrow",
       "color": "#4f46e5", "size": 1, "u": 0.84, "v": 0.6,
-      "rot": 90, "ts": 1.2, "box": false, "fix": true
+      "rot": 90, "ts": 1.2, "box": false, "fix": true,
+      "lp": "t", "hov": true, "fl": true
     }]
   }]
 }
@@ -220,11 +235,17 @@ whichever way the project was opened.
 - A hotspot `label` may contain line breaks. `shape` is one of `arrow`, `spot`, `ring`,
   `dot`, `pin`, `star`, `info`, `none` (text only) or `img`, which names one of the root
   `icons` in an `icon` field; on import, a hotspot whose icon is missing becomes an arrow.
-  The last four hotspot fields are optional
-  and left out at their defaults: `rot` turns an arrow by -180 to 179 degrees, clockwise;
-  `ts` scales the label text, 0.6 to 2; `box: false` draws the label with an outline
-  instead of a dark box; `fix: true` keeps the hotspot's size on screen when zooming. A
-  build that predates them ignores them, and shows a text-only hotspot as an arrow.
+  The last seven hotspot fields are optional
+  and left out at their defaults: `rot` turns an arrow by -180 to 179 degrees, clockwise
+  (on the floor, clockwise as seen from above); `ts` scales the label text, 0.6 to 2;
+  `box: false` draws the label with an outline instead of a dark box; `fix: true` keeps the
+  hotspot's size on screen when zooming; `lp` puts the label above (`t`), left (`l`) or
+  right (`r`) of the icon instead of below it, on the photo's sides whatever the language;
+  `hov: true` shows the label only on hover; `fl: true` lays the hotspot on the floor, and
+  is dropped on import from a text-only hotspot. A floor hotspot sits at least 5° below the
+  horizon as levelled by the scene's `lq`; import moves a higher one straight down to that. A build that
+  predates these fields ignores them, shows a text-only hotspot as an arrow, and draws a
+  floor hotspot standing, with its label below.
 - `u0` and `p0` are the scene's starting yaw and pitch; `n` is its north offset. `f0`,
   optional, is its starting zoom as a vertical field of view from 40 to 95 degrees
   (75 when absent). `lq`, optional, is its level correction as a quaternion `[x, y, z, w]`.
