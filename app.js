@@ -1273,7 +1273,11 @@ function makeHotspotSprite(h) {
   sprite.renderOrder = 10;
   return sprite;
 }
+// The scene whose hotspots are on the panorama. showScene() moves current on at once but
+// builds the next scene's hotspots only once its panorama has loaded.
+let hotspotsOf = null;
 function buildHotspots() {
+  hotspotsOf = scenes[current]?.id;
   hotspotGroup.children.slice().forEach(c => {
     c.material.map.dispose();
     c.material.dispose();
@@ -2692,11 +2696,11 @@ $('sgm').addEventListener('keydown', e => {
   }
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (a == f) {
-    // Down goes into the grid; Enter opens the first match.
+    // Down goes into the grid; Enter opens the first match of a search.
     if (e.key == 'ArrowDown' && stop) {
       e.preventDefault();
       gridFocus(stop);
-    } else if (e.key == 'Enter' && c.length) {
+    } else if (e.key == 'Enter' && f.value.trim() && c.length) {
       e.preventDefault();
       pickGrid(+c[0].dataset.i);
     }
@@ -2999,7 +3003,9 @@ function aimedLink(ray) {
 }
 // What a click at e takes: the hotspot under it, or in the tour with click anywhere on, the
 // link it aims at. A plain note under the pointer takes nothing, since it is there to be read.
+// While a scene loads, the hotspots shown are still the last scene's, and take nothing.
 function clickTarget(e, aim = true) {
+  if (hotspotsOf != scenes[current]?.id) return null;
   const h = hotspotAt(e);
   if (h || !aim || !project.click || mode != 'view') return h;
   return raycaster.intersectObjects(hotspotGroup.children, false).length
@@ -3092,7 +3098,7 @@ glCanvas.addEventListener('pointermove', e => {
     drag.y = e.clientY;
   } else {
     // With click anywhere on, the link a click would take grows as if hovered.
-    hovered = clickTarget(e);
+    hovered = pointers.size > 1 ? null : clickTarget(e);
     glCanvas.style.cursor = placing ? 'crosshair' : hovered ? 'pointer' : 'grab';
   }
 });

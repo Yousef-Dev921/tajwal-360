@@ -926,6 +926,10 @@ canvas {
   overflow: hidden;
   animation: rise var(--mo3) var(--ez);
 }
+/* it takes focus only so a click on its title or margins keeps the keyboard in the dialog */
+#sgb:focus {
+  outline: none;
+}
 #sgb header {
   display: flex;
   flex-wrap: wrap;
