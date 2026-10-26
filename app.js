@@ -265,6 +265,15 @@ const I18N = {
       'اضغط على المخطط لتحديد موقع هذا المشهد. كبّر المخطط وحرّكه أولاً لتحديد أدق.',
     'msg.audioBig': 'حجم الملف الصوتي أكبر من 8 ميجابايت. اختر ملفاً أصغر.',
     'msg.audioAdded': 'أُضيفت الموسيقى.',
+    'f.sceneAudio': 'صوت المشهد',
+    'hint.sceneAudio':
+      'يُشغَّل عند دخول الزائر هذا المشهد ويتوقف عند مغادرته، وتنخفض الموسيقى الخلفية أثناءه. الحد الأقصى 8 ميجابايت.',
+    'f.loop': 'تكرار',
+    'f.delay': 'التأخير قبل التشغيل',
+    'f.sec': '{n} ث',
+    'act.listen': 'استماع',
+    'act.stop': 'إيقاف',
+    'msg.sceneAudioAdded': 'أُضيف صوت المشهد.',
     'msg.logoAdded': 'أُضيف الشعار. اسحبه داخل البانوراما إلى الزاوية التي تريدها.',
     'msg.logoOpaque':
       'أُضيف الشعار، لكن خلفيته غير شفافة فسيظهر داخل مستطيل. ملف PNG بخلفية شفافة يعطي نتيجة أنظف.',
@@ -492,6 +501,15 @@ const I18N = {
     'msg.planClick': 'Click the plan to place this scene. Zoom and pan first for a precise spot.',
     'msg.audioBig': 'The audio file is over 8 MB. Choose a smaller one.',
     'msg.audioAdded': 'Music added.',
+    'f.sceneAudio': 'Scene audio',
+    'hint.sceneAudio':
+      'Plays when the visitor enters this scene and stops when they leave; the background music is lowered meanwhile. 8 MB maximum.',
+    'f.loop': 'Loop',
+    'f.delay': 'Delay before playing',
+    'f.sec': '{n} s',
+    'act.listen': 'Listen',
+    'act.stop': 'Stop',
+    'msg.sceneAudioAdded': 'Scene audio added.',
     'msg.logoAdded': 'Logo added. Drag it on the panorama to the corner you want.',
     'msg.logoOpaque':
       'Logo added, but its background isn’t transparent, so it will show as a rectangle. A PNG with a transparent background looks cleaner.',
@@ -675,6 +693,7 @@ let library = [],
   projectId = null,
   dirtyScenes = new Set(),
   storedSceneIds = new Set(),
+  storedSnd = new Map(), // scene id → the clip Blob in storage
   audioDirty = false,
   planDirty = false,
   coverDirty = false,
@@ -839,15 +858,19 @@ async function libraryThumb(src) {
     return null;
   }
 }
+// A scene clip's name and options, without its bytes.
+const sndOpts = ({ src, blob, ...o }) => o;
 // Project document without image bytes, so autosave stays a few KB per write.
 function toDoc(Q) {
   const d = {
     ...Q,
     v: SCHEMA,
     // hd: 1 records that the scene has a high-resolution master under its own key.
-    scenes: (Q.scenes || []).map(({ img, blob, hd, hdBlob, ...r }) =>
-      hdBlob ? { ...r, hd: 1 } : r
-    ),
+    scenes: (Q.scenes || []).map(({ img, blob, hd, hdBlob, ...r }) => {
+      // The scene's clip is stored under its own key too; the document keeps its options.
+      if (r.snd) r.snd = sndOpts(r.snd);
+      return hdBlob ? { ...r, hd: 1 } : r;
+    }),
   };
   if (Q.audio) d.audio = { name: Q.audio.name, vol: Q.audio.vol };
   else delete d.audio;
@@ -906,8 +929,23 @@ async function flush() {
       }
       throw x;
     }
+    // Scene clips are written when they differ from what storage holds, which also covers
+    // a clip that undo or redo brings back.
+    const held = storedSnd;
+    for (const s of Q.scenes) {
+      const b = s.snd?.blob || null;
+      if (b === (held.get(s.id) || null)) continue;
+      if (b) await dbOp('put', 'sa:' + id + ':' + s.id, b);
+      else await dbOp('del', 'sa:' + id + ':' + s.id).catch(() => {});
+      b ? held.set(s.id, b) : held.delete(s.id);
+    }
     await dbOp('put', 'p:' + id, toDoc(Q));
     const live = new Set(Q.scenes.map(s => s.id));
+    for (const [sid] of held)
+      if (!live.has(sid)) {
+        await dbOp('del', 'sa:' + id + ':' + sid).catch(() => {});
+        held.delete(sid);
+      }
     for (const sid of storedSceneIds)
       if (!live.has(sid)) {
         await dbOp('del', 'b:' + id + ':' + sid).catch(() => {});
@@ -1003,6 +1041,11 @@ async function loadProject(id) {
         s.hd = objURL(b);
       } else delete s.hd;
     }
+    if (s.snd) {
+      const b = s.img && (await dbOp('get', 'sa:' + id + ':' + s.id).catch(() => null));
+      if (b instanceof Blob) s.snd = { ...s.snd, src: objURL(b), blob: b };
+      else delete s.snd;
+    }
     if (!Array.isArray(s.hs)) s.hs = [];
   }
   doc.scenes = doc.scenes.filter(s => s.img);
@@ -1050,6 +1093,7 @@ function revokeProject(Q) {
   (Q?.scenes || []).forEach(s => {
     freeURL(s.img);
     freeURL(s.hd);
+    freeURL(s.snd?.src);
   });
   freeURL(Q?.audio?.src);
   freeURL(Q?.plan?.img);
@@ -2132,6 +2176,11 @@ async function toPortable(Q, forTour, put) {
     if (zip) delete r.th;
     // The single file carries the 4096 copies only: at 8192 it would grow about fourfold.
     if (hdBlob && (zip || !forTour)) r.hd = await put(hdBlob, 'scenes/' + s.id + '-hd');
+    if (r.snd)
+      r.snd = {
+        ...sndOpts(r.snd),
+        src: r.snd.blob ? await put(r.snd.blob, 'audio/' + s.id) : r.snd.src,
+      };
     out.scenes.push({ ...r, img: blob ? await put(blob, 'scenes/' + s.id) : s.img });
   }
   if (Q.audio)
@@ -2160,7 +2209,7 @@ const portableProject = () => toPortable(project);
 const EXPORT_BIG_MB = 100;
 function exportEstimate() {
   let n = 0;
-  for (const s of scenes) n += s.blob?.size || 0;
+  for (const s of scenes) n += (s.blob?.size || 0) + (s.snd?.blob?.size || 0);
   n += (project.audio?.blob?.size || 0) + (project.plan?.blob?.size || 0);
   n += project.cover?.blob?.size || 0;
   return (n * 4) / 3 + 8e5;
@@ -2465,6 +2514,14 @@ const cleanScene = s => {
   };
   if (isDataImage(s.th)) out.th = s.th;
   if (isDataImage(s.hd)) out.hd = s.hd;
+  // A clip, as the editor takes it: audio, 8 MB at most, with a delay of up to 30 s.
+  const a = s.snd;
+  if (a && typeof a.src == 'string' && /^data:audio\//.test(a.src) && a.src.length < 1.1e7) {
+    out.snd = { src: a.src, name: String(a.name ?? '').slice(0, 120) };
+    if (a.loop === true) out.snd.loop = true;
+    const dl = Math.round(Math.min(30, Math.max(0, num(a.delay, 0))));
+    if (dl) out.snd.delay = dl;
+  }
   if (s.n != null && Number.isFinite(+s.n)) out.n = +s.n;
   const f0 = num(s.f0, NaN);
   if (f0 >= FOV_MIN && f0 <= FOV_MAX) out.f0 = f0;
@@ -2554,6 +2611,10 @@ $('pfile').onchange = async e => {
         s.hdBlob = dataToBlob(s.hd);
         s.hd = objURL(s.hdBlob);
       }
+      if (s.snd) {
+        s.snd.blob = dataToBlob(s.snd.src);
+        s.snd.src = objURL(s.snd.blob);
+      }
     }
     if (d.audio) {
       d.audio.blob = dataToBlob(d.audio.src);
@@ -2576,6 +2637,7 @@ $('pfile').onchange = async e => {
     planDirty = !!d.plan;
     coverDirty = !!d.cover;
     storedSceneIds = new Set();
+    storedSnd = new Map();
     await flush();
     closeLib();
     toast(t('msg.imported'));
@@ -2611,6 +2673,7 @@ function setProject(id, d) {
   mode = 'edit';
   applyMigration(d);
   storedSceneIds = new Set(scenes.map(s => s.id));
+  storedSnd = new Map(scenes.filter(s => s.snd).map(s => [s.id, s.snd.blob]));
   editCount = 0;
   $('ptitle').value = project.title || '';
   $('auto').checked = !!project.auto;
@@ -2656,6 +2719,8 @@ async function duplicateProject(id) {
       if (b instanceof Blob) await dbOp('put', 'b:' + nid + ':' + s.id, b);
       const h = s.hd && (await dbOp('get', 'h:' + id + ':' + s.id).catch(() => null));
       if (h instanceof Blob) await dbOp('put', 'h:' + nid + ':' + s.id, h);
+      const sa = s.snd && (await dbOp('get', 'sa:' + id + ':' + s.id).catch(() => null));
+      if (sa instanceof Blob) await dbOp('put', 'sa:' + nid + ':' + s.id, sa);
     }
     const a = await dbOp('get', 'a:' + id).catch(() => null);
     if (a instanceof Blob) await dbOp('put', 'a:' + nid, a);
@@ -2679,6 +2744,7 @@ async function deleteProject(id) {
     for (const s of d?.scenes || []) {
       await dbOp('del', 'b:' + id + ':' + s.id).catch(() => {});
       await dbOp('del', 'h:' + id + ':' + s.id).catch(() => {});
+      await dbOp('del', 'sa:' + id + ':' + s.id).catch(() => {});
     }
     await dbOp('del', 'a:' + id).catch(() => {});
     await dbOp('del', 'pl:' + id).catch(() => {});
@@ -3513,7 +3579,9 @@ $('pdesc').oninput = e => {
 };
 $('sgo').onclick = () => {
   $('start').hidden = true;
+  gestured = true;
   startAudio();
+  syncClip();
 };
 // ───────────── nadir patch, audio, floor plan, embed code ─────────────
 async function shrinkCanvas(f, max, bg) {
@@ -3609,6 +3677,8 @@ function syncNadir() {
 }
 function syncAudio() {
   const a = project.audio;
+  $('mutei').setAttribute('href', muted ? '#i-mute' : '#i-volume');
+  $('mute').setAttribute('aria-label', t(muted ? 'act.unmuteAria' : 'act.muteAria'));
   if (!a) {
     if (audioEl) {
       audioEl.pause();
@@ -3622,13 +3692,109 @@ function syncAudio() {
     audioSrc = a.src;
     audioEl = new Audio(a.src);
     audioEl.loop = true;
-    audioEl.volume = a.vol ?? 0.6;
+    audioEl.volume = (a.vol ?? 0.6) * duck;
   }
-  $('mutei').setAttribute('href', muted ? '#i-mute' : '#i-volume');
-  $('mute').setAttribute('aria-label', t(muted ? 'act.unmuteAria' : 'act.muteAria'));
 }
 function startAudio() {
-  if (audioEl && !muted && audioEl.paused && mode == 'view') audioEl.play().catch(() => {});
+  // Where the volume can't be lowered, the music waits for a scene's clip to finish.
+  if (audioEl && !muted && audioEl.paused && mode == 'view' && (duck == 1 || volumeWorks()))
+    audioEl.play().catch(() => {});
+}
+// ── scene audio ──
+// A scene can have its own clip: it starts when the visitor enters the scene, after an
+// optional delay, and stops when they leave. Browsers only play sound after the visitor has
+// touched or clicked the page, so nothing starts before that, nor behind the start screen.
+// While a clip plays the music is lowered to DUCK of its volume, with a short fade, and
+// comes back when the clip ends or the visitor moves on. The mute button silences both.
+const DUCK = 0.25,
+  DUCK_MS = 400;
+let duck = 1, // the music's share of its own volume
+  duckTimer = 0,
+  clip = null, // the current scene's clip: { id, snd, state: 'wait' | 'play' | 'done', timer }
+  volOK = null,
+  gestured = false;
+const clipEl = new Audio();
+// Safari on iOS ignores volume: it reads back as 1 whatever is set.
+function volumeWorks() {
+  if (volOK == null) {
+    const a = new Audio();
+    a.volume = 0.5;
+    volOK = a.volume == 0.5;
+  }
+  return volOK;
+}
+function fadeMusic(to) {
+  clearInterval(duckTimer);
+  if (!volumeWorks()) {
+    duck = to;
+    if (audioEl) to < 1 ? audioEl.pause() : startAudio();
+    return;
+  }
+  const from = duck,
+    t0 = performance.now();
+  // A timer rather than animation frames, which stop while the tab is in the background.
+  duckTimer = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / DUCK_MS);
+    duck = from + (to - from) * k;
+    if (audioEl) audioEl.volume = (project.audio?.vol ?? 0.6) * duck;
+    if (k == 1) clearInterval(duckTimer);
+  }, 30);
+}
+function endClip() {
+  if (!clip) return;
+  clearTimeout(clip.timer);
+  clip = null;
+  clipEl.onended = null;
+  clipEl.pause();
+  clipEl.removeAttribute('src');
+  clipEl.load(); // let go of the file
+  fadeMusic(1);
+}
+function playClip(c) {
+  c.timer = 0;
+  if (clip !== c || muted) return;
+  c.state = 'play';
+  clipEl.src = c.snd.src;
+  clipEl.loop = !!c.snd.loop;
+  clipEl.onended = () => {
+    if (clip !== c) return;
+    c.state = 'done';
+    fadeMusic(1);
+  };
+  fadeMusic(DUCK);
+  clipEl.play().catch(() => {
+    if (clip !== c) return;
+    c.state = 'done';
+    fadeMusic(1);
+  });
+}
+// Brings the clip in line with the scene on screen, the mode and the mute button.
+function syncClip() {
+  const s = scenes[current],
+    on =
+      mode == 'view' &&
+      s?.snd &&
+      $('start').hidden &&
+      (gestured || navigator.userActivation?.hasBeenActive);
+  if (!on || clip?.id != s.id || clip.snd !== s.snd) {
+    endClip();
+    if (!on) return;
+    clip = { id: s.id, snd: s.snd, state: 'wait', timer: 0 };
+  }
+  if (muted) {
+    // Paused where it is; a clip still waiting for its delay starts the wait again.
+    clearTimeout(clip.timer);
+    clip.timer = 0;
+    clipEl.pause();
+    return;
+  }
+  if (clip.state == 'wait' && !clip.timer) {
+    const c = clip;
+    c.timer = setTimeout(() => playClip(c), (s.snd.delay || 0) * 1000);
+  } else if (clip.state == 'play' && clipEl.paused) {
+    fadeMusic(DUCK);
+    clipEl.play().catch(() => {});
+  }
 }
 function renderPlan() {
   const pl = project.plan;
@@ -3839,7 +4005,7 @@ function syncExtras() {
   syncAudio();
   renderPlan();
   fillThumbs();
-  $('mute').hidden = !project.audio;
+  $('mute').hidden = !project.audio && !scenes.some(s => s.snd);
   $('pbtn').hidden = !project.plan;
   if (document.activeElement != $('nsz')) $('nsz').value = project.nadir?.r || 25;
   if (document.activeElement != $('eurl')) $('eurl').value = project.eurl || '';
@@ -3849,14 +4015,23 @@ function syncExtras() {
   if (audioEl) {
     mode == 'view' ? startAudio() : audioEl.pause();
   }
+  syncClip();
+  syncSceneAudio();
 }
-addEventListener('pointerdown', startAudio);
+const onGesture = () => {
+  gestured = true;
+  startAudio();
+  syncClip();
+};
+addEventListener('pointerdown', onGesture);
+addEventListener('keydown', onGesture);
 $('mute').onclick = () => {
   muted = !muted;
   if (audioEl) {
     muted ? audioEl.pause() : startAudio();
   }
   syncAudio();
+  syncClip();
 };
 $('pbtn').onclick = () => {
   planOpen = !planOpen;
@@ -3926,6 +4101,75 @@ $('nsz').oninput = e => {
     save();
     syncNadir();
   }
+};
+// The scene's clip in the editor: upload, remove, loop, delay and a button to listen to it.
+// Removing a clip doesn't revoke its URL, since undo can bring the clip back.
+let saPrev = null; // { id, el } while the author listens to a clip
+function stopListening() {
+  if (!saPrev) return;
+  saPrev.el.pause();
+  saPrev = null;
+  syncSceneAudio();
+}
+function syncSceneAudio() {
+  if (EMBED) return;
+  const s = scenes[current],
+    a = s?.snd;
+  if (saPrev && (mode != 'edit' || saPrev.id != s?.id || saPrev.snd !== a)) stopListening();
+  $('sactl').hidden = !a;
+  $('sarm').disabled = !a;
+  if (!a) return;
+  $('saname').textContent = a.name;
+  $('saloop').checked = !!a.loop;
+  if (document.activeElement != $('sadl')) $('sadl').value = a.delay || 0;
+  $('sadlv').value = t('f.sec', { n: a.delay || 0 });
+  $('saplay').setAttribute('aria-pressed', !!saPrev);
+  $('saplayi').setAttribute('href', saPrev ? '#i-stop' : '#i-play');
+  setText($('saplayt'), t(saPrev ? 'act.stop' : 'act.listen'));
+}
+// Options change by replacing the object, so undo snapshots keep their own.
+const setSnd = o => {
+  const s = scenes[current];
+  if (!s?.snd) return;
+  s.snd = { ...s.snd, ...o };
+  for (const k in o) if (!o[k]) delete s.snd[k]; // loop and delay are left out at their defaults
+  save();
+  syncSceneAudio();
+};
+$('safile').onchange = e => {
+  const f = e.target.files[0],
+    s = scenes[current];
+  e.target.value = '';
+  if (!f || !s) return;
+  if (f.size > 8e6) {
+    toast(t('msg.audioBig'));
+    return;
+  }
+  // Some systems hand over audio with no type; it is played and served as audio all the same.
+  const b = /^audio\//.test(f.type) ? f : new Blob([f], { type: 'audio/mpeg' });
+  s.snd = { ...s.snd, src: objURL(b), blob: b, name: f.name.slice(0, 120) };
+  save();
+  syncExtras();
+  toast(t('msg.sceneAudioAdded'));
+};
+$('sarm').onclick = () => {
+  const s = scenes[current];
+  if (!s?.snd) return;
+  delete s.snd;
+  save();
+  syncExtras();
+};
+$('saloop').onchange = e => setSnd({ loop: e.target.checked });
+$('sadl').oninput = e => setSnd({ delay: +e.target.value });
+$('saplay').onclick = () => {
+  const s = scenes[current];
+  if (saPrev) return stopListening();
+  if (!s?.snd) return;
+  saPrev = { id: s.id, snd: s.snd, el: new Audio(s.snd.src) };
+  saPrev.el.loop = !!s.snd.loop;
+  saPrev.el.onended = stopListening;
+  saPrev.el.play().catch(stopListening);
+  syncSceneAudio();
 };
 $('afile').onchange = e => {
   const f = e.target.files[0];
@@ -4530,6 +4774,7 @@ if (!EMBED) {
           scenes = project.scenes;
           applyMigration(d);
           storedSceneIds = new Set(scenes.map(s => s.id));
+          storedSnd = new Map(scenes.filter(s => s.snd).map(s => [s.id, s.snd.blob]));
         }
       }
       if (!projectId) {
