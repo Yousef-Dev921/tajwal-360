@@ -120,7 +120,10 @@ that isn't granted it says once per session that the browser may clear the work.
 - Deleting a scene or a hotspot leaves a message with an Undo button for 10 seconds. Undo
   puts a scene back at its place in the tour with its images, clip, thumbnail and every link
   that led to it, at its place in each scene's list, even after autosave has removed its
-  files from storage; a hotspot comes back at its place in its scene, selected.
+  files from storage; a hotspot comes back at its place in its scene, selected. Several
+  scenes deleted one after another can be brought back in any order: each returns to its
+  place, and a link between two of them returns once both are back, so undo never leaves a
+  link to a scene that isn't there.
 - Messages stack, up to three at a time with the newest at the bottom, each with a close
   button. They wait while the pointer is over them or focus is in them, sit over the
   panorama clear of the scene bar (on a phone, clear of the bottom sheet too), and are read
