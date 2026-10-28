@@ -669,11 +669,6 @@ label.pri {
   background: var(--ac);
   color: var(--af);
 }
-.sth.dz {
-  border-color: var(--acT);
-  border-style: dashed;
-  transform: scale(0.96);
-}
 
 /* ───────────────────────── import queue ───────────────────────── */
 #iq {
@@ -1852,7 +1847,8 @@ canvas {
 #smb[data-d='list'] .smc {
   grid-template-columns: auto 52px minmax(0, 1fr) auto;
   column-gap: var(--s2);
-  padding: var(--s1) var(--s1) var(--s1) 0;
+  padding-block: var(--s1);
+  padding-inline: 0 var(--s1);
   min-height: 64px;
 }
 #smb[data-d='list'] .smk {

@@ -4012,12 +4012,12 @@ function syncNote() {
   card.hidden = !show;
   if (!show) return;
   const taken = project.meta && s.taken,
-    k = [LANG, current, scenes.length, navScenes().length, s.name, taken, tx].join('\n');
+    nav = navScenes(),
+    at = nav.indexOf(s),
+    k = [LANG, current, at, nav.length, s.name, taken, tx].join('\n');
   if (k == noteShown) return;
   noteShown = k;
   // Counted as the bar counts; a scene hidden from the bar has no place in that count.
-  const nav = navScenes(),
-    at = nav.indexOf(s);
   $('noten').hidden = at < 0;
   $('noten').textContent = t('note.scene', { i: at + 1, n: nav.length });
   $('notet').textContent = s.name;
@@ -5748,7 +5748,9 @@ function dragSort(box, o) {
     end(sortDrag);
   };
   box.addEventListener('pointerdown', e => {
-    if (sortDrag || e.button || (o.can && !o.can())) return;
+    // A view that can't be reordered still takes a long press.
+    const can = () => !o.can || o.can();
+    if (sortDrag || e.button || !(can() || (o.long && e.pointerType == 'touch'))) return;
     const c = o.card(e.target);
     if (!c) return;
     const d = (sortDrag = {
@@ -5759,11 +5761,12 @@ function dragSort(box, o) {
       y0: e.clientY,
       x: e.clientX,
       y: e.clientY,
-      armed: e.pointerType == 'mouse',
+      armed: e.pointerType == 'mouse' && can(),
       live: false,
     });
     if (!d.armed) {
       d.hold = setTimeout(() => {
+        if (!can()) return;
         d.armed = true;
         c.classList.add('hold');
       }, HOLD_MS);
@@ -5970,6 +5973,10 @@ function smDraw() {
     .querySelectorAll('button')
     .forEach(b => b.setAttribute('aria-pressed', b.dataset.d == smDens));
   L.classList.toggle('nodrag', smSort != 'tour');
+  // A button that has just disabled or hidden itself drops the focus; it goes to the list.
+  const a = document.activeElement;
+  if (a == document.body || (a && $('smb').contains(a) && (a.disabled || !a.offsetParent)))
+    (smStop()?.querySelector('.smk') || $('smb')).focus({ preventScroll: true });
 }
 function openManager(from) {
   if (EMBED || mode != 'edit' || !scenes.length || smOpen() || !$('libm').hidden) return;
@@ -5989,6 +5996,9 @@ function openManager(from) {
     { root: $('sml'), rootMargin: '100px 0px' }
   );
   $('smg').hidden = false;
+  // The messages show over the dialog and their Undo stays in reach of the keyboard, so they
+  // move into it while it is open.
+  $('smb').append($('msg'), $('msgs'));
   smDraw();
   const c = $('sml').querySelector('.smc.on') || $('sml').firstElementChild;
   smFocus(c, true);
@@ -5998,13 +6008,15 @@ function closeManager() {
   if (smEdit) smRenameEnd(false);
   sortDrag?.stop();
   $('smg').hidden = true;
+  $('root').append($('msg'), $('msgs'));
   smIO.disconnect();
   smIO = null;
   $('sml').innerHTML = '';
   smArm(false);
-  const f = smFrom?.isConnected && smFrom.offsetParent ? smFrom : $('smo');
+  // Back to the opener, or the panorama once no scene is left to manage.
+  const f = [smFrom, $('smo')].find(x => x?.isConnected && x.offsetParent) || glCanvas;
   smFrom = null;
-  f?.focus({ preventScroll: true });
+  f.focus({ preventScroll: true });
 }
 // Makes card c the list's tab stop and focuses it, centred or just brought into view.
 function smFocus(c, centre) {
@@ -6092,8 +6104,9 @@ function smRenameEnd(keep, back) {
 if (!EMBED) {
   $('smo').onclick = e => openManager(e.currentTarget);
   $('smx').onclick = closeManager;
+  // The click that ends a drag let go over the backdrop is not a click on it.
   $('smg').onclick = e => {
-    if (e.target == $('smg')) closeManager();
+    if (e.target == $('smg') && sortDropAt < performance.now() - 400) closeManager();
   };
   $('smf').oninput = smDraw;
   $('sms').onchange = e => {
@@ -6680,6 +6693,8 @@ addEventListener('keydown', e => {
   if (e.key != 'Escape') return;
   // The library and the enlarged plan cover the stage and take Escape for themselves.
   if (!$('libm').hidden || planBig) return;
+  // The scene manager takes Escape too, even when focus has fallen out of it.
+  if (smOpen()) return closeManager();
   // In Preview, the start screen goes back to the editor.
   if (!EMBED && mode == 'view' && !$('start').hidden) $('back').click();
   else if (!$('pop').hidden) closePop();
@@ -7280,7 +7295,7 @@ const undo = () => {
 $('undo').onclick = undo;
 $('redo').onclick = redo;
 addEventListener('keydown', e => {
-  if (EMBED || mode != 'edit' || !$('libm').hidden || !(e.ctrlKey || e.metaKey)) return;
+  if (EMBED || mode != 'edit' || !$('libm').hidden || smOpen() || !(e.ctrlKey || e.metaKey)) return;
   const tg = e.target.tagName;
   if (tg == 'INPUT' || tg == 'TEXTAREA' || tg == 'SELECT') return;
   const k = e.key.toLowerCase();
@@ -7305,7 +7320,8 @@ addEventListener('keydown', e => {
 // Delete or Backspace removes the selected hotspot, from the panorama or the hotspot list
 // but not from a text field. Undo brings it back.
 addEventListener('keydown', e => {
-  if (EMBED || mode != 'edit' || !$('libm').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (EMBED || mode != 'edit' || !$('libm').hidden || smOpen()) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key != 'Delete' && e.key != 'Backspace') return;
   const tg = e.target;
   if (!(tg == document.body || tg == glCanvas || tg.closest?.('#hlist, #hprops button'))) return;
@@ -8806,20 +8822,6 @@ if (!EMBED)
       } catch (e) {}
     });
   });
-
-// Drop indicator while reordering scenes.
-if (!EMBED) {
-  const scn = $('scenes');
-  scn.addEventListener('dragover', e => {
-    const b = e.target.closest('.sth');
-    scn.querySelectorAll('.sth.dz').forEach(x => x !== b && x.classList.remove('dz'));
-    b && b.classList.add('dz');
-  });
-  const clr = () => scn.querySelectorAll('.sth.dz').forEach(x => x.classList.remove('dz'));
-  scn.addEventListener('dragleave', clr);
-  scn.addEventListener('drop', clr);
-  scn.addEventListener('dragend', clr);
-}
 
 (async () => {
   if (!EMBED) {
