@@ -189,7 +189,9 @@
     <summary data-i18n="sec.view">خيارات العرض</summary>
     <div class="bd">
       <label class="opt"><input type="checkbox" id="auto"><span data-i18n="opt.autorotate">دوران تلقائي</span></label>
-      <label class="opt"><input type="checkbox" id="wk" checked><span data-i18n="opt.walk">انتقال سلس بين المشاهد</span></label>
+      <label id="aspw" hidden><span data-i18n="f.autoSpeed">السرعة</span><select id="asp"><option value="0.5" data-i18n="spd.slow">بطيئة</option><option value="1" data-i18n="spd.normal">عادية</option><option value="2" data-i18n="spd.fast">سريعة</option></select></label>
+      <p class="hint" id="autoh" hidden data-i18n="hint.autoReduced">معطّل لأن نظامك يطلب تقليل الحركة.</p>
+      <label><span data-i18n="opt.tr">الانتقال بين المشاهد</span><select id="trn"><option value="walk" data-i18n="tr.walk">مشي</option><option value="fade" data-i18n="tr.fade">تلاشٍ</option><option value="none" data-i18n="tr.none">بلا انتقال</option></select></label>
       <label class="opt"><input type="checkbox" id="ca"><span data-i18n="opt.click">النقر في أي مكان للانتقال</span></label>
       <p class="hint" data-i18n="hint.click">في الجولة، تنقل النقرة التي لا تصيب أي نقطة إلى نقطة الانتقال الأقرب إلى اتجاهها. تكبر تلك النقطة تحت المؤشر قبل النقر، فيرى الزائر إلى أين سيذهب.</p>
       <label class="opt"><input type="checkbox" id="metaon"><span data-i18n="opt.meta">إظهار تاريخ التصوير وموقعه</span></label>
