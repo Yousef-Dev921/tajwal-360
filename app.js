@@ -185,6 +185,13 @@ const I18N = {
     'hint.dlImg': 'لا يُحتفظ بالملف الأصلي، فالتنزيل هو أفضل نسخة محفوظة منه.',
     'msg.dlImg': 'نُزّلت الصورة «\u2068{name}\u2069».',
     'act.cancel': 'إلغاء',
+    'f.thumb': 'صورة المشهد المصغّرة',
+    'act.thumbView': 'استخدم المنظر الحالي',
+    'act.thumbReset': 'من زاوية البداية',
+    'hint.thumbStart':
+      'تُلتقط من زاوية البداية بلا نقاط تفاعلية، وتتبعها إذا تغيّرت. تظهر في قائمة المشاهد وشبكة الجولة والمكتبة.',
+    'hint.thumbPinned': 'مثبّتة على منظر اخترته، فلا تتغيّر مع زاوية البداية.',
+    'msg.thumbSet': 'حُدّثت الصورة المصغّرة.',
     'act.openMap': 'فتح الموقع على الخريطة',
     'act.planBig': 'تكبير المخطط',
     'act.planSmall': 'تصغير المخطط',
@@ -521,6 +528,13 @@ const I18N = {
     'hint.dlImg': 'The original file isn’t kept: this downloads the best copy stored.',
     'msg.dlImg': 'Downloaded “\u2068{name}\u2069”.',
     'act.cancel': 'Cancel',
+    'f.thumb': 'Scene thumbnail',
+    'act.thumbView': 'Use the current view',
+    'act.thumbReset': 'From the start view',
+    'hint.thumbStart':
+      'Taken from the start view without hotspots, and follows it when it changes. Shown in the scene list, the tour’s scene grid and the library.',
+    'hint.thumbPinned': 'Pinned to a view you chose, so it stays when the start view changes.',
+    'msg.thumbSet': 'Thumbnail updated.',
     'act.openMap': 'Open this location on a map',
     'act.planBig': 'Enlarge plan',
     'act.planSmall': 'Shrink plan',
@@ -870,6 +884,7 @@ let library = [],
   storedSceneIds = new Set(),
   storedSnd = new Map(), // scene id → the clip Blob in storage
   hdGone = new Set(), // scenes whose high-resolution master went with a replaced image
+  storedSq = new Map(), // scene id → the square thumbnail Blob in storage
   audioDirty = false,
   planDirty = false,
   coverDirty = false,
@@ -1060,10 +1075,12 @@ function toDoc(Q) {
   const d = {
     ...Q,
     v: SCHEMA,
-    // hd: 1 records that the scene has a high-resolution master under its own key.
-    scenes: (Q.scenes || []).map(({ img, blob, hd, hdBlob, ...r }) => {
+    // hd: 1 and sq: 1 record that the scene has a high-resolution master and a square
+    // thumbnail under their own keys.
+    scenes: (Q.scenes || []).map(({ img, blob, hd, hdBlob, sq, sqBlob, ...r }) => {
       // The scene's clip is stored under its own key too; the document keeps its options.
       if (r.snd) r.snd = sndOpts(r.snd);
+      if (sqBlob) r.sq = 1;
       return hdBlob ? { ...r, hd: 1 } : r;
     }),
   };
@@ -1136,12 +1153,26 @@ async function flush() {
       else await dbOp('del', 'sa:' + id + ':' + s.id).catch(() => {});
       b ? held.set(s.id, b) : held.delete(s.id);
     }
+    // So are the square thumbnails.
+    const sqs = storedSq;
+    for (const s of Q.scenes) {
+      const b = s.sqBlob || null;
+      if (b === (sqs.get(s.id) || null)) continue;
+      if (b) await dbOp('put', 't:' + id + ':' + s.id, b);
+      else await dbOp('del', 't:' + id + ':' + s.id).catch(() => {});
+      b ? sqs.set(s.id, b) : sqs.delete(s.id);
+    }
     await dbOp('put', 'p:' + id, toDoc(Q));
     const live = new Set(Q.scenes.map(s => s.id));
     for (const [sid] of held)
       if (!live.has(sid)) {
         await dbOp('del', 'sa:' + id + ':' + sid).catch(() => {});
         held.delete(sid);
+      }
+    for (const [sid] of sqs)
+      if (!live.has(sid)) {
+        await dbOp('del', 't:' + id + ':' + sid).catch(() => {});
+        sqs.delete(sid);
       }
     for (const sid of storedSceneIds)
       if (!live.has(sid)) {
@@ -1157,16 +1188,20 @@ async function flush() {
     e.title = Q.title || t('def.untitled');
     e.n = Q.scenes.length;
     e.t = Date.now();
-    // The library shows the cover, or else the first scene; a new image in that scene (a
-    // replace) gives it a new thumbnail, so the end of that tells them apart too.
+    // The library shows the cover, or else the first scene's square thumbnail, or its 2:1 one.
+    // A new image or thumbnail in that scene changes its size, or the end of its th.
     const f = Q.scenes[0],
-      thid = Q.cover ? 'cv' + Q.cover.t : f && f.id + ':' + (f.th || '').slice(-24);
+      thid = Q.cover
+        ? 'cv' + Q.cover.t
+        : f && f.id + ':' + (f.sqBlob ? 'sq' + f.sqBlob.size : (f.th || '').slice(-24));
     if (!f) {
       e.th = null;
       e.thid = null;
     } else if (e.thid != thid) {
       e.thid = thid;
-      e.th = Q.cover ? await libraryThumb(Q.cover.img) : f.th || (await libraryThumb(f.img));
+      e.th = Q.cover
+        ? await libraryThumb(Q.cover.img)
+        : (f.sq && (await libraryThumb(f.sq))) || f.th || (await libraryThumb(f.img));
     }
     await dbOp('put', 'idx', library);
     await dbOp('put', 'last', id);
@@ -1245,6 +1280,13 @@ async function loadProject(id) {
       if (b instanceof Blob) s.snd = { ...s.snd, src: objURL(b), blob: b };
       else delete s.snd;
     }
+    if (s.sq) {
+      const b = s.img && (await dbOp('get', 't:' + id + ':' + s.id).catch(() => null));
+      if (b instanceof Blob) {
+        s.sqBlob = b;
+        s.sq = objURL(b);
+      } else delete s.sq; // made again while the editor is idle
+    }
     if (!Array.isArray(s.hs)) s.hs = [];
   }
   doc.scenes = doc.scenes.filter(s => s.img);
@@ -1292,6 +1334,7 @@ function revokeProject(Q) {
   (Q?.scenes || []).forEach(s => {
     freeURL(s.img);
     freeURL(s.hd);
+    freeURL(s.sq);
     freeURL(s.snd?.src);
   });
   freeURL(Q?.audio?.src);
@@ -2098,6 +2141,7 @@ async function iqRun() {
     save();
   }
   if (q.stop) toast(t('iq.stopped', { n: q.added }));
+  sqFill();
   if (iq === q) {
     iqHead();
     iqTidy();
@@ -2133,6 +2177,7 @@ async function iqOne(q, r) {
   if (q.Q !== project) {
     freeURL(s.img);
     freeURL(s.hd);
+    freeURL(s.sq);
     return;
   }
   scenes.push(s);
@@ -2170,9 +2215,8 @@ async function iqDraw(r, cap, im) {
   if (flat && !r.mode) return [null, ['flat', { ratio }]];
   const w = im.width,
     h = im.height,
-    p = await encodePano(im, r.mode);
-  return [
-    {
+    p = await encodePano(im, r.mode),
+    s = {
       id: uid(),
       name: f.name.replace(/\.[^.]+$/, ''),
       img: objURL(p.blob),
@@ -2184,9 +2228,14 @@ async function iqDraw(r, cap, im) {
       hs: [],
       ...cap,
       src: srcOf(f, r.h, w, h),
-    },
-    null,
-  ];
+    };
+  // Without it, the idle fill tries again later.
+  let sq = null;
+  try {
+    sq = await renderSq(s, p.small);
+  } catch (e) {}
+  if (sq) Object.assign(s, { sq: objURL(sq), sqBlob: sq });
+  return [s, null];
 }
 // An image further than this from 2:1 is not a panorama, and is not placed until the author
 // chooses how.
@@ -2203,7 +2252,8 @@ const srcOf = (f, hash, w, h) => ({
 // The stored copies of a decoded image, for the import and for a replaced image alike: the
 // copy of at most 4096 px, with high resolution on a master of up to 8192 px, and the 2:1
 // thumbnail. mode is the author's choice for an image that isn't 2:1: 'stretch' fills the
-// sphere, anything else lays it flat on a dark panorama. Closes im as soon as it is drawn.
+// sphere, anything else lays it flat on a dark panorama. Closes im as soon as it is drawn. small
+// is a 2048 copy for the square thumbnail; renderSq() releases it.
 async function encodePano(im, mode) {
   const ratio = im.width / im.height;
   let flat = notPano(ratio);
@@ -2252,10 +2302,14 @@ async function encodePano(im, mode) {
   }
   im.close(); // closed again by the caller, which does nothing
   const blob = await canvasBlob(canvas, 'image/jpeg', 0.86),
-    th = sceneThumb(canvas);
+    th = sceneThumb(canvas),
+    small = await panoSmall(canvas); // for the square thumbnail, which the caller renders
   canvas.width = canvas.height = 0; // and the 32 MB copy, before the next file
-  if (!blob) throw new Error('encode');
-  return { blob, hdBlob, th, flat };
+  if (!blob) {
+    small.close();
+    throw new Error('encode');
+  }
+  return { blob, hdBlob, th, flat, small };
 }
 // Each added scene redraws the scene list, at most every 250 ms: with 150 scenes it carries
 // a few hundred KB of thumbnails. Only the list: the rest of the panel, a hotspot's fields
@@ -2474,23 +2528,25 @@ function sceneMatcher(q, notes) {
 // written in place and the current scene just marked. With 150 scenes the list carries a few
 // hundred KB of thumbnails, and this runs on every change in the editor.
 let listShown = []; // [id, name, thumbnail] of each scene as #scenes shows it
+const sthImg = th =>
+  th ? `<img src="${esc(th)}" alt="" draggable="false">` : '<span class="ph"></span>';
 function renderScenes() {
   const L = $('scenes'),
-    rows = scenes.map(s => [s.id, s.name, s.th]),
-    same =
-      rows.length == listShown.length &&
-      rows.every((r, i) => r[0] === listShown[i][0] && r[2] === listShown[i][2]);
+    rows = scenes.map(s => [s.id, s.name, thumbOf(s)]),
+    same = rows.length == listShown.length && rows.every((r, i) => r[0] === listShown[i][0]);
   if (!same)
     L.innerHTML = scenes
       .map(
         (s, i) =>
-          `<button data-i="${i}" draggable="true" class="sth" title="${esc(s.name)}">${s.th ? `<img src="${esc(s.th)}" alt="" draggable="false">` : '<span class="ph"></span>'}<span dir="auto">${esc(s.name)}</span></button>`
+          `<button data-i="${i}" draggable="true" class="sth" title="${esc(s.name)}">${sthImg(thumbOf(s))}<span dir="auto">${esc(s.name)}</span></button>`
       )
       .join('');
   else
+    // A thumbnail filled in or a name changed: only that cell is touched.
     rows.forEach((r, i) => {
-      if (r[1] === listShown[i][1]) return;
       const b = L.children[i];
+      if (r[2] !== listShown[i][2]) b.firstChild.outerHTML = sthImg(r[2]);
+      if (r[1] === listShown[i][1]) return;
       b.title = r[1];
       b.lastChild.textContent = r[1];
     });
@@ -3044,7 +3100,10 @@ async function replaceImage(sid, f, mode, known) {
   }
   const i = scenes.findIndex(x => x.id == sid);
   // Another project was opened, or the scene deleted, while the file was read.
-  if (pid != projectId || i < 0) return syncImage();
+  if (pid != projectId || i < 0) {
+    p?.small.close();
+    return syncImage();
+  }
   if (ask) {
     repAsk = { sid, f, h: hash, cap, ratio: w / h };
     syncImage();
@@ -3056,16 +3115,19 @@ async function replaceImage(sid, f, mode, known) {
   snapshotNow();
   const o = scenes[i],
     n = { ...o, img: objURL(p.blob), blob: p.blob, th: p.th, src: srcOf(f, hash, w, h) };
-  for (const k of ['hd', 'hdBlob', 'taken', 'gps', 'cam']) delete n[k];
+  for (const k of ['hd', 'hdBlob', 'taken', 'gps', 'cam', 'sq', 'sqBlob']) delete n[k];
   if (p.hdBlob) Object.assign(n, { hd: objURL(p.hdBlob), hdBlob: p.hdBlob });
   Object.assign(n, cap);
   scenes[i] = n;
   freeURL(o.img);
   freeURL(o.hd);
+  freeURL(o.sq);
   if (o.hdBlob && !p.hdBlob) hdGone.add(sid);
   dirtyScenes.add(sid);
   save();
   swapPano(sid);
+  // The thumbnail keeps its view: the start view, or the one the author pinned.
+  sqFrom(sid, p.small).catch(() => sqFill());
   // The start view and north were kept; the guides help check that the new photo still
   // stands level where the old one did.
   if (i == current) showGuides();
@@ -3171,6 +3233,7 @@ function ui() {
   renderHotspotList();
   renderHotspotProps();
   syncMeta();
+  if (!EMBED) syncSq();
   syncNote();
   syncSnap();
   syncLevel();
@@ -3345,6 +3408,7 @@ $('sstart').onclick = () => {
   if (Math.abs(fov - FOV0) > 0.5) s.f0 = Math.round(fov * 10) / 10;
   else delete s.f0;
   save();
+  if (!s.sqv) sqSoon(s.id);
   showScene(current);
   toast(t('msg.startSaved'));
 };
@@ -3376,6 +3440,7 @@ function tiltScene(deg) {
   showGuides();
   syncLevel();
   save();
+  sqSoon(s.id);
 }
 function syncLevel() {
   const s = scenes[current];
@@ -3415,9 +3480,12 @@ function repeatOnHold(b, f) {
 repeatOnHold($('lvlccw'), () => tiltScene(-LEVEL_STEP));
 repeatOnHold($('lvlcw'), () => tiltScene(LEVEL_STEP));
 $('lvl0').onclick = () => {
-  delete scenes[current]?.lq;
+  const s = scenes[current];
+  if (!s) return;
+  delete s.lq;
   syncLevel();
   save();
+  sqSoon(s.id);
 };
 let delConfirm = 0;
 $('sdel').onclick = () => {
@@ -3524,7 +3592,7 @@ async function toPortable(Q, forTour, put) {
   put = put || toDataURL;
   out.scenes = [];
   for (const s of Q.scenes) {
-    const { blob, hdBlob, hd, ...r } = s;
+    const { blob, hdBlob, hd, sqBlob, ...r } = s;
     if (forTour && !Q.meta) {
       delete r.taken;
       delete r.gps;
@@ -3535,6 +3603,10 @@ async function toPortable(Q, forTour, put) {
       r.src = o;
     }
     if (forTour) delete r.cam; // the author's record, not the visitor's
+    if (forTour) delete r.sqv; // only the editor makes thumbnails
+    // The square thumbnail: a data: URL, or a file beside the 2:1 one in the folder tour.
+    if (sqBlob) r.sq = await put(sqBlob, 'thumbs/' + s.id + '-sq');
+    else delete r.sq;
     // The tour's scene grid loads thumbnails lazily, as files of their own.
     if (zip && r.th) r.th = await inline(r.th, 'thumbs/' + s.id);
     // The single file carries the 4096 copies only: at 8192 it would grow about fourfold.
@@ -3575,7 +3647,8 @@ const portableProject = () => toPortable(project);
 const EXPORT_BIG_MB = 100;
 function exportEstimate() {
   let n = 0;
-  for (const s of scenes) n += (s.blob?.size || 0) + (s.snd?.blob?.size || 0);
+  for (const s of scenes)
+    n += (s.blob?.size || 0) + (s.snd?.blob?.size || 0) + (s.sqBlob?.size || 0);
   n += (project.audio?.blob?.size || 0) + (project.plan?.blob?.size || 0);
   n += project.cover?.blob?.size || 0;
   return (n * 4) / 3 + 8e5;
@@ -3899,6 +3972,22 @@ const cleanScene = s => {
   };
   if (isDataImage(s.th)) out.th = s.th;
   if (isDataImage(s.hd)) out.hd = s.hd;
+  // A square thumbnail as renderSq() makes it: a JPEG, a few tens of KB. Anything else is left
+  // out and made again.
+  if (
+    typeof s.sq == 'string' &&
+    s.sq.startsWith('data:image/jpeg;base64,/9j/') &&
+    s.sq.length <= SQ_MAX
+  )
+    out.sq = s.sq;
+  const v = s.sqv;
+  if (v && typeof v == 'object') {
+    const y = num(v.y, NaN),
+      pt = num(v.p, NaN),
+      f = num(v.f, NaN);
+    if (Number.isFinite(y) && Math.abs(pt) <= PI / 2 && f >= FOV_MIN && f <= FOV_MAX)
+      out.sqv = { y: ((y % 1) + 1) % 1, p: pt, f };
+  }
   const nt = cleanNote(s.note);
   if (nt) out.note = nt;
   // A clip, as the editor takes it: audio, 8 MB at most, with a delay of up to 30 s.
@@ -4033,6 +4122,10 @@ $('pfile').onchange = async e => {
         s.snd.blob = dataToBlob(s.snd.src);
         s.snd.src = objURL(s.snd.blob);
       }
+      if (s.sq) {
+        s.sqBlob = dataToBlob(s.sq);
+        s.sq = objURL(s.sqBlob);
+      }
     }
     if (d.audio) {
       d.audio.blob = dataToBlob(d.audio.src);
@@ -4057,6 +4150,7 @@ $('pfile').onchange = async e => {
     coverDirty = !!d.cover;
     storedSceneIds = new Set();
     storedSnd = new Map();
+    storedSq = new Map();
     await flush();
     closeLib();
     toast(t('msg.imported'));
@@ -4097,6 +4191,7 @@ function setProject(id, d) {
   applyMigration(d);
   storedSceneIds = new Set(scenes.map(s => s.id));
   storedSnd = new Map(scenes.filter(s => s.snd).map(s => [s.id, s.snd.blob]));
+  storedSq = new Map(scenes.filter(s => s.sqBlob).map(s => [s.id, s.sqBlob]));
   editCount = 0;
   $('ptitle').value = project.title || '';
   syncAuto();
@@ -4111,6 +4206,7 @@ function setProject(id, d) {
     buildHotspots();
     ui();
   }
+  sqFill(); // scenes from before square thumbnails
 }
 async function openProject(id) {
   if (id == projectId) return;
@@ -4147,6 +4243,8 @@ async function duplicateProject(id) {
       if (h instanceof Blob) await dbOp('put', 'h:' + nid + ':' + s.id, h);
       const sa = s.snd && (await dbOp('get', 'sa:' + id + ':' + s.id).catch(() => null));
       if (sa instanceof Blob) await dbOp('put', 'sa:' + nid + ':' + s.id, sa);
+      const sq = s.sq && (await dbOp('get', 't:' + id + ':' + s.id).catch(() => null));
+      if (sq instanceof Blob) await dbOp('put', 't:' + nid + ':' + s.id, sq);
     }
     const a = await dbOp('get', 'a:' + id).catch(() => null);
     if (a instanceof Blob) await dbOp('put', 'a:' + nid, a);
@@ -4171,6 +4269,7 @@ async function deleteProject(id) {
       await dbOp('del', 'b:' + id + ':' + s.id).catch(() => {});
       await dbOp('del', 'h:' + id + ':' + s.id).catch(() => {});
       await dbOp('del', 'sa:' + id + ':' + s.id).catch(() => {});
+      await dbOp('del', 't:' + id + ':' + s.id).catch(() => {});
     }
     await dbOp('del', 'a:' + id).catch(() => {});
     await dbOp('del', 'pl:' + id).catch(() => {});
@@ -4280,7 +4379,7 @@ function openGrid(from) {
   L.innerHTML = scenes
     .map(
       (s, i) =>
-        `<button data-i="${i}" tabindex="-1"${i == current ? ' class="on" aria-current="true"' : ''}><span class="no" dir="ltr">${i + 1}</span>${s.th ? `<img src="${esc(s.th)}" alt="" loading="lazy" draggable="false">` : '<span class="ph"></span>'}<span class="nm" dir="auto">${esc(s.name)}</span></button>`
+        `<button data-i="${i}" tabindex="-1"${i == current ? ' class="on" aria-current="true"' : ''}><span class="no" dir="ltr">${i + 1}</span>${thumbOf(s) ? `<img src="${esc(thumbOf(s))}" alt="" loading="lazy" draggable="false">` : '<span class="ph"></span>'}<span class="nm" dir="auto">${esc(s.name)}</span></button>`
     )
     .join('');
   $('sgf').value = '';
@@ -5221,12 +5320,16 @@ let undoStack = [],
   undoPos = -1,
   snapTimer,
   restoring = false;
+// Thumbnails are made in the background and are not steps of their own.
 const sceneKey = () =>
-  JSON.stringify(scenes.map(s => ({ ...s, img: 0, th: 0, blob: 0, hd: 0, hdBlob: 0 })));
+  JSON.stringify(
+    scenes.map(s => ({ ...s, img: 0, th: 0, blob: 0, hd: 0, hdBlob: 0, sq: 0, sqBlob: 0 }))
+  );
 const cloneScene = s => ({
   ...s,
   hs: JSON.parse(JSON.stringify(s.hs || [])),
   pp: s.pp && { ...s.pp },
+  sqv: s.sqv && { ...s.sqv },
 });
 function syncUndoButtons() {
   const u = $('undo'),
@@ -5273,6 +5376,7 @@ function restoreSnapshot(i) {
   // a new URL, and the one that was on show lets its own go.
   scenes.forEach(s => {
     const o = live.get(s.id);
+    restoreSq(s, o);
     if (o && o.blob === s.blob) {
       s.img = o.img;
       if (s.hdBlob) s.hd = o.hd;
@@ -5308,6 +5412,26 @@ function restoreSnapshot(i) {
     buildHotspots();
     ui();
   }
+}
+// The square thumbnail of scene s as a snapshot brings it back, o being the scene it replaces. A
+// snapshot taken before the thumbnail was made keeps the one on show while that one still fits;
+// one that no longer fits the scene's image or view is made again.
+function restoreSq(s, o) {
+  if (s.sqBlob) {
+    if (o?.sqBlob === s.sqBlob) s.sq = o.sq;
+    else {
+      s.sq = objURL(s.sqBlob);
+      freeURL(o?.sq);
+    }
+  } else if (o?.sqBlob && sqFits(o.sqBlob, s) && o.blob === s.blob) {
+    s.sq = o.sq;
+    s.sqBlob = o.sqBlob;
+  } else {
+    delete s.sq;
+    freeURL(o?.sq);
+  }
+  if (!s.sqBlob) sqFill();
+  else if (!sqFits(s.sqBlob, s)) sqSoon(s.id);
 }
 const undo = () => {
     if (iqRuns) return;
@@ -6049,27 +6173,35 @@ const COVER_W = 1280,
 // Renders the current view again, into an off-screen target of w × h, and returns it on a 2D
 // canvas. The camera keeps its field of view, so at the stage's aspect the frame is the one on
 // screen. hs false leaves the hotspots out; true draws them as the last frame laid them out,
-// labels shown on hover hidden unless they are showing. The pixels are read straight into the
-// canvas's own buffer and flipped there, so a 2400 px picture holds two copies, not three.
+// labels shown on hover hidden unless they are showing.
 function renderView(w, h, hs) {
+  const cam = camera.clone(),
+    shown = hotspotGroup.visible;
+  cam.aspect = w / h;
+  cam.updateProjectionMatrix();
+  hotspotGroup.visible = shown && hs;
+  try {
+    return renderTo(scene3d, cam, w, h);
+  } finally {
+    hotspotGroup.visible = shown;
+  }
+}
+// Renders sc through cam into an off-screen target of w × h and returns it on a 2D canvas. The
+// pixels are read straight into the canvas's own buffer and flipped there, so a 2400 px picture
+// holds two copies, not three.
+function renderTo(sc, cam, w, h) {
   const rt = new THREE.WebGLRenderTarget(w, h),
-    cam = camera.clone(),
-    shown = hotspotGroup.visible,
     c = document.createElement('canvas'),
     ctx = c.getContext('2d'),
     im = ctx.createImageData(w, h),
     px = new Uint8Array(im.data.buffer);
   rt.texture.encoding = THREE.sRGBEncoding;
-  cam.aspect = w / h;
-  cam.updateProjectionMatrix();
-  hotspotGroup.visible = shown && hs;
   try {
     renderer.setRenderTarget(rt);
-    renderer.render(scene3d, cam);
+    renderer.render(sc, cam);
     renderer.readRenderTargetPixels(rt, 0, 0, w, h, px);
   } finally {
     renderer.setRenderTarget(null);
-    hotspotGroup.visible = shown;
     rt.dispose();
   }
   // WebGL reads rows from the bottom up.
@@ -6098,6 +6230,199 @@ async function captureCover() {
   save();
   syncCover();
   return true;
+}
+// ───────────── square scene thumbnails ─────────────
+// Each scene has a square thumbnail of a real view, the way a visitor would see the room, for the
+// scene list, the tour's scene grid and the library: a whole panorama squeezed to 2:1 is
+// unreadable among a hundred stone rooms. It is rendered off-screen, without hotspots, from the
+// scene's start view at a fixed 75°, wider than most start views so a room reads, or from a view
+// the author pinned (sqv). It is kept as a Blob under t:<project>:<scene> (s.sq is its URL), made
+// when an image is added or replaced, and again a second after the start view or the level
+// correction changes. Projects made before it are filled in while the editor is idle, one scene
+// at a time. A render works from a 2048 px copy decoded from the stored 4096 one, never from the
+// textures on show, so it neither evicts a panorama nor holds a second large one on the GPU.
+// The 2:1 th stays: older builds and the import queue's rows use it.
+const SQ_PX = 320,
+  SQ_FOV = 75,
+  SQ_SRC = 2048, // ample for 320 px across 75°: about 430 source pixels
+  SQ_MAX = 200000; // characters of an imported data: URL
+const sqScene = new THREE.Scene(),
+  sqWorld = new THREE.Group(),
+  sqLevel = new THREE.Group(),
+  sqMat = new THREE.MeshBasicMaterial(),
+  sqCam = new THREE.PerspectiveCamera(SQ_FOV, 1, 0.1, 2000);
+sqCam.rotation.order = 'YXZ';
+sqScene.add(sqWorld);
+sqWorld.add(sqLevel);
+sqLevel.add(new THREE.Mesh(sphereGeo, sqMat));
+// The view a thumbnail shows, as showScene() would set it: a turn of the scene, a pitch and a
+// vertical field of view.
+const sqView = s => s.sqv || { y: s.u0 || 0, p: s.p0 || 0, f: SQ_FOV },
+  sqKey = s => JSON.stringify([sqView(s), s.lq || null]),
+  // What each thumbnail made in this session was made from, so one brought back by undo can be
+  // told from one that no longer fits its scene. Thumbnails read from storage aren't listed.
+  sqMade = new WeakMap(),
+  sqFits = (b, s) => {
+    const m = sqMade.get(b);
+    return !m || (m.img === s.blob && m.key === sqKey(s));
+  },
+  thumbOf = s => s.sq || s.th;
+// A 2048 × 1024 copy of a panorama, as an ImageBitmap, from a stored Blob or a canvas in hand.
+// The browser decodes and scales it off the main thread. Drawn into a canvas instead, or scaled
+// with a better filter, it costs a 50–85 ms task on a phone-speed CPU when it reaches the GPU;
+// this way, under 10 ms. Where the browser can't resize, the bitmap keeps its own size.
+const panoSmall = src =>
+  createImageBitmap(src, { resizeWidth: SQ_SRC, resizeHeight: SQ_SRC / 2, resizeQuality: 'low' });
+// Renders scene s's thumbnail from pano, its 2048 copy, and releases the copy. The render is
+// synchronous, so it sees the scene as it is now; the JPEG is encoded after.
+function renderSq(s, pano) {
+  const v = sqView(s),
+    made = { img: s.blob, key: sqKey(s) },
+    tex = new THREE.Texture(pano);
+  // A bitmap ignores the flip on upload, so the texture turns it the right way up instead.
+  tex.flipY = false;
+  tex.repeat.set(1, -1);
+  tex.offset.set(0, 1);
+  tex.encoding = THREE.sRGBEncoding;
+  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearFilter;
+  tex.needsUpdate = true;
+  sqMat.map = tex;
+  sqWorld.rotation.y = 2 * PI * v.y + PI / 2;
+  sqLevel.quaternion.fromArray(s.lq || NO_TILT);
+  sqCam.fov = v.f;
+  sqCam.rotation.set(v.p, 0, 0);
+  sqCam.updateProjectionMatrix();
+  let c;
+  try {
+    c = renderTo(sqScene, sqCam, SQ_PX, SQ_PX);
+  } finally {
+    sqMat.map = null;
+    tex.dispose();
+    pano.close();
+  }
+  return canvasBlob(c, 'image/jpeg', 0.72).then(b => {
+    if (b) sqMade.set(b, made);
+    return b;
+  });
+}
+// Gives scene id a new thumbnail rendered from pano, if the scene still shows the same image
+// from the same view once it is encoded; otherwise a newer request is on its way. Returns
+// whether it was taken.
+async function sqFrom(id, pano) {
+  const pid = projectId,
+    s = scenes.find(x => x.id == id);
+  if (!s || renderer.xr.isPresenting) {
+    pano.close();
+    return false;
+  }
+  const b = await renderSq(s, pano),
+    x = scenes.find(y => y.id == id);
+  if (!b || pid != projectId || !x || !sqFits(b, x)) return false;
+  const old = x.sq;
+  x.sq = objURL(b);
+  x.sqBlob = b;
+  sqShown();
+  freeURL(old);
+  return true;
+}
+// Renders scene id's thumbnail again from its stored copy. Decodes take their turn with the
+// panoramas and the imports, so a phone holds one decoded image at a time.
+async function sqRedo(id) {
+  const s = scenes.find(x => x.id == id);
+  if (!s?.blob || EMBED) return false;
+  let pano;
+  await decodeTurn('sq');
+  try {
+    pano = await panoSmall(s.blob);
+  } finally {
+    decodeDone();
+  }
+  return sqFrom(id, pano);
+}
+// A changed thumbnail is written with the next save, and the lists show it at once.
+function sqShown() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flush, 400);
+  renderScenes();
+  if (scenes[current]) syncSq();
+}
+// The start view or level correction changed: the thumbnail follows a second later, once the
+// author has stopped turning.
+const sqTimers = {};
+function sqSoon(id) {
+  clearTimeout(sqTimers[id]);
+  sqTimers[id] = setTimeout(() => {
+    delete sqTimers[id];
+    sqRedo(id).catch(() => {});
+  }, 1000);
+}
+// Fills in the scenes that have no square thumbnail, one per idle moment. Never during a walk or
+// a fade, nor while images are being added or replaced, which make their own.
+let sqFilling = 0;
+const sqFailed = new WeakSet(); // stored copies that couldn't be rendered, not tried again
+const whenIdle = f =>
+  window.requestIdleCallback ? requestIdleCallback(f, { timeout: 3000 }) : setTimeout(f, 300);
+function sqFill() {
+  if (EMBED || sqFilling) return;
+  sqFilling = 1;
+  whenIdle(async () => {
+    const s = scenes.find(x => x.blob && !x.sqBlob && !sqFailed.has(x.blob));
+    if (!s) return (sqFilling = 0);
+    if (walking || fading || iqBusy() || repBusy || document.hidden) {
+      sqFilling = 0;
+      return setTimeout(sqFill, 1000);
+    }
+    const b = s.blob;
+    try {
+      if (!(await sqRedo(s.id)) && scenes.includes(s) && s.blob === b && !s.sqBlob) sqFailed.add(b);
+    } catch (e) {
+      sqFailed.add(b);
+    }
+    sqFilling = 0;
+    sqFill();
+  });
+}
+// The thumbnail in the scene settings, and whether it follows the start view.
+function syncSq() {
+  const s = scenes[current],
+    im = $('ssqi');
+  if (!s) return;
+  if (s.sq) {
+    if (im.getAttribute('src') != s.sq) im.src = s.sq;
+  } else im.removeAttribute('src');
+  im.hidden = !s.sq;
+  $('ssqr').disabled = !s.sqv;
+  $('ssqh').textContent = t(s.sqv ? 'hint.thumbPinned' : 'hint.thumbStart');
+}
+if (!EMBED) {
+  // Pins the thumbnail to the view on screen, zoom included.
+  $('ssqv').onclick = () => {
+    const s = scenes[current];
+    if (!s) return;
+    s.sqv = {
+      y: Math.round(((((worldTurn - yaw / (2 * PI)) % 1) + 1) % 1) * 1e4) / 1e4,
+      p: Math.round(pitch * 1e4) / 1e4,
+      f: Math.round(fov * 10) / 10,
+    };
+    save();
+    syncSq();
+    sqRedo(s.id).then(
+      ok => ok && toast(t('msg.thumbSet')),
+      () => toast(t('msg.imgFail'))
+    );
+  };
+  $('ssqr').onclick = () => {
+    const s = scenes[current];
+    if (!s?.sqv) return;
+    delete s.sqv;
+    save();
+    syncSq();
+    sqRedo(s.id).then(
+      ok => ok && toast(t('msg.thumbSet')),
+      () => toast(t('msg.imgFail'))
+    );
+  };
 }
 // ───────────── save the view as an image ─────────────
 // A still of what is on screen, for a survey report: the stage's frame, SNAP_PX on its long

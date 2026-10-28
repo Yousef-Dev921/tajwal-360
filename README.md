@@ -102,6 +102,19 @@ that isn't granted it says once per session that the browser may clear the work.
 - Glyphs on light icon colours, such as white, are drawn dark so they stay visible.
 - 60 steps of undo and redo.
 - Scene thumbnails, drag-to-reorder, rename and delete.
+- Square scene thumbnails that look like the place: a 320 × 320 picture of a real view,
+  without hotspots, for the scene list, the tour's scene grid and the library (for a
+  project without a cover). It is taken from the start view at a fixed 75°, wider than most
+  start views so a room reads, with the level correction applied, and follows the start view
+  and the level a second after they change. "Use the current view" pins it to the view on
+  screen, zoom included, and "From the start view" lets it follow again. It is made when an
+  image is added or replaced, and a project from before it gets its thumbnails while the
+  editor is idle, one scene at a time and never during a walk. Each is rendered off-screen
+  from a 2048 px copy that the browser decodes and scales off the main thread, so it never
+  touches the panoramas on show or their memory budget. Measured on a 60-scene project: about
+  8 ms of main-thread work per thumbnail on a desktop and 12 ms with the CPU slowed fourfold
+  as for a phone, with no task long enough to delay input. The squeezed
+  2:1 thumbnail is kept for older builds and the import queue.
 - Tours of more than 12 scenes get a search field over the scene list and over a link's
   list of destinations. Search ignores case, accents and Arabic diacritics, treats the alef
   forms (أ إ آ ا) as one, and finds a scene by its number in the tour as well as by name.
@@ -295,7 +308,8 @@ scenes/<id>.jpg     one file per panorama
 audio/music.<ext>   background music
 audio/<id>.<ext>    each scene's audio clip
 icons/<id>.png      custom icons, only those in use
-thumbs/<id>.jpg     scene thumbnails for the scene grid, loaded when it opens
+thumbs/<id>-sq.jpg  square scene thumbnails for the scene grid, loaded when it opens
+thumbs/<id>.jpg     the 2:1 thumbnails, for builds that predate the square ones
 plan.<ext>, cover.jpg, nadir.png, logo.<ext>
 ```
 
@@ -339,6 +353,7 @@ IndexedDB database `vrtour`, object store `k`:
 | `pl:<id>` | Floor plan image as a `Blob` |
 | `cv:<id>` | Cover image as a `Blob` |
 | `sa:<id>:<sceneId>` | A scene's audio clip as a `Blob` |
+| `t:<id>:<sceneId>` | A scene's square thumbnail, a 320 × 320 JPEG `Blob` |
 | `last` | Most recently opened project |
 
 Keeping images out of the document is what makes autosave cheap. Autosave runs on
@@ -380,6 +395,8 @@ whichever way the project was opened.
     "note": "East iwan\nTimber decay in the roof",
     "img": "data:image/jpeg;base64,...",
     "th":  "data:image/jpeg;base64,...",
+    "sq":  "data:image/jpeg;base64,...",
+    "sqv": { "y": 0.42, "p": -0.1, "f": 60 },
     "hd":  "data:image/jpeg;base64,...",
     "u0": 0.8, "p0": 0, "n": 0.25, "f0": 60,
     "lq": [0.0262, 0, 0, 0.9997],
@@ -445,6 +462,14 @@ whichever way the project was opened.
 - `taken` is the camera's local capture time, with no time zone, and `gps` the position in
   decimal degrees. Both are optional. `meta` decides whether the tour shows them; an
   exported tour carries them only when it is `true`.
+- Scene `sq`, optional, is the square thumbnail: in a `.json` file and the single-file tour
+  a `data:image/jpeg` URL of at most 200,000 characters, in a folder tour's `data.js` the
+  path of a file under `thumbs/`. Import keeps only a base64 JPEG within that length, and a
+  scene without one gets a new thumbnail. The name is `sq` (square) rather than `cv`, so it
+  isn't mistaken for the project's cover. Scene `sqv`, optional, is the view the author
+  pinned it to: `y` the turn of the scene from 0 to 1, as `u0`, `p` the pitch in radians
+  (±π/2) and `f` the vertical field of view, 40 to 95. Without it the thumbnail follows the
+  start view. An exported tour leaves `sqv` out.
 - Scene `cam`, optional, is the camera that took the photo: Exif make and model, then the
   focal length, at most 80 characters. Import keeps it as a trimmed string without control
   or bidi formatting characters. It is the author's record: an exported tour leaves it out,
