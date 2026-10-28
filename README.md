@@ -116,7 +116,8 @@ that isn't granted it says once per session that the browser may clear the work.
   message offers Undo too. On a 150-scene tour with 450 hotspots it takes about 30 ms.
 - Glyphs on light icon colours, such as white, are drawn dark so they stay visible.
 - 60 steps of undo and redo.
-- Scene thumbnails, drag-to-reorder, rename and delete.
+- Scene thumbnails, drag-to-reorder, rename and delete. Reordering is a pointer drag, so it
+  works with a finger too: hold a scene for a quarter of a second, then drag it.
 - A scene manager for large tours: "Manage scenes" over the scene list, or Ctrl+Shift+M
   (Cmd+Shift+M on a Mac), opens every scene as a card on the whole screen, as large cards,
   small cards or a list with the capture date, the original's pixel size and its file size.
@@ -133,6 +134,9 @@ that isn't granted it says once per session that the browser may clear the work.
     the scene bar, each as one step of undo. A deletion takes the links that led to the
     scenes along and says how many; its Undo puts back every scene at its place, with its
     images, clip, thumbnail and links.
+  - In tour order the cards can be dragged into place, the selection moving together in
+    its order: at once with a mouse, after a short hold with a finger. The list scrolls near
+    its edges, a bar shows where the cards will land and Escape cancels.
   - From the keyboard, the arrow keys move between cards, Space selects, Enter opens, F2
     renames and Delete deletes the selection; Ctrl+Z undoes. Thumbnails load as cards come
     near the screen and are let go once they are past it, so a phone never holds all 143
