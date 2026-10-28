@@ -1746,6 +1746,10 @@ canvas {
   background: color-mix(in srgb, var(--ac) 22%, transparent);
   pointer-events: none;
 }
+/* the thumbnail strip is a band with no margin of its own, so a bottom logo keeps clear of it */
+#root.view #stage:has(> #sb[data-k='strip']) #logo {
+  --gap-b: calc(var(--s4) + var(--sb-h, 0px) + var(--s2));
+}
 /* the start screen covers the stage, but the logo belongs on it too */
 #stage:has(> #start:not([hidden])) #logo {
   z-index: 16;
@@ -1755,7 +1759,7 @@ canvas {
   z-index: 16;
 }
 #stage:has(> #start:not([hidden])) #top > :not(#back) {
-  visibility: hidden;
+  display: none;
 }
 /* make room for a top logo in the title row, and move the compass below it */
 .logo-tl #top {
