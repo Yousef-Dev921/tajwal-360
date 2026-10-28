@@ -675,6 +675,178 @@ label.pri {
   transform: scale(0.96);
 }
 
+/* ───────────────────────── import queue ───────────────────────── */
+#iq {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  background: var(--pn2);
+  border: 1px solid var(--bd);
+  border-radius: var(--r3);
+  scroll-margin-block: 120px var(--s4); /* clear of the sticky panel header */
+}
+#iq > header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+#iqh {
+  flex: 1 1 10em;
+  font-size: var(--tSm);
+  font-weight: 650;
+}
+/* the buttons wrap below the count together, at the inline end */
+#iq > header > span {
+  display: flex;
+  gap: var(--s2);
+  margin-inline-start: auto;
+}
+#iql {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 320px;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+}
+.iqr {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  column-gap: var(--s2);
+  row-gap: 2px;
+  padding: var(--s2) 0;
+  border-top: 1px solid var(--bd);
+  transition: opacity var(--mo2) var(--ez);
+}
+.iqr:first-child {
+  border-top: 0;
+}
+.iqr.out {
+  opacity: 0;
+}
+.iqt {
+  grid-row: span 2;
+  align-self: center;
+  width: 48px;
+  height: 24px;
+  border-radius: var(--r1);
+  background: var(--pn3);
+  overflow: hidden;
+}
+.iqt img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.iqn {
+  font-size: var(--tSm);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.iqs {
+  font-size: var(--tSm);
+  color: var(--mu);
+  line-height: 1.4;
+}
+.iqr[data-st='fail'] .iqs {
+  color: var(--dg);
+}
+/* a block in the row's own direction, so it fills from the right in Arabic */
+.iqp {
+  grid-column: 1 / -1;
+  height: 3px;
+  margin-top: var(--s1);
+  border-radius: var(--rp);
+  background: var(--pn3);
+  overflow: hidden;
+}
+.iqp i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--acT);
+  transition: width var(--mo2) var(--ez);
+}
+.iqr[data-st='fail'] .iqp i {
+  background: var(--dg);
+}
+.iqa {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s1);
+}
+.iqa:empty {
+  display: none;
+}
+.iqa button {
+  flex: 1 1 auto;
+}
+/* Below 760 px the queue floats at the foot of the stage, clear of the sheet's top edge
+   and the title chip; the list scrolls inside it. */
+#stage > #iq {
+  position: absolute;
+  z-index: 8;
+  inset-inline: var(--s3);
+  bottom: calc(14px + var(--s3));
+  max-width: 460px;
+  max-height: calc(100% - 92px);
+  margin: 0 auto;
+  background: var(--pn);
+  box-shadow: var(--sh3);
+}
+#stage > #iq #iql {
+  max-height: none;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.view #iq {
+  display: none;
+}
+
+/* the drop target over the editor's stage: the stage is dark in both themes, so the
+   outline and text are white on the scrim, like the other chrome over a panorama */
+#drop {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  display: flex;
+  padding: var(--s5);
+  background: var(--gl);
+  pointer-events: none;
+  animation: drop var(--mo1) var(--ez);
+}
+#drop > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s3);
+  padding: var(--s4);
+  border: 2px dashed #fff;
+  border-radius: var(--r3);
+  color: #fff;
+  font-size: var(--tLg);
+  font-weight: 650;
+  text-align: center;
+}
+#drop .ic {
+  width: 40px;
+  height: 40px;
+}
+@keyframes drop {
+  from {
+    opacity: 0;
+  }
+}
+
 #hlist {
   display: flex;
   flex-direction: column;
