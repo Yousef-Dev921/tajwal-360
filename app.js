@@ -18,7 +18,8 @@ const uid = () => Math.random().toString(36).slice(2, 9),
   EMBED = window.__TOUR__,
   textures = {};
 // ───────────── theme, language, strings ─────────────
-// localStorage throws outright in some private-browsing modes, so every access is guarded.
+// localStorage and sessionStorage throw outright in some private-browsing modes, so every
+// access is guarded.
 const lsGet = k => {
     try {
       return localStorage.getItem(k);
@@ -29,6 +30,18 @@ const lsGet = k => {
   lsSet = (k, v) => {
     try {
       localStorage.setItem(k, v);
+    } catch (e) {}
+  },
+  ssGet = k => {
+    try {
+      return sessionStorage.getItem(k);
+    } catch (e) {
+      return null;
+    }
+  },
+  ssSet = (k, v) => {
+    try {
+      sessionStorage.setItem(k, v);
     } catch (e) {}
   };
 // Every interface string, in Arabic and English. Static markup refers to these keys through
@@ -97,6 +110,7 @@ const I18N = {
     'act.redo': 'إعادة',
     'act.redoTitle': 'إعادة (Ctrl+Shift+Z)',
     'act.preview': 'معاينة',
+    'act.previewTitle': 'الجولة كما يراها الزائر، من شاشة البداية (Shift مع النقر لتخطّيها)',
     'act.export': 'تصدير HTML',
     'act.exportTitle':
       'ملف HTML واحد يُفتح في أي مكان، حتى من الجهاز مباشرة. يناسب الجولات الصغيرة.',
@@ -239,6 +253,18 @@ const I18N = {
     'smg.rename': 'إعادة تسمية المشهد',
     'smg.keys': 'المسافة تحدّد المشهد، وEnter يفتحه، وF2 يعيد تسميته، وDelete يحذف المحدّد.',
     'smg.touch': 'المس البطاقة مطوّلاً لتحديدها، أو المسها لحظة ثم اسحبها لنقلها.',
+    'act.fs': 'ملء الشاشة',
+    'act.fsExit': 'الخروج من ملء الشاشة',
+    'nav.strip': 'المشاهد',
+    'nav.cell': '\u2066{n}\u2069. {name}',
+    'nav.hideBar': 'إخفاء المشاهد',
+    'nav.showBar': 'إظهار المشاهد',
+    'opt.bar': 'شريط المشاهد',
+    'bar.thumbs': 'صور مصغّرة',
+    'bar.names': 'أسماء',
+    'bar.none': 'مخفي',
+    'hint.bar':
+      'في الجولة والمعاينة. تُظهر الأسماء كل مشهد باسمه حتى \u206612\u2069 مشهداً، وزرّي السابق والتالي لما يزيد. عند الإخفاء لا يتنقّل الزائر إلا عبر النقاط التفاعلية والمخطط.',
     'f.targetFind': 'ابحث عن الوجهة',
     'hint.meta':
       'يُقرأ التاريخ والموقع من بيانات الكاميرا داخل الصورة، ولا تتضمّنهما الجولة المصدَّرة إلا عند تفعيل هذا الخيار.',
@@ -519,6 +545,8 @@ const I18N = {
     'act.redo': 'Redo',
     'act.redoTitle': 'Redo (Ctrl+Shift+Z)',
     'act.preview': 'Preview',
+    'act.previewTitle':
+      'The tour as visitors see it, from the start screen (Shift-click to skip it)',
     'act.export': 'Export HTML',
     'act.exportTitle':
       'One HTML file that opens anywhere, even straight from disk. Best for small tours.',
@@ -643,6 +671,18 @@ const I18N = {
     'smg.keys':
       'Space selects a scene, Enter opens it, F2 renames it and Delete deletes the selection.',
     'smg.touch': 'Hold a card to select it, or hold it a moment and drag it to move it.',
+    'act.fs': 'Full screen',
+    'act.fsExit': 'Exit full screen',
+    'nav.strip': 'Scenes',
+    'nav.cell': '{n}. {name}',
+    'nav.hideBar': 'Hide scenes',
+    'nav.showBar': 'Show scenes',
+    'opt.bar': 'Scene bar',
+    'bar.thumbs': 'Thumbnails',
+    'bar.names': 'Names',
+    'bar.none': 'Hidden',
+    'hint.bar':
+      'In the tour and Preview. Names lists every scene by name up to 12 scenes, and previous and next beyond that. When hidden, visitors move only through hotspots and the floor plan.',
     'f.targetFind': 'Find a destination',
     'hint.meta':
       'Both are read from the camera data in each photo. An exported tour includes them only while this is on.',
@@ -2786,14 +2826,9 @@ const selHotspot = () => scenes[current]?.hs.find(h => h.id == selId);
 const MANY = 12;
 // The scenes the tour's bar, its grid and previous and next go through: all of them in tour
 // order, less those the author hid from the bar (scene hide). A hidden scene is still reached by
-// its hotspots and the plan, as a corridor or a detail of another room often is.
+// its hotspots and the plan, as a corridor or a detail of another room often is. barScenes()
+// gives the same scenes as tour indices.
 const navScenes = () => scenes.filter(s => !s.hide);
-// The tour index of the nearest scene in the bar after (dir 1) or before (dir -1) the current
-// one, hidden or not, or -1.
-function navStep(dir) {
-  for (let k = current + dir; k >= 0 && k < scenes.length; k += dir) if (!scenes[k].hide) return k;
-  return -1;
-}
 // Folds text for searching. Case, accents and Arabic diacritics (tashkeel, tatweel) are
 // dropped; alef with hamza or madda becomes a plain alef, alef maqsura yaa and taa marbuta
 // haa; Arabic-Indic digits become Latin. So "ايوان" finds "إيوان" and "12" finds "١٢". NFKD
@@ -2884,46 +2919,280 @@ function renderScenes() {
     if (!$('smg').hidden) smDraw();
   }
 }
-// The tour's scene bar. It is rebuilt on every scene change, so the button that had focus
-// gets it back, and a keyboard user can press Next again and again.
+// The scenes the scene bar goes through, as tour indices in tour order: its cells, its counter,
+// and previous and next. Every scene of the tour that isn't hidden from the bar.
+const barScenes = () => scenes.map((s, i) => i).filter(i => !scenes[i].hide);
+// The scene before (d = -1) or after (d = 1) the current one in the bar's order. A scene the bar
+// leaves out still has the bar's scenes on either side of it in the tour as neighbours.
+function barStep(d) {
+  const L = barScenes(),
+    k = L.indexOf(current);
+  if (k >= 0) return L[k + d];
+  return d < 0 ? L.filter(x => x < current).pop() : L.find(x => x > current);
+}
+// The project's scene bar: '' for the thumbnail strip, 'names' or 'none'.
+const barKind = () => (project.bar == 'names' || project.bar == 'none' ? project.bar : '');
+// A strip folded down to previous, grid and next stays folded for the rest of the visit to
+// that tour, in that tab. Kept in memory as well, for a browser that refuses sessionStorage.
+const sbFolds = {},
+  sbKey = () => 'vrt.sbFold:' + (EMBED ? location.pathname : projectId),
+  sbFolded = () => {
+    const k = sbKey();
+    if (!(k in sbFolds)) sbFolds[k] = ssGet(k) == '1';
+    return sbFolds[k];
+  };
+function sbFold() {
+  const k = sbKey();
+  sbFolds[k] = !sbFolded();
+  ssSet(k, sbFolds[k] ? '1' : '');
+  renderBar();
+}
+// The strip itself: one row of square thumbnails that scrolls sideways. It stays in the page
+// from one scene to the next and is rebuilt only when its scenes or thumbnails change. Only the
+// cells within half a strip's width either side of the view hold an image (sbIO); the others
+// drop theirs, so a 143-scene tour keeps some 30 thumbnails decoded, not 143.
+const sbS = document.createElement('div');
+sbS.id = 'sbs';
+sbS.setAttribute('role', 'group');
+let sbRows = [], // [index, id, thumbnail, label] of each cell as the strip shows it
+  sbAt = '', // the scene the strip was last centred on, and the direction, or '' when hidden
+  sbLive = false; // whether sbIO is watching the cells
+const sbFace = (r, j) =>
+    r[2]
+      ? `<img alt="" data-src="${esc(r[2])}" draggable="false">`
+      : `<span class="ph" dir="ltr">${j + 1}</span>`,
+  sbCell = (r, j) =>
+    `<button data-i="${r[0]}" tabindex="-1" aria-label="${esc(r[3])}">${sbFace(r, j)}</button>`;
+const sbIO = new IntersectionObserver(
+  es =>
+    es.forEach(e => {
+      const b = e.target,
+        im = b.firstChild;
+      b.toggleAttribute('data-near', e.isIntersecting);
+      if (im.tagName != 'IMG') return;
+      if (!e.isIntersecting) im.removeAttribute('src');
+      else if (!im.hasAttribute('src')) im.src = im.dataset.src;
+    }),
+  { root: sbS, rootMargin: '0px 50%' }
+);
+// The cells are watched only while the strip is on screen; hidden, it holds no image. Chrome
+// stops reporting on cells that were observed while their strip was not displayed, so they are
+// observed again each time it shows.
+function sbWatch(on) {
+  sbLive = on;
+  sbIO.disconnect();
+  for (const b of sbS.children) {
+    if (on) {
+      sbIO.observe(b);
+      continue;
+    }
+    b.removeAttribute('data-near');
+    if (b.firstChild.tagName == 'IMG') b.firstChild.removeAttribute('src');
+  }
+}
+// Scrolls the strip so that b is in its middle. scrollIntoView() would also scroll a page that
+// embeds the tour, so the strip is scrolled directly, and in the next frame, when its layout is
+// due anyway.
+function sbCentre(b, smooth) {
+  requestAnimationFrame(() => {
+    if (!b.isConnected || mode != 'view') return;
+    const a = b.getBoundingClientRect(),
+      r = sbS.getBoundingClientRect(),
+      d = a.left + a.width / 2 - (r.left + r.width / 2);
+    if (Math.abs(d) >= 1)
+      sbS.scrollBy({ left: d, behavior: smooth && !reduceMotion.matches ? 'smooth' : 'auto' });
+  });
+}
+// Makes b the strip's tab stop, focuses it and brings it into view.
+function sbFocus(b) {
+  sbS.querySelectorAll('[tabindex="0"]').forEach(x => (x.tabIndex = -1));
+  b.tabIndex = 0;
+  b.focus({ preventScroll: true });
+  const a = b.getBoundingClientRect(),
+    r = sbS.getBoundingClientRect(),
+    pad = 8;
+  if (a.left < r.left + pad) sbS.scrollLeft -= r.left + pad - a.left;
+  else if (a.right > r.right - pad) sbS.scrollLeft += a.right - (r.right - pad);
+}
+// The tour's scene bar. Previous, next and the grid button keep focus when it is redrawn, so a
+// keyboard user can press Next again and again.
 function renderBar() {
   const sb = $('sb'),
-    nav = navScenes(),
-    n = nav.length,
-    i = nav.indexOf(scenes[current]),
+    L = barScenes(),
+    n = L.length,
+    i = current,
+    k = L.indexOf(i),
+    // A hidden scene, reached by a hotspot, still gets the way back into the bar's scenes.
+    few = n < 2 && !(n && k < 0 && scenes[current]),
+    kind = few || barKind() == 'none' ? '' : barKind() || (sbFolded() ? 'fold' : 'strip'),
     f = sb.contains(document.activeElement) && document.activeElement,
-    was = f && (f.dataset.a || f.dataset.i);
-  // A hidden scene, reached by a hotspot, still gets the way back into the bar's scenes.
-  if (n < 2 && !(n && i < 0 && scenes[current])) {
-    sb.innerHTML = '';
-    return;
+    was = f && (f.dataset.a || f.dataset.i),
+    no = k < 0 ? '–' : k + 1,
+    step = (a, to) =>
+      `<button data-a="${a}" class="sbn" title="${esc(t('nav.' + a))}" aria-label="${esc(t('nav.' + a))}"${to == null ? ' disabled' : ''}><svg class="ic flip"><use href="#i-${a}"/></svg></button>`,
+    grid = `<button data-a="grid" class="sbg" aria-haspopup="dialog"><svg class="ic"><use href="#i-grid"/></svg><span dir="ltr"></span></button>`,
+    fold = `<button data-a="fold" class="sbn sbf"><svg class="ic"><use href="#i-down"/></svg></button>`;
+  if (kind != 'strip' || sb.dataset.k != 'strip') {
+    sbTip(null);
+    if (sbLive) sbWatch(false);
+    sb.dataset.k = kind;
+    sbAt = '';
+    sb.innerHTML = !kind
+      ? ''
+      : kind == 'strip'
+        ? grid + fold
+        : kind == 'names' && n <= MANY
+          ? grid +
+            L.map(
+              x =>
+                `<button data-i="${x}" class="${x == i ? 'on' : ''}" dir="auto">${esc(scenes[x].name)}</button>`
+            ).join('')
+          : step('prev', barStep(-1)) +
+            grid +
+            step('next', barStep(1)) +
+            (kind == 'fold' ? fold : '');
+    if (kind == 'strip') sb.insertBefore(sbS, sb.lastChild);
   }
-  const step = (k, dis) =>
-      `<button data-a="${k}" class="sbn" title="${esc(t('nav.' + k))}" aria-label="${esc(t('nav.' + k))}"${dis ? ' disabled' : ''}><svg class="ic flip"><use href="#i-${k}"/></svg></button>`,
-    grid = `<button data-a="grid" class="sbg" aria-haspopup="dialog" title="${esc(t('nav.all'))}" aria-label="${esc(i < 0 ? t('nav.all') : t('nav.gridAria', { i: i + 1, n }))}"><svg class="ic"><use href="#i-grid"/></svg><span dir="ltr">${i < 0 ? '–' : i + 1}/${n}</span></button>`;
-  sb.innerHTML =
-    n > MANY
-      ? step('prev', navStep(-1) < 0) + grid + step('next', navStep(1) < 0)
-      : grid +
-        nav
-          .map(s => {
-            const k = scenes.indexOf(s);
-            return `<button data-i="${k}" class="${k == current ? 'on' : ''}" dir="auto">${esc(s.name)}</button>`;
-          })
-          .join('');
-  if (was) {
+  if (!kind) return;
+  const g = sb.querySelector('.sbg'),
+    fb = sb.querySelector('.sbf');
+  g.lastChild.textContent = no + '/' + n;
+  g.title = t('nav.all');
+  g.setAttribute('aria-label', k < 0 ? t('nav.all') : t('nav.gridAria', { i: no, n }));
+  if (fb) {
+    const l = t(kind == 'fold' ? 'nav.showBar' : 'nav.hideBar');
+    fb.title = l;
+    fb.setAttribute('aria-label', l);
+    fb.classList.toggle('up', kind == 'fold');
+    fb.setAttribute('aria-expanded', kind == 'strip');
+    if (kind == 'strip') fb.setAttribute('aria-controls', 'sbs');
+  }
+  if (kind == 'strip') renderStrip(L, k);
+  if (was && !sb.contains(document.activeElement)) {
     const b = sb.querySelector(`[data-a="${was}"], [data-i="${was}"]`);
-    (b && !b.disabled ? b : sb.querySelector('[data-a="grid"]')).focus({ preventScroll: true });
+    if (b && sbS.contains(b)) sbFocus(b);
+    else (b && !b.disabled ? b : g).focus({ preventScroll: true });
   }
-  // Centre the active scene in the bar. scrollIntoView() would also scroll the page that
-  // embeds a tour, so the bar is scrolled directly.
-  const on = mode == 'view' && sb.querySelector('.on');
+  // Centre the active scene in a bar of names, which scrolls as a whole.
+  const on = kind == 'names' && mode == 'view' && sb.querySelector('.on');
   if (on) {
     const a = on.getBoundingClientRect(),
       b = sb.getBoundingClientRect();
     sb.scrollLeft += a.left + a.width / 2 - (b.left + b.width / 2);
   }
 }
+function renderStrip(L, k) {
+  sbS.setAttribute('aria-label', t('nav.strip'));
+  const rows = L.map((x, j) => [
+      x,
+      scenes[x].id,
+      thumbOf(scenes[x]) || '',
+      t('nav.cell', { n: j + 1, name: scenes[x].name }),
+    ]),
+    same = rows.length == sbRows.length && rows.every((r, j) => r[1] === sbRows[j][1]);
+  if (!same) {
+    sbIO.disconnect();
+    sbS.innerHTML = rows.map(sbCell).join('');
+    sbLive = false;
+  } else
+    // A thumbnail made or a scene renamed: only that cell is touched.
+    rows.forEach((r, j) => {
+      const b = sbS.children[j],
+        o = sbRows[j];
+      b.dataset.i = r[0];
+      if (r[3] !== o[3]) b.setAttribute('aria-label', r[3]);
+      if (r[2] === o[2]) return;
+      b.firstChild.outerHTML = sbFace(r, j);
+      const im = b.firstChild;
+      if (im.tagName == 'IMG' && b.hasAttribute('data-near')) im.src = im.dataset.src;
+    });
+  sbRows = rows;
+  const cells = sbS.children,
+    on = cells[k];
+  sbS.querySelector('[aria-current]')?.removeAttribute('aria-current');
+  on?.setAttribute('aria-current', 'true');
+  // The tab stop follows the scene on screen, unless the keyboard is in the strip.
+  if (!sbS.contains(document.activeElement)) {
+    sbS.querySelectorAll('[tabindex="0"]').forEach(x => (x.tabIndex = -1));
+    (on || cells[0]).tabIndex = 0;
+  }
+  if (sbLive != (mode == 'view')) sbWatch(mode == 'view');
+  // Shown again, or turned round by a change of language, it centres at once; a new scene
+  // glides into the middle.
+  const at = current + (isRTL() ? 'r' : 'l');
+  if (mode != 'view') sbAt = '';
+  else if (on && sbAt != at) {
+    sbCentre(on, sbAt.slice(-1) == at.slice(-1));
+    sbAt = at;
+  }
+}
+// Arrows move along the strip, in the reading direction; Enter and Space open the scene.
+sbS.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const c = [...sbS.children],
+    i = c.indexOf(document.activeElement);
+  if (i < 0) return;
+  const rtl = isRTL(),
+    go = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1 }[e.key];
+  let k;
+  if (go != null) k = i + go;
+  else if (e.key == 'Home') k = 0;
+  else if (e.key == 'End') k = c.length - 1;
+  else return;
+  e.preventDefault();
+  if (c[k]) sbFocus(c[k]);
+});
+// A thumbnail's scene name: after a moment under a mouse, at once for the keyboard. Touch has
+// no hover, and holding a finger on the strip is how it scrolls.
+let sbTipT = 0,
+  sbTipKb = null; // the cell whose name shows for the keyboard
+const fineHover = matchMedia('(hover: hover) and (pointer: fine)');
+function sbTip(b, wait, kb) {
+  clearTimeout(sbTipT);
+  const tip = $('sbt');
+  sbTipKb = b && kb ? b : null;
+  if (!b || !scenes[+b.dataset.i]) {
+    tip.hidden = true;
+    return;
+  }
+  if (wait && tip.hidden) {
+    sbTipT = setTimeout(() => sbTip(b), wait);
+    return;
+  }
+  tip.textContent = scenes[+b.dataset.i].name;
+  tip.hidden = false;
+  const st = $('stage').getBoundingClientRect(),
+    a = b.getBoundingClientRect(),
+    w = tip.offsetWidth,
+    x = a.left + a.width / 2 - st.left;
+  tip.style.left = Math.min(Math.max(x, w / 2 + 8), st.width - w / 2 - 8) + 'px';
+  tip.style.bottom = st.bottom - a.top + 8 + 'px';
+}
+sbS.addEventListener('pointerover', e => {
+  const b = e.target.closest('button');
+  if (b && e.pointerType == 'mouse' && fineHover.matches) sbTip(b, 300);
+});
+sbS.addEventListener('pointerleave', () => sbTip(null));
+sbS.addEventListener('pointerdown', () => sbTip(null));
+sbS.addEventListener('focusin', e => {
+  // Safari before 15.4 throws on :focus-visible; it gets no name for the keyboard.
+  try {
+    if (e.target.matches(':focus-visible')) sbTip(e.target, 0, true);
+  } catch (x) {}
+});
+sbS.addEventListener('focusout', () => sbTip(null));
+// A scroll moves the keyboard's name along with its cell, and puts a mouse's away.
+sbS.addEventListener('scroll', () => sbTip(sbTipKb, 0, true), { passive: true });
+// Bottom corners, the floor plan, the notes card and the toasts sit above the bar.
+// A strip that changes width, as a phone turns, centres the current scene again.
+let sbW = 0;
+new ResizeObserver(() => {
+  const sb = $('sb');
+  $('root').style.setProperty('--sb-h', sb.offsetHeight + 'px');
+  const on = sb.dataset.k == 'strip' && sbS.querySelector('[aria-current]');
+  if (on && sbW && sbS.clientWidth != sbW && mode == 'view') sbCentre(on);
+  sbW = sbS.clientWidth;
+}).observe($('sb'));
 function renderHotspotList() {
   $('hlist').innerHTML = (scenes[current]?.hs || [])
     .map(
@@ -3783,6 +4052,8 @@ function ui() {
   $('sset').hidden = $('hsec').hidden = !scenes[current];
   $('cmp').hidden = scenes[current]?.n == null;
   $('back').hidden = !(mode == 'view' && !EMBED);
+  if (!EMBED && mode != 'view' && !$('start').hidden) setStart(false);
+  syncFs();
   if (scenes[current] && document.activeElement != $('sname'))
     $('sname').value = scenes[current].name;
   if (scenes[current] && document.activeElement != $('snote'))
@@ -3807,14 +4078,15 @@ $('sfilt').oninput = renderScenes;
 // on site. Like the grid, they jump rather than walk: neighbours in the list need not be
 // neighbours in the building.
 $('sb').onclick = ev => {
-  const b = ev.target.closest('button');
-  if (!b || walking) return;
-  const a = b.dataset.a;
+  const b = ev.target.closest('button'),
+    a = b?.dataset.a;
+  if (a == 'fold') sbFold();
+  if (!b || walking || a == 'fold') return;
   if (a == 'grid') openGrid(b);
   else if (a) {
-    const k = navStep(a == 'next' ? 1 : -1);
-    if (k >= 0) jumpTo(k);
-  } else jumpTo(+b.dataset.i);
+    const k = barStep(a == 'next' ? 1 : -1);
+    if (scenes[k]) jumpTo(k);
+  } else if (+b.dataset.i != current) jumpTo(+b.dataset.i);
 };
 $('hlist').onclick = e => {
   const b = e.target.closest('button');
@@ -3931,6 +4203,14 @@ $('ca').onchange = e => {
   else delete project.click;
   hovered = null;
   save();
+};
+// The scene bar: thumbnails, left out of the project, or 'names' or 'none'.
+$('sbar').onchange = e => {
+  const v = e.target.value;
+  if (v == 'names' || v == 'none') project.bar = v;
+  else delete project.bar;
+  save();
+  renderBar();
 };
 $('metaon').onchange = e => {
   project.meta = e.target.checked;
@@ -4235,17 +4515,24 @@ $('addi').onclick = () => {
   renderHotspotList();
   renderHotspotProps();
 };
-$('prev').onclick = () => {
+// Preview opens on the start screen, as the tour does; Shift skips it.
+$('prev').onclick = e => {
   mode = 'view';
   selId = placing = null;
   buildHotspots();
+  const st = !e.shiftKey && !!scenes.length;
+  if (st) setStart(true);
   ui();
+  if (st) $('sgo').focus();
 };
 $('back').onclick = () => {
   closeGrid();
+  setFs(false);
   mode = 'edit';
   buildHotspots();
   ui();
+  // The button pressed is gone with the tour; Preview, which brings it back, takes the focus.
+  $('prev').focus({ preventScroll: true });
 };
 const fetchText = async u => {
   const r = await fetch(u);
@@ -4824,6 +5111,7 @@ $('pfile').onchange = async e => {
       ...(raw.hd === true && { hd: true }),
       ...(raw.click === true && { click: true }),
       ...(raw.snap === true && { snap: true }),
+      ...((raw.bar === 'names' || raw.bar === 'none') && { bar: raw.bar }),
       eurl: typeof raw.eurl == 'string' ? raw.eurl : '',
       scenes: (Array.isArray(raw.scenes) ? raw.scenes : [])
         .filter(s => s && isDataImage(s.img))
@@ -4971,6 +5259,7 @@ function setProject(id, d) {
   $('trn').value = transition();
   $('hdon').checked = !!project.hd;
   $('ca').checked = !!project.click;
+  $('sbar').value = barKind();
   toast('');
   if (scenes.length) showScene(0);
   else {
@@ -6391,7 +6680,9 @@ addEventListener('keydown', e => {
   if (e.key != 'Escape') return;
   // The library and the enlarged plan cover the stage and take Escape for themselves.
   if (!$('libm').hidden || planBig) return;
-  if (!$('pop').hidden) closePop();
+  // In Preview, the start screen goes back to the editor.
+  if (!EMBED && mode == 'view' && !$('start').hidden) $('back').click();
+  else if (!$('pop').hidden) closePop();
   else if (!$('snapm').hidden)
     setSnapMenu(
       false,
@@ -6580,6 +6871,44 @@ if (navigator.xr)
       if (ok) $('vr').hidden = false;
     })
     .catch(() => {});
+// ── full screen ──
+// The whole tour, chrome included, fills the screen. Safari before 16.4 has only the webkit
+// names, and Safari on iPhone has no element full screen at all, so the button stays hidden.
+const fsOK = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
+  fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+function setFs(on) {
+  if (!fsOK || on == !!fsEl()) return;
+  const r = $('root');
+  try {
+    const p = on
+      ? (r.requestFullscreen || r.webkitRequestFullscreen).call(r)
+      : (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    p?.catch?.(() => {});
+  } catch (e) {}
+}
+function syncFs() {
+  const on = !!fsEl(),
+    l = t(on ? 'act.fsExit' : 'act.fs'),
+    b = $('fs');
+  b.hidden = !fsOK || mode != 'view';
+  b.title = l;
+  b.setAttribute('aria-label', l);
+  b.dataset.i18nAria = b.dataset.i18nTitle = on ? 'act.fsExit' : 'act.fs';
+  $('fsi').setAttribute('href', on ? '#i-shrink' : '#i-expand');
+}
+$('fs').onclick = () => setFs(!fsEl());
+['fullscreenchange', 'webkitfullscreenchange'].forEach(k => document.addEventListener(k, syncFs));
+// F toggles it in the tour, unless the key is typing into a field or a dialog has the focus.
+addEventListener('keydown', e => {
+  if (mode != 'view' || !fsOK || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  // A layout without Latin letters (Arabic) still has the F key where F is.
+  if (e.key != 'f' && e.key != 'F' && !(e.code == 'KeyF' && !/^[a-z]$/i.test(e.key))) return;
+  const a = document.activeElement;
+  if (a?.closest?.('input, textarea, select, [contenteditable], #sgm, #note, #pop, #snapm, #libm'))
+    return;
+  e.preventDefault();
+  setFs(!fsEl());
+});
 $('vr').onclick = async () => {
   try {
     mode = 'view';
@@ -6988,8 +7317,23 @@ $('pdesc').oninput = e => {
   project.desc = e.target.value;
   save();
 };
+// The start screen: the tour's title and description over its cover, or over the first
+// panorama. An exported tour opens on it, and so does each visit to Preview, so the author sees
+// what a visitor sees first. While it shows, nothing behind it takes the keyboard, auto-rotate
+// waits and no sound plays.
+function setStart(on) {
+  const st = $('start');
+  if (on) {
+    $('stt').textContent = project.title || '';
+    $('std').textContent = project.desc || '';
+    st.style.backgroundImage = `linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.7)),url("${project.cover?.img || scenes[0].img}")`;
+  }
+  st.hidden = !on;
+  for (const e of [glCanvas, $('sb'), $('plan'), $('cmp'), $('note'), $('sgm')]) e.inert = on;
+}
 $('sgo').onclick = () => {
-  $('start').hidden = true;
+  setStart(false);
+  glCanvas.focus({ preventScroll: true }); // the button that had focus is gone
   gestured = true;
   startAudio();
   syncClip();
@@ -7108,7 +7452,14 @@ function syncAudio() {
 }
 function startAudio() {
   // Where the volume can't be lowered, the music waits for a scene's clip to finish.
-  if (audioEl && !muted && audioEl.paused && mode == 'view' && (duck == 1 || volumeWorks()))
+  if (
+    audioEl &&
+    !muted &&
+    audioEl.paused &&
+    mode == 'view' &&
+    $('start').hidden &&
+    (duck == 1 || volumeWorks())
+  )
     audioEl.play().catch(() => {});
 }
 // ── scene audio ──
@@ -8538,15 +8889,12 @@ if (!EMBED) {
   $('trn').value = transition();
   $('hdon').checked = !!project.hd;
   $('ca').checked = !!project.click;
+  $('sbar').value = barKind();
   resetHist();
   if (EMBED && scenes.length) {
-    $('stt').textContent = project.title || '';
-    $('std').textContent = project.desc || '';
-    $('start').style.backgroundImage =
-      `linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.7)),url("${project.cover?.img || scenes[0].img}")`;
+    setStart(true);
     $('sgo').disabled = true;
     $('sgo').textContent = t('view.loading');
-    $('start').hidden = false;
     // A folder tour opened from disk: browsers such as Chrome refuse to hand a file:// image
     // to WebGL, so every scene would fail. Say why, in both languages, and how to open it.
     if (location.protocol == 'file:' && !/^data:/.test(scenes[0].img)) {

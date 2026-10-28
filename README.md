@@ -269,7 +269,11 @@ that isn't granted it says once per session that the browser may clear the work.
   grid or the enlarged plan.
 - A hotspot under the pointer, aimed at by click anywhere, or showing its label after a tap
   grows smoothly to 1.2 times its size, at the same pace at any frame rate.
-- A start screen built from the first scene.
+- A start screen with the tour's title and description over its cover, or over the first
+  panorama. Preview opens on it too, each time, so the author sees what a visitor sees first;
+  Shift-click on Preview skips it, and Escape or Back to editor leaves it. Behind it nothing
+  takes the keyboard, auto-rotate waits and no sound starts, music included, until Start tour
+  is pressed. Focus then goes to the panorama.
 - A scene with notes gets an "i" button in the title row. It opens a card at the end of the
   reading direction, 320 px wide, with the scene's number and name, its capture date when the
   tour shows it, and the notes. Each line of the notes takes its own direction, so an Arabic
@@ -288,17 +292,34 @@ that isn't granted it says once per session that the browser may clear the work.
   editor and Preview always have the button; an exported tour has it only when "Let visitors
   save the view as an image" is on under Viewing options. The logo and the other screen
   overlays are not part of the picture.
-- A scene bar with a counter (48/143) and a grid of every scene, with thumbnails and the
-  same search as the editor. The grid is a dialog: arrow keys move through it, Enter opens
-  a scene, Escape closes it, and focus goes back to the button that opened it. A scene
-  chosen there opens with a cross-fade rather than the walk, since it is a jump rather
-  than a step.
-  - Up to 12 scenes, the bar also names every scene, so each is one tap away.
-  - A longer tour shows previous and next buttons instead. A row of 143 names would have to
-    be scrolled to find where you are, and each name is a blurred glass button that a
-    phone redraws every frame. Previous and next follow the tour's order, which in a survey
-    is usually the route walked on site. With the grid, they are also how a keyboard reaches
-    every scene, since the hotspots on the panorama can't take focus.
+- A scene bar along the foot of the tour, in one of three forms chosen under Viewing options.
+  - Thumbnails, the default: a strip of square scene thumbnails, 64 px (52 px on a touch
+    screen), led by a grid button with a counter (48/143). The current scene has a white ring
+    and is kept in the middle of the strip, which scrolls sideways by wheel, trackpad or
+    finger. With a mouse, a scene's name shows above its thumbnail after 300 ms; from the
+    keyboard it shows at once. The strip is one tab stop: the arrow keys move along it in the
+    reading direction (right to left in Arabic), Home and End go to its ends and Enter opens a
+    scene. Each thumbnail is named "12. East iwan" for screen readers. A button at its end
+    folds it down to previous, the grid and next, and the tour remembers that for the rest of
+    the visit, in that tab.
+    The band is a solid tint, not glass: a blur under a scrolling row of pictures would be
+    redrawn on every frame. Only thumbnails within half a strip's width either side of the
+    view hold an image, and those further away let theirs go, so a 143-scene tour keeps about
+    30 decoded at a time rather than 143, which matters on an iPhone. A scene without a square
+    thumbnail yet shows its 2:1 thumbnail, cropped.
+  - Names: up to 12 scenes, the bar names every scene, so each is one tap away. A longer tour
+    shows previous and next instead, since a row of 143 names would have to be scrolled to
+    find where you are.
+  - Hidden: no bar; visitors move through the hotspots and the floor plan.
+
+  Previous and next follow the tour's order, which in a survey is usually the route walked
+  on site. With the grid, they are also how a keyboard reaches every scene, since the hotspots
+  on the panorama can't take focus. The grid shows every scene, with thumbnails and the same
+  search as the editor. It is a dialog: arrow keys move through it, Enter opens a scene,
+  Escape closes it, and focus goes back to the button that opened it. A scene chosen from the
+  bar or the grid opens with a cross-fade rather than the walk, since it is a jump rather than
+  a step. The floor plan, the logo, the notes card and the messages all sit above the bar,
+  whichever form it takes.
 - Click anywhere, an option under Viewing options, off by default. A click in the tour that
   misses every hotspot takes the link hotspot that lies most nearly in its direction, and
   walks there. Directions are compared after level correction, with heights counting half
@@ -326,6 +347,12 @@ that isn't granted it says once per session that the browser may clear the work.
   exports and in VR mode.
 - Pinch zoom on touch, wheel zoom on desktop, and full keyboard control.
 - Device gyroscope, and WebXR VR mode with an in-headset info panel.
+- Full screen, a button in the title row of the tour and of Preview, or the F key (not
+  while typing in a field or while the scene grid, the notes card or a popup has the focus).
+  It fills the screen with the whole tour, scene bar and buttons included, and its label and
+  icon follow the browser, so Escape leaves it too. It shows only where the browser allows
+  it: not on an iPhone, which has no full screen for a page element, nor in an `<iframe>`
+  without `allowfullscreen` (the generated embed code has it).
 
 ### Projects
 - A project library with thumbnails and timestamps.
@@ -443,6 +470,7 @@ whichever way the project was opened.
   "hd": true,
   "click": true,
   "snap": true,
+  "bar": "names",
   "look": { "link": { "shape": "arrow", "color": "#22c55e", "size": 1.5, "fl": true } },
   "scenes": [{
     "id": "abc123",
@@ -520,6 +548,9 @@ whichever way the project was opened.
   any of the hotspot fields `shape`, `icon`, `color`, `size`, `ts`, `box`, `fix`, `lp`,
   `hov`, `fl` and `wl`, checked as on a hotspot. Import drops a field that doesn't check
   out and an icon the file doesn't carry. Exported tours leave it out.
+- `bar`, optional, is the tour's scene bar: `"names"` for the names (or previous and next past
+  12 scenes) or `"none"` for no bar. It is left out for the thumbnail strip, the default, and
+  import drops any other value. A build that predates it shows its own bar.
 - `snap`, optional, puts Save view as image in an exported tour. Like `click`, it is left
   out while off and only `true` is accepted on import.
 - Scene `note`, optional, is the scene's notes for visitors: plain text with `\n` line
