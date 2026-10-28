@@ -66,6 +66,32 @@ const I18N = {
     'act.undo': 'تراجع',
     'act.undoTitle': 'تراجع (Ctrl+Z)',
     'act.dismiss': 'إغلاق التنبيه',
+    'act.applyLook': 'تطبيق المظهر على…',
+    'act.apply': 'تطبيق',
+    'act.cancel': 'إلغاء',
+    'look.scene': 'كل نقاط الانتقال في هذا المشهد',
+    'look.tour': 'كل نقاط الانتقال في الجولة',
+    'look.sceneInfo': 'كل نقاط المعلومات في هذا المشهد',
+    'look.tourInfo': 'كل نقاط المعلومات في الجولة',
+    'look.sameIcon': 'النقاط ذات الأيقونة نفسها',
+    'hint.look':
+      'يُنسخ الشكل واللون والحجم وإعدادات العنوان، ولا يتغير العنوان ولا النص ولا الوجهة ولا الموضع ولا الاتجاه.',
+    'look.confirm': {
+      one: 'تغيير نقطة واحدة؟',
+      two: 'تغيير نقطتين؟',
+      few: 'تغيير \u2066{n}\u2069 نقاط؟',
+      many: 'تغيير \u2066{n}\u2069 نقطة؟',
+      other: 'تغيير \u2066{n}\u2069 نقطة؟',
+    },
+    'look.none': 'لها كلها هذا المظهر من قبل.',
+    'msg.lookApplied': {
+      one: 'طُبّق المظهر على نقطة واحدة.',
+      two: 'طُبّق المظهر على نقطتين.',
+      few: 'طُبّق المظهر على \u2066{n}\u2069 نقاط.',
+      many: 'طُبّق المظهر على \u2066{n}\u2069 نقطة.',
+      other: 'طُبّق المظهر على \u2066{n}\u2069 نقطة.',
+    },
+    'look.moved': 'ونُقل بعضها ليبقى على الأرض أو ضمن نطاق الجدار.',
     'msg.sceneDel': 'حُذف المشهد «\u2068{name}\u2069».',
     'msg.hsDel': 'حُذفت النقطة.',
     'act.redo': 'إعادة',
@@ -387,6 +413,23 @@ const I18N = {
     'act.undo': 'Undo',
     'act.undoTitle': 'Undo (Ctrl+Z)',
     'act.dismiss': 'Dismiss',
+    'act.applyLook': 'Apply look to…',
+    'act.apply': 'Apply',
+    'act.cancel': 'Cancel',
+    'look.scene': 'All link hotspots in this scene',
+    'look.tour': 'All link hotspots in the tour',
+    'look.sceneInfo': 'All info hotspots in this scene',
+    'look.tourInfo': 'All info hotspots in the tour',
+    'look.sameIcon': 'Hotspots with the same icon',
+    'hint.look':
+      'Copies the shape, colour, size and label settings. Labels, text, destinations, positions and directions stay as they are.',
+    'look.confirm': { one: 'Change 1 hotspot?', other: 'Change {n} hotspots?' },
+    'look.none': 'They all have this look already.',
+    'msg.lookApplied': {
+      one: 'Applied the look to 1 hotspot.',
+      other: 'Applied the look to {n} hotspots.',
+    },
+    'look.moved': 'Some moved to stay on the floor or within the wall band.',
     'msg.sceneDel': 'Deleted the scene “\u2068{name}\u2069”.',
     'msg.hsDel': 'Deleted the hotspot.',
     'act.redo': 'Redo',
@@ -2596,15 +2639,17 @@ function renderHotspotList() {
     )
     .join('');
 }
-// The look of the last link and the last info hotspot the author styled. A new hotspot of
-// the same kind starts from it, so a tour of many scenes needs its arrows styled only once.
-// Held for the session only.
-const LOOK = ['shape', 'icon', 'color', 'size', 'ts', 'box', 'fix', 'lp', 'hov', 'fl', 'wl'],
-  hsLook = { link: null, info: null };
+// A hotspot's look: everything about how it is drawn, but not what it says, where it leads,
+// where it sits or which way it points. The project keeps the look of the last link and the
+// last info hotspot the author styled, as look.link and look.info; a new hotspot of the same
+// kind starts from it, so a tour of many scenes needs its arrows styled only once.
+const LOOK = ['shape', 'icon', 'color', 'size', 'ts', 'box', 'fix', 'lp', 'hov', 'fl', 'wl'];
+const lookOf = h => Object.fromEntries(LOOK.filter(k => h[k] !== undefined).map(k => [k, h[k]]));
+const sameLook = (a, b) => LOOK.every(k => a[k] === b[k]);
 const updateHotspot = o => {
   const h = selHotspot();
   Object.assign(h, o);
-  hsLook[h.type] = Object.fromEntries(LOOK.filter(k => h[k] !== undefined).map(k => [k, h[k]]));
+  project.look = { ...project.look, [h.type]: lookOf(h) };
   buildHotspots();
   renderHotspotList();
   save();
@@ -2677,6 +2722,11 @@ function renderHotspotProps() {
   <label class="opt"><input type="checkbox" id="pb" ${h.box !== false ? 'checked' : ''}><span>${t('f.labelBox')}</span></label>
   <label class="opt" id="phvw"><input type="checkbox" id="phv" aria-describedby="phvh" ${h.hov ? 'checked' : ''}><span>${t('f.labelHover')}</span></label>
   <p id="phvh" class="hint">${t('hint.labelHover')}</p>
+  <div id="plk"><button id="plkb" aria-expanded="false" aria-controls="plkm"><svg class="ic"><use href="#i-look"/></svg><span>${t('act.applyLook')}</span></button>
+  <div id="plkm" hidden><p class="hint">${t('hint.look')}</p>${lookScopes(h)
+    .map(k => `<button data-k="${k}">${esc(t(lookLabel(h, k)))}</button>`)
+    .join('')}</div>
+  <div id="plkc" hidden><p id="plkq" role="status"></p><div class="row"><button id="plky" class="pri">${t('act.apply')}</button><button id="plkn">${t('act.cancel')}</button></div></div></div>
   <p id="hint3">${t('hint.dragHs')}</p>
   <div class="row"><button id="pdup" title="${esc(t('act.dupTitle'))}"><svg class="ic"><use href="#i-dup"/></svg><span>${t('act.dup')}</span></button><button id="pcopy" title="${esc(t('act.copyTitle'))}"><svg class="ic"><use href="#i-copy"/></svg><span>${t('act.copy')}</span></button></div>
   <button id="pd" class="dng">${t('act.delHs')}</button>`;
@@ -2770,9 +2820,128 @@ function renderHotspotProps() {
   });
   bind('pb', 'change', e => updateHotspot({ box: e.target.checked }));
   bind('pk', 'change', e => updateHotspot({ fix: e.target.checked }));
+  // Apply look to…: a choice of hotspots, then the count to confirm, inline.
+  let lookK = null;
+  const lookShut = () => {
+    lookK = null;
+    $('plkm').hidden = $('plkc').hidden = true;
+    $('plkb').setAttribute('aria-expanded', 'false');
+    $('plkb').focus();
+  };
+  bind('plkb', 'click', () => {
+    const on = $('plkm').hidden && $('plkc').hidden;
+    if (!on) return lookShut();
+    $('plkm').hidden = false;
+    $('plkb').setAttribute('aria-expanded', 'true');
+    $('plkm').querySelector('button').focus();
+  });
+  bind('plkm', 'click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const h = selHotspot(),
+      n = lookTargets(h, b.dataset.k).filter(([, x]) => !sameLook(x, h)).length;
+    lookK = n ? b.dataset.k : null;
+    $('plkm').hidden = true;
+    $('plkc').hidden = false;
+    $('plkq').textContent = n ? t('look.confirm', { n }) : t('look.none');
+    $('plky').hidden = !n;
+    (n ? $('plky') : $('plkn')).focus();
+  });
+  bind('plky', 'click', () => {
+    const k = lookK;
+    lookShut();
+    if (k) applyLook(selHotspot(), k);
+    $('plkb')?.focus();
+  });
+  bind('plkn', 'click', lookShut);
+  bind('plk', 'keydown', e => {
+    if (e.key != 'Escape' || ($('plkm').hidden && $('plkc').hidden)) return;
+    e.stopPropagation();
+    lookShut();
+  });
   bind('pd', 'click', deleteHotspot);
   bind('pdup', 'click', duplicateHotspot);
   bind('pcopy', 'click', copyHotspot);
+}
+// ── apply look ──
+// Where h's look can go: hotspots of its type in this scene or in the tour, and for a custom
+// icon, the hotspots with that icon anywhere in the tour.
+function lookScopes(h) {
+  return ['scene', 'tour', ...(h.shape == 'img' ? ['icon'] : [])];
+}
+function lookLabel(h, k) {
+  return k == 'icon' ? 'look.sameIcon' : 'look.' + k + (h.type == 'info' ? 'Info' : '');
+}
+// The hotspots, as [scene, hotspot], that choice k reaches from h, h aside.
+function lookTargets(h, k) {
+  const out = [];
+  scenes.forEach((s, i) => {
+    if (k == 'scene' && i != current) return;
+    for (const x of s.hs)
+      if (x !== h && (k == 'icon' ? x.shape == 'img' && x.icon == h.icon : x.type == h.type))
+        out.push([s, x]);
+  });
+  return out;
+}
+// x with the look l, as a new object; the look fields l lacks are dropped.
+function withLook(x, l) {
+  const n = { ...x };
+  for (const k of LOOK) l[k] === undefined ? delete n[k] : (n[k] = l[k]);
+  return n;
+}
+// Gives h's look to the hotspots choice k reaches, as one step of undo, and offers to undo it
+// from the message too. A hotspot laid on the floor or a wall may have to move to stay there.
+function applyLook(h, k) {
+  if (!h) return;
+  const l = lookOf(h),
+    pid = projectId,
+    hit = new Set(lookTargets(h, k).map(([, x]) => x)),
+    done = []; // [scene id, the hotspot before, after]
+  let moved = false;
+  // Edits waiting for their snapshot get theirs first, so this is a step of its own.
+  snapshotNow();
+  for (const s of scenes) {
+    if (!s.hs.some(x => hit.has(x) && !sameLook(x, l))) continue;
+    s.hs = s.hs.map(x => {
+      if (!hit.has(x) || sameLook(x, l)) return x;
+      const n = withLook(x, l);
+      if (layClamp(n, s.lq || NO_TILT)) moved = true;
+      done.push([s.id, x, n]);
+      return n;
+    });
+  }
+  if (!done.length) return;
+  project.look = { ...project.look, [h.type]: l };
+  buildHotspots();
+  ui();
+  save();
+  snapshotNow();
+  toast(t('msg.lookApplied', { n: done.length }) + (moved ? ' ' + t('look.moved') : ''), {
+    action: { label: t('act.undo'), fn: () => unapplyLook(pid, done) },
+  });
+}
+// Puts back the look and place each hotspot had, leaving whatever else was edited since. A
+// hotspot untouched since comes back exactly as it was, its fields in their old order.
+function unapplyLook(pid, done) {
+  if (pid != projectId) return;
+  const by = new Map(done.map(r => [r[0] + '\n' + r[2].id, r[1]])),
+    own = new Set([...LOOK, 'u', 'v']);
+  snapshotNow();
+  for (const s of scenes) {
+    if (!s.hs.some(x => by.has(s.id + '\n' + x.id))) continue;
+    s.hs = s.hs.map(x => {
+      const was = by.get(s.id + '\n' + x.id);
+      if (!was) return x;
+      const o = {};
+      for (const k of Object.keys(was)) o[k] = own.has(k) ? was[k] : x[k];
+      for (const k of Object.keys(x)) if (!(k in o) && !own.has(k)) o[k] = x[k];
+      return o;
+    });
+  }
+  buildHotspots();
+  ui();
+  save();
+  snapshotNow();
 }
 // ── custom icons ──
 // Raster icons are re-encoded as PNG at up to ICON_MAX_PX, keeping transparency. SVG is drawn
@@ -3437,7 +3606,11 @@ async function toPortable(Q, forTour, put) {
   if (!out.icons.length) delete out.icons;
   if (zip && Q.nadir) out.nadir = { ...Q.nadir, img: await inline(Q.nadir.img, 'nadir') };
   if (zip && Q.logo) out.logo = { ...Q.logo, img: await inline(Q.logo.img, 'logo') };
-  if (forTour) delete out.hd; // an editor setting
+  if (forTour) {
+    // editor settings
+    delete out.hd;
+    delete out.look;
+  }
   out.lang = LANG; // an exported tour renders in the language its author was using
   // Not a field of the file: tells the caller the masters were left out.
   if (!forTour && !withHd && Q.scenes.some(s => s.hdBlob))
@@ -3778,6 +3951,27 @@ const cleanHotspot = h => {
   }
   return out;
 };
+// The project's last looks, look.link and look.info, each with the fields cleanHotspot()
+// would keep on a hotspot of that type. Only the fields the file gives are kept, and a
+// shape, icon, colour or label side that cleanHotspot() would replace is dropped, so a new
+// hotspot still takes its type's defaults for those; numbers are brought into range.
+function cleanLook(o) {
+  if (!o || typeof o != 'object' || Array.isArray(o)) return null;
+  const out = {};
+  for (const type of ['link', 'info']) {
+    const v = o[type];
+    if (!v || typeof v != 'object' || Array.isArray(v)) continue;
+    const c = cleanHotspot({ ...v, type }),
+      l = Object.fromEntries(
+        LOOK.filter(
+          k =>
+            v[k] !== undefined && c[k] !== undefined && (typeof c[k] != 'string' || c[k] === v[k])
+        ).map(k => [k, c[k]])
+      );
+    if (Object.keys(l).length) out[type] = l;
+  }
+  return Object.keys(out).length ? out : null;
+}
 const cleanScene = s => {
   const out = {
     id: String(s.id || uid()),
@@ -3811,7 +4005,7 @@ const cleanScene = s => {
         .toArray()
         .map(v => Math.round(v * 1e6) / 1e6);
   }
-  out.hs.forEach(h => layClamp(h, out.lq));
+  out.hs.forEach(h => layClamp(h, out.lq || NO_TILT));
   if (s.pp && typeof s.pp == 'object')
     out.pp = { x: clamp01(num(s.pp.x, 0.5)), y: clamp01(num(s.pp.y, 0.5)) };
   if (typeof s.taken == 'string' && TAKEN.test(s.taken)) out.taken = s.taken;
@@ -3896,6 +4090,15 @@ $('pfile').onchange = async e => {
           h.shape = 'arrow';
           delete h.icon;
         }
+    const look = cleanLook(raw.look);
+    if (look) {
+      for (const l of Object.values(look))
+        if (l.icon !== undefined && !icons.some(ic => ic.id == l.icon)) {
+          delete l.shape;
+          delete l.icon;
+        }
+      d.look = look;
+    }
     const a = raw.audio;
     if (a && typeof a.src == 'string' && a.src.startsWith('data:'))
       d.audio = {
@@ -4791,7 +4994,7 @@ glCanvas.addEventListener('pointerup', e => {
       moved = layClamp(h) && h;
     } else {
       const o = scenes.find(s => s.id != scenes[current].id),
-        look = { ...hsLook[placing] };
+        look = { ...project.look?.[placing] };
       // The last look may name an icon of a project that is no longer open.
       if (look.shape == 'img' && !projectIcon(look.icon)) delete look.shape;
       if (look.shape != 'img') delete look.icon;

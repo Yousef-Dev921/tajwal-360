@@ -896,6 +896,31 @@ label.pri {
   border-radius: var(--r3);
 }
 
+/* Apply look to…: the choices, then the count to confirm, open under the button */
+#plk {
+  display: grid;
+  gap: var(--s2);
+}
+#plkm,
+#plkc {
+  display: grid;
+  gap: var(--s2);
+  padding: var(--s2);
+  background: var(--pn);
+  border: 1px solid var(--bd);
+  border-radius: var(--r2);
+}
+#plkm button {
+  justify-content: flex-start;
+  text-align: start;
+}
+#plkq {
+  margin: 0;
+  color: var(--fg);
+  font-size: var(--tMd);
+  font-weight: 600;
+}
+
 /* ───────────────────────── stage ───────────────────────── */
 #stage {
   position: relative;

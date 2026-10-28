@@ -105,7 +105,15 @@ that isn't granted it says once per session that the browser may clear the work.
   pasted into its own destination turns into a link back to the scene it came from, which
   is what a return arrow needs.
 - A new hotspot takes the look of the last one of its kind that was edited, so a tour of
-  many scenes needs its arrows styled once.
+  many scenes needs its arrows styled once. The project remembers that look, so it carries
+  over to the next session and into a saved copy.
+- Apply look to… gives the selected hotspot's look (shape or icon, colour, size, text size
+  and box, keep size, label side, label on hover, floor or wall) to every link hotspot (or
+  every info hotspot) in the scene or in the whole tour, or to every hotspot with the same
+  custom icon. Labels, text, destinations, positions and directions stay as they are; a
+  hotspot that has to lie on the floor or hang on a wall is moved only as far as that needs.
+  It asks first with the number of hotspots it will change, is one step of undo, and its
+  message offers Undo too. On a 150-scene tour with 450 hotspots it takes about 30 ms.
 - Glyphs on light icon colours, such as white, are drawn dark so they stay visible.
 - 60 steps of undo and redo.
 - Scene thumbnails, drag-to-reorder, rename and delete.
@@ -371,6 +379,7 @@ whichever way the project was opened.
   "hd": true,
   "click": true,
   "snap": true,
+  "look": { "link": { "shape": "arrow", "color": "#22c55e", "size": 1.5, "fl": true } },
   "scenes": [{
     "id": "abc123",
     "name": "Entrance",
@@ -439,6 +448,10 @@ whichever way the project was opened.
   out at normal speed, and any other value is dropped on import.
 - `click`, optional, turns on click anywhere. It is left out while off, and only `true`
   is accepted on import.
+- `look`, optional, is the look a new hotspot starts from: `link` and `info`, each with
+  any of the hotspot fields `shape`, `icon`, `color`, `size`, `ts`, `box`, `fix`, `lp`,
+  `hov`, `fl` and `wl`, checked as on a hotspot. Import drops a field that doesn't check
+  out and an icon the file doesn't carry. Exported tours leave it out.
 - `snap`, optional, puts Save view as image in an exported tour. Like `click`, it is left
   out while off and only `true` is accepted on import.
 - Scene `note`, optional, is the scene's notes for visitors: plain text with `\n` line
