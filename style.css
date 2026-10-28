@@ -896,6 +896,31 @@ label.pri {
   border-radius: var(--r3);
 }
 
+/* Apply look to…: the choices, then the count to confirm, open under the button */
+#plk {
+  display: grid;
+  gap: var(--s2);
+}
+#plkm,
+#plkc {
+  display: grid;
+  gap: var(--s2);
+  padding: var(--s2);
+  background: var(--pn);
+  border: 1px solid var(--bd);
+  border-radius: var(--r2);
+}
+#plkm button {
+  justify-content: flex-start;
+  text-align: start;
+}
+#plkq {
+  margin: 0;
+  color: var(--fg);
+  font-size: var(--tMd);
+  font-weight: 600;
+}
+
 /* ───────────────────────── stage ───────────────────────── */
 #stage {
   position: relative;
@@ -2225,28 +2250,103 @@ canvas {
   padding: 0 var(--s2);
 }
 
-/* ───────────────────────── status toast ───────────────────────── */
+/* ───────────────────────── status toasts ───────────────────────── */
+/* Up to three, the newest at the bottom, centred over the stage and above the scene bar (on a
+   phone, above the bottom sheet too). Over the panorama, so white on glass like the notes
+   card; above the library (20) so a library action's result shows. Only the toasts take the
+   pointer, not the gaps between them. */
 #msg {
+  --msg-b: calc(env(safe-area-inset-bottom, 0px) + var(--s4) + var(--sb-h, 0px) + var(--s3));
   position: fixed;
   z-index: 30;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--s5));
+  bottom: var(--msg-b);
   inset-inline: 0;
   margin: 0 auto;
   width: max-content;
   max-width: min(88vw, 460px);
-  background: var(--fg);
-  color: var(--bg);
-  padding: var(--s3) var(--s4);
-  border-radius: var(--r3);
-  font-size: var(--tMd);
-  font-weight: 600;
-  line-height: 1.5;
-  text-align: center;
-  box-shadow: var(--sh3);
-  animation: toast var(--mo3) var(--ez);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s2);
+  pointer-events: none;
+}
+#root:not(.view) #msg {
+  inset-inline-start: clamp(320px, 26vw, 384px);
+  max-width: min(calc(100vw - clamp(320px, 26vw, 384px) - 2 * var(--s4)), 460px);
 }
 #msg:empty {
   display: none;
+}
+.tst {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  max-width: 100%;
+  padding: var(--s1) var(--s1) var(--s1) var(--s4);
+  background: rgba(10, 10, 17, 0.8);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--r3);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--sh3);
+  font-size: var(--tMd);
+  font-weight: 600;
+  line-height: 1.5;
+  animation: toast var(--mo3) var(--ez);
+}
+:root[dir='rtl'] .tst {
+  padding: var(--s1) var(--s4) var(--s1) var(--s1);
+}
+.tsm {
+  flex: 1;
+  min-width: 0;
+  padding-block: var(--s2);
+  overflow-wrap: anywhere;
+}
+.tst button {
+  flex: none;
+  min-height: 38px;
+  border-radius: var(--r2);
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+.tst button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.tst .tsa {
+  padding: 0 var(--s3);
+  font-weight: 700;
+}
+.tst .tsx {
+  min-width: 38px;
+  padding: 0;
+  border-color: transparent;
+}
+.tst :focus-visible {
+  outline-color: #fff;
+}
+@media (pointer: coarse) {
+  .tst button {
+    min-height: 44px;
+  }
+  .tst .tsx {
+    min-width: 44px;
+  }
+}
+/* read by screen readers, not shown */
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 @keyframes toast {
   from {
@@ -2306,8 +2406,14 @@ canvas {
   #root:not(.view) #logoslot {
     --gap-b: calc(var(--s4) + 14px);
   }
-  #msg {
+  #msg,
+  #root:not(.view) #msg {
+    inset-inline: 0;
     max-width: 92vw;
+  }
+  /* over the foot of the stage, clear of the sheet, which overlaps the stage by 14px */
+  #root:not(.view) #msg {
+    --msg-b: calc(54% + 14px + var(--s3));
   }
   /* a sheet over the lower half of the stage at most, as tall as its notes need, kept above
      the scene bar so previous, next and the grid stay in reach while it is open */
