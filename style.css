@@ -669,11 +669,6 @@ label.pri {
   background: var(--ac);
   color: var(--af);
 }
-.sth.dz {
-  border-color: var(--acT);
-  border-style: dashed;
-  transform: scale(0.96);
-}
 
 /* ───────────────────────── import queue ───────────────────────── */
 #iq {
@@ -1443,6 +1438,551 @@ canvas {
   padding: var(--s6) var(--s4);
   text-align: center;
   color: var(--mu);
+}
+
+/* ───────────────────────── scene manager ───────────────────────── */
+/* the Scenes heading, with the button that opens the manager at its end */
+.lbr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+}
+#smo {
+  font-size: var(--tSm);
+  padding: 0 var(--s3);
+}
+/* a scene hidden from the tour's bar, in the panel's list */
+.sth[data-hid] img,
+.sth[data-hid] .ph {
+  opacity: 0.5;
+}
+.sth[data-hid]::after {
+  content: attr(data-hid);
+  position: absolute;
+  top: var(--s1);
+  inset-inline-start: var(--s1);
+  padding: 0 6px;
+  border-radius: var(--rp);
+  background: var(--gl);
+  color: #fff;
+  font-size: var(--tXs);
+  font-weight: 650;
+  line-height: 18px;
+}
+.sth,
+.smc {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#smg {
+  position: fixed;
+  inset: 0;
+  z-index: 19; /* under the library (20) and the toasts (30) */
+  display: flex;
+  padding: calc(env(safe-area-inset-top, 0px) + var(--s3)) var(--s3)
+    calc(env(safe-area-inset-bottom, 0px) + var(--s3));
+  background: var(--ov);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+  animation: fade var(--mo2) var(--ez);
+}
+#smb {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--pn);
+  color: var(--fg);
+  border: 1px solid var(--bd);
+  border-radius: var(--r4);
+  box-shadow: var(--sh3);
+  overflow: hidden;
+  animation: rise var(--mo3) var(--ez);
+}
+#smb:focus {
+  outline: none;
+}
+#smb > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  padding: var(--s3) var(--s4) 0;
+}
+#smt {
+  font-size: var(--tLg);
+  letter-spacing: -0.01em;
+}
+#smn {
+  color: var(--mu);
+  font-size: var(--tSm);
+  font-variant-numeric: tabular-nums;
+}
+#smx {
+  margin-inline-start: auto;
+  min-width: var(--ctl);
+  padding: 0;
+  border-radius: var(--rp);
+}
+#smtb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--bd);
+}
+#smf {
+  flex: 1 1 220px;
+  width: auto;
+}
+.sms {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  white-space: nowrap;
+}
+.sms select {
+  width: auto;
+}
+/* a segmented control: three buttons sharing one border */
+#smd {
+  display: inline-flex;
+}
+#smd button {
+  border-radius: 0;
+  margin-inline-start: -1px;
+}
+#smd button:first-child {
+  margin: 0;
+  border-start-start-radius: var(--r2);
+  border-end-start-radius: var(--r2);
+}
+#smd button:last-child {
+  border-start-end-radius: var(--r2);
+  border-end-end-radius: var(--r2);
+}
+#smd button[aria-pressed='true'] {
+  position: relative;
+  background: var(--ac);
+  color: var(--af);
+  border-color: var(--ac);
+}
+.smsel {
+  display: inline-flex;
+  gap: var(--s2);
+}
+
+#sml {
+  position: relative; /* the cards' offsetTop is measured from here */
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: var(--s4);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: var(--s2);
+}
+#smb[data-d='s'] #sml {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+#smb[data-d='list'] #sml {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s1);
+}
+#sme {
+  margin: 0;
+  padding: var(--s6) var(--s4);
+  text-align: center;
+  color: var(--mu);
+}
+#smhint {
+  margin: 0;
+  padding: var(--s2) var(--s4);
+  border-top: 1px solid var(--bd);
+}
+/* the keys for a keyboard and mouse, the gestures for a finger */
+#smhint .tc {
+  display: none;
+}
+@media (pointer: coarse) {
+  #smhint .kb {
+    display: none;
+  }
+  #smhint .tc {
+    display: inline;
+  }
+}
+
+/* a card: the thumbnail with the checkbox, place and badges over it, then the name and links */
+.smc {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  overflow: hidden;
+  border-radius: var(--r2);
+  border: 1px solid var(--bd);
+  background: var(--pn2);
+  cursor: grab;
+  transition:
+    border-color var(--mo1) var(--ez),
+    box-shadow var(--mo1) var(--ez);
+}
+#sml.nodrag .smc {
+  cursor: pointer;
+}
+.smc:hover {
+  border-color: var(--bds);
+  box-shadow: var(--sh2);
+}
+.smc.sel {
+  border-color: var(--ac);
+  background: var(--acw);
+  box-shadow: 0 0 0 2px var(--ac);
+}
+.smc:has(.smk:focus-visible) {
+  outline: 2px solid var(--acT);
+  outline-offset: 2px;
+}
+.smth {
+  grid-row: 1;
+  grid-column: 1 / -1;
+  display: block;
+  aspect-ratio: 1;
+  background: var(--pn3);
+  overflow: hidden;
+}
+.smth img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.smth img:not([src]) {
+  visibility: hidden;
+}
+.hid .smth img {
+  opacity: 0.5;
+}
+/* the checkbox: the whole control height to tap, a 22px box drawn inside it (.smc outranks
+   the plain checkbox rule) */
+.smc .smk {
+  grid-row: 1;
+  grid-column: 1;
+  align-self: start;
+  justify-self: start;
+  z-index: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  display: grid;
+  place-content: center;
+  width: var(--ctl);
+  height: var(--ctl);
+  margin: 2px;
+  border: 0;
+  border-radius: var(--r2);
+  background: none;
+}
+.smc .smk::before {
+  content: '';
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r1);
+  border: 2px solid #fff;
+  background: rgba(10, 10, 17, 0.5) center / 14px no-repeat;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.smc .smk:checked::before {
+  background-color: var(--ac);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+.smc .smk:focus {
+  box-shadow: none;
+}
+.smc .smk:focus-visible {
+  outline: 0;
+}
+/* the scene's place in the tour */
+.smno {
+  grid-row: 1;
+  grid-column: 1 / -1;
+  align-self: start;
+  justify-self: end;
+  margin: var(--s2);
+  padding: 0 7px;
+  border-radius: var(--rp);
+  background: var(--gl);
+  color: #fff;
+  font-size: var(--tSm);
+  font-weight: 650;
+  line-height: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.smc.on .smno {
+  background: var(--ac);
+}
+.smbd {
+  grid-row: 1;
+  grid-column: 1 / -1;
+  align-self: end;
+  justify-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+  margin: var(--s2);
+}
+.smbd:empty {
+  display: none;
+}
+.smbd b {
+  padding: 0 7px;
+  border-radius: var(--rp);
+  background: var(--gl);
+  color: #fff;
+  font-size: var(--tXs);
+  font-weight: 650;
+  line-height: 20px;
+}
+.smbd .st {
+  background: var(--ac);
+}
+.smtx {
+  grid-row: 2;
+  grid-column: 1;
+  min-width: 0;
+  padding: var(--s2) var(--s3) 0;
+}
+/* a name keeps its own direction but lines up with the dialog's */
+.smnm,
+.smi {
+  text-align: left;
+}
+:root[dir='rtl'] .smnm,
+:root[dir='rtl'] .smi {
+  text-align: right;
+}
+.smnm {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: var(--tSm);
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.smc.on .smnm {
+  color: var(--acT);
+}
+.smmeta {
+  display: block;
+  color: var(--mu);
+  font-size: var(--tXs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.smi {
+  -webkit-user-select: text;
+  user-select: text;
+  min-height: 32px;
+  padding: 0 var(--s2);
+  font-size: var(--tSm);
+}
+.smln {
+  grid-row: 3;
+  grid-column: 1;
+  justify-self: start;
+  padding: 0 var(--s3) var(--s2);
+  color: var(--mu);
+  font-size: var(--tXs);
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+}
+.smr {
+  grid-row: 2 / span 2;
+  grid-column: 2;
+  min-width: var(--ctl);
+  padding: 0;
+  margin-inline-end: var(--s1);
+  border-color: transparent;
+  background: transparent;
+  color: var(--mu);
+}
+.smr:hover {
+  color: var(--fg);
+}
+/* small cards: the badges and links give way to the name */
+#smb[data-d='s'] .smbd b {
+  line-height: 18px;
+  padding: 0 5px;
+}
+#smb[data-d='s'] .smtx {
+  grid-column: 1 / -1;
+  padding: var(--s1) var(--s2) 0;
+}
+#smb[data-d='s'] .smln {
+  grid-column: 1 / -1;
+  padding: 0 var(--s2) var(--s1);
+}
+/* the pencil sits on the thumbnail, so a short card keeps the whole name */
+#smb[data-d='s'] .smr {
+  grid-row: 1;
+  grid-column: 1 / -1;
+  align-self: end;
+  justify-self: end;
+  margin: 2px;
+  border-radius: var(--rp);
+  background: var(--gl);
+  color: #fff;
+}
+/* a list row: checkbox, thumbnail with its place, name with date and size, badges and links */
+#smb[data-d='list'] .smc {
+  grid-template-columns: auto 52px minmax(0, 1fr) auto;
+  column-gap: var(--s2);
+  padding-block: var(--s1);
+  padding-inline: 0 var(--s1);
+  min-height: 64px;
+}
+#smb[data-d='list'] .smk {
+  grid-row: 1 / 3;
+  grid-column: 1;
+  align-self: center;
+  margin: 0;
+}
+#smb[data-d='list'] .smk::before {
+  border-color: var(--bds);
+  background-color: var(--pn);
+  box-shadow: none;
+}
+#smb[data-d='list'] .smk:checked::before {
+  border-color: var(--ac);
+  background-color: var(--ac);
+}
+#smb[data-d='list'] .smth {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  width: 52px;
+  border-radius: var(--r1);
+}
+#smb[data-d='list'] .smno {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  justify-self: start;
+  margin: 2px;
+  padding: 0 5px;
+  font-size: var(--tXs);
+  line-height: 18px;
+}
+#smb[data-d='list'] .smtx {
+  grid-row: 1;
+  grid-column: 3;
+  align-self: end;
+  padding: 0;
+}
+#smb[data-d='list'] .smnm {
+  -webkit-line-clamp: 1;
+}
+#smb[data-d='list'] .smbd {
+  grid-row: 2;
+  grid-column: 3;
+  align-self: start;
+  margin: 2px 0 0;
+}
+#smb[data-d='list'] .smbd b {
+  background: var(--pn3);
+  color: var(--fg);
+  line-height: 18px;
+}
+#smb[data-d='list'] .smbd .st {
+  background: var(--ac);
+  color: var(--af);
+}
+#smb[data-d='list'] .smln {
+  grid-row: 2;
+  grid-column: 3;
+  justify-self: end;
+  align-self: start;
+  padding: 2px 0 0;
+}
+#smb[data-d='list'] .smr {
+  grid-row: 1 / 3;
+  grid-column: 4;
+  margin: 0;
+}
+
+#smbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  border-top: 1px solid var(--bd);
+  background: var(--pn2);
+  animation: rise var(--mo2) var(--ez);
+}
+#smbar button {
+  background: var(--pn);
+}
+#smbar .dng:hover {
+  background: var(--dgw);
+}
+
+/* dragging: the card lifted under the pointer, its place left faint, the bar where it lands */
+.drg {
+  opacity: 0.35;
+}
+.ghost {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  margin: 0;
+  pointer-events: none;
+  box-shadow: var(--sh3);
+  cursor: grabbing;
+}
+.gn {
+  position: absolute;
+  top: var(--s1);
+  inset-inline-start: 50%;
+  min-width: 26px;
+  padding: 0 7px;
+  border-radius: var(--rp);
+  background: var(--ac);
+  color: var(--af);
+  font-size: var(--tSm);
+  font-weight: 700;
+  line-height: 26px;
+  text-align: center;
+  box-shadow: var(--sh2);
+}
+.dropbar {
+  position: fixed;
+  z-index: 61;
+  border-radius: 2px;
+  background: var(--acT);
+  box-shadow: 0 0 0 1px var(--pn);
+  pointer-events: none;
+}
+.sorting,
+.sorting * {
+  cursor: grabbing !important;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ghost {
+    scale: 1.04;
+  }
+  .hold {
+    scale: 0.97;
+    transition: scale var(--mo2) var(--ez);
+  }
 }
 
 #pop {
@@ -2573,6 +3113,57 @@ canvas {
   /* over the foot of the stage, clear of the sheet, which overlaps the stage by 14px */
   #root:not(.view) #msg {
     --msg-b: calc(54% + 14px + var(--s3));
+  }
+  /* the scene manager takes the whole screen */
+  #smg {
+    padding: env(safe-area-inset-top, 0px) 0 0;
+  }
+  #smb {
+    border: 0;
+    border-radius: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  #smb > header {
+    padding: var(--s2) var(--s3) 0;
+  }
+  #smtb {
+    padding: var(--s2) var(--s3);
+  }
+  #smf {
+    flex-basis: 100%;
+  }
+  /* the select names itself by its options; its label stays for screen readers */
+  .sms {
+    flex: 1;
+    min-width: 0;
+  }
+  .sms select {
+    width: 100%;
+  }
+  .sms > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .smsel {
+    flex: 1 1 100%;
+  }
+  .smsel button,
+  #smbar button {
+    flex: 1 1 auto;
+  }
+  #sml {
+    padding: var(--s3);
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  #smb[data-d='s'] #sml {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  }
+  #smbar {
+    padding: var(--s2) var(--s3);
   }
   /* a sheet over the lower half of the stage at most, as tall as its notes need, kept above
      the scene bar so previous, next and the grid stay in reach while it is open */
