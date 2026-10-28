@@ -811,7 +811,7 @@ function toast(text, o) {
   const box = $('msg');
   if (!box) return;
   if (!text) {
-    toasts.slice().forEach(dropToast);
+    toasts.slice().forEach(x => dropToast(x));
     return;
   }
   let x = toasts.find(x => (o.key ? x.key == o.key : !x.act && !o.action && x.text == text));
@@ -820,15 +820,18 @@ function toast(text, o) {
     x = { el: document.createElement('div') };
     x.el.className = 'tst';
     x.el.innerHTML = `<span class="tsm"></span><button type="button" class="tsx" data-i18n-aria="act.dismiss" aria-label="${esc(t('act.dismiss'))}"><svg class="ic"><use href="#i-close"/></svg></button>`;
-    x.el.querySelector('.tsx').onclick = () => dropToast(x);
+    // A click has no detail when it comes from the keyboard.
+    x.el.querySelector('.tsx').onclick = e => dropToast(x, !e.detail);
     x.el.onkeydown = e => {
       if (e.key != 'Escape') return;
       e.stopPropagation();
-      dropToast(x);
+      dropToast(x, true);
     };
   }
   toasts.push(x);
-  box.appendChild(x.el);
+  // Moving or rebuilding a toast would drop the focus inside it, so it is put back.
+  const had = x.el.contains(document.activeElement);
+  if (box.lastChild !== x.el) box.appendChild(x.el);
   x.key = o.key;
   x.text = text;
   x.el.querySelector('.tsm').textContent = text;
@@ -839,12 +842,13 @@ function toast(text, o) {
     b.type = 'button';
     b.className = 'tsa';
     b.textContent = x.act.label;
-    b.onclick = () => {
-      dropToast(x);
+    b.onclick = e => {
+      dropToast(x, !e.detail);
       x.act.fn();
     };
     x.el.insertBefore(b, x.el.lastChild);
   }
+  if (had && !x.el.contains(document.activeElement)) x.el.querySelector('.tsa, .tsx').focus();
   // A fresh node in the live region is read; the one it replaces, removed, is not.
   x.sr?.remove();
   x.sr = document.createElement('span');
@@ -875,22 +879,23 @@ function holdToasts() {
     }
   }
 }
-function dropToast(x) {
+// Closes toast x. Closed from the keyboard, focus moves to the next toast so the stack can be
+// gone through; otherwise it leaves the stack, which nothing would report once the element is
+// gone. With the last toast gone, the pointer is no longer over anything to hold.
+function dropToast(x, kbd) {
   const i = toasts.indexOf(x);
   if (i < 0) return;
   clearTimeout(x.timer);
   toasts.splice(i, 1);
-  const had = x.el.contains(document.activeElement);
+  const had = x.el.contains(document.activeElement),
+    n = toasts[Math.min(i, toasts.length - 1)];
   x.el.remove();
   x.sr.remove();
-  // Focus would otherwise fall to the page, and nothing would tell the stack it left.
-  if (had) {
-    const n = toasts[Math.min(i, toasts.length - 1)];
-    if (n) n.el.querySelector('.tsa, .tsx').focus();
-    else {
-      toastFocus = false;
-      holdToasts();
-    }
+  if (had && kbd && n) n.el.querySelector('.tsa, .tsx').focus();
+  else if (had || !toasts.length) {
+    toastFocus = false;
+    if (!toasts.length) toastHover = false;
+    holdToasts();
   }
 }
 // The default zoom, as the camera's vertical field of view in degrees; zoom runs from 40 to 95.
@@ -2896,7 +2901,7 @@ function applyLook(h, k) {
   const l = lookOf(h),
     pid = projectId,
     hit = new Set(lookTargets(h, k).map(([, x]) => x)),
-    done = []; // [scene id, the hotspot before, after]
+    done = []; // [scene id, the hotspot before, after, whether it moved]
   let moved = false;
   // Edits waiting for their snapshot get theirs first, so this is a step of its own.
   snapshotNow();
@@ -2904,9 +2909,10 @@ function applyLook(h, k) {
     if (!s.hs.some(x => hit.has(x) && !sameLook(x, l))) continue;
     s.hs = s.hs.map(x => {
       if (!hit.has(x) || sameLook(x, l)) return x;
-      const n = withLook(x, l);
-      if (layClamp(n, s.lq || NO_TILT)) moved = true;
-      done.push([s.id, x, n]);
+      const n = withLook(x, l),
+        m = layClamp(n, s.lq || NO_TILT);
+      if (m) moved = true;
+      done.push([s.id, x, n, m]);
       return n;
     });
   }
@@ -2920,19 +2926,23 @@ function applyLook(h, k) {
     action: { label: t('act.undo'), fn: () => unapplyLook(pid, done) },
   });
 }
-// Puts back the look and place each hotspot had, leaving whatever else was edited since. A
-// hotspot untouched since comes back exactly as it was, its fields in their old order.
+// Puts back the look each hotspot had, and the place of those the look moved, leaving
+// whatever else was edited since. A hotspot untouched since comes back exactly as it was, its
+// fields in their old order.
 function unapplyLook(pid, done) {
   if (pid != projectId) return;
-  const by = new Map(done.map(r => [r[0] + '\n' + r[2].id, r[1]])),
-    own = new Set([...LOOK, 'u', 'v']);
+  const by = new Map(done.map(r => [r[0] + '\n' + r[2].id, r])),
+    look = new Set(LOOK),
+    lookAt = new Set([...LOOK, 'u', 'v']);
   snapshotNow();
   for (const s of scenes) {
     if (!s.hs.some(x => by.has(s.id + '\n' + x.id))) continue;
     s.hs = s.hs.map(x => {
-      const was = by.get(s.id + '\n' + x.id);
-      if (!was) return x;
-      const o = {};
+      const r = by.get(s.id + '\n' + x.id);
+      if (!r) return x;
+      const was = r[1],
+        own = r[3] ? lookAt : look,
+        o = {};
       for (const k of Object.keys(was)) o[k] = own.has(k) ? was[k] : x[k];
       for (const k of Object.keys(x)) if (!(k in o) && !own.has(k)) o[k] = x[k];
       return o;
@@ -2996,23 +3006,27 @@ function deleteHotspot() {
   const h = selHotspot();
   if (!h) return;
   const s = scenes[current],
-    k = s.hs.indexOf(h),
     pid = projectId;
-  s.hs = s.hs.filter(x => x !== h);
+  takeHs(s, x => x === h);
   selId = null;
   buildHotspots();
   ui();
   save();
   toast(t('msg.hsDel'), {
-    action: { label: t('act.undo'), fn: () => undeleteHotspot(pid, s.id, k, h) },
+    action: { label: t('act.undo'), fn: () => undeleteHotspot(pid, s.id, h) },
   });
 }
-// Puts a deleted hotspot back where it was in its scene's list, and shows it selected.
-async function undeleteHotspot(pid, sid, k, h) {
+// Puts a deleted hotspot back where it was in its scene's list, and shows it selected. A link
+// whose destination has been deleted since waits in heldLinks until that scene comes back.
+async function undeleteHotspot(pid, sid, h) {
   const i = scenes.findIndex(s => s.id == sid);
   if (pid != projectId || i < 0 || scenes[i].hs.some(x => x.id == h.id)) return;
+  if (h.type == 'link' && !scenes.some(s => s.id == h.to)) {
+    heldLinks.push([sid, h]);
+    return;
+  }
   const s = scenes[i];
-  s.hs = [...s.hs.slice(0, k), h, ...s.hs.slice(k)];
+  putHs(s, h);
   save();
   if (i != current) await showScene(i);
   if (scenes[current] !== s) return;
@@ -3452,18 +3466,17 @@ $('sdel').onclick = () => {
     gone = scenes[at],
     id = gone.id,
     pid = projectId,
-    // The links into it go with it; undo puts each back at its place in its scene's list.
-    links = [];
+    into = h => h.type == 'link' && h.to == id;
   dropTexture(id);
+  sceneWas = ghostMerge(idsOf(scenes), sceneWas);
   scenes.splice(at, 1);
+  // The links into it go with it, held until undo brings it back.
   scenes.forEach(s => {
-    if (!s.hs.some(h => h.type == 'link' && h.to == id)) return;
-    s.hs.forEach((h, k) => h.type == 'link' && h.to == id && links.push([s.id, k, h]));
-    s.hs = s.hs.filter(h => h.type != 'link' || h.to != id);
+    if (s.hs.some(into)) heldLinks.push(...takeHs(s, into).map(h => [s.id, h]));
   });
   save();
   toast(t('msg.sceneDel', { name: gone.name }), {
-    action: { label: t('act.undo'), fn: () => undeleteScene(pid, at, gone, links) },
+    action: { label: t('act.undo'), fn: () => undeleteScene(pid, at, gone) },
   });
   if (scenes.length) showScene(Math.min(current, scenes.length - 1));
   else {
@@ -3474,19 +3487,75 @@ $('sdel').onclick = () => {
     ui();
   }
 };
-// Brings a deleted scene back at its place in the tour, with the links into it. The scene
-// object kept its images, clip and thumbnail; the autosave since has taken its images and
-// clip out of storage, so they are marked to be written again (a clip is written whenever
+// What undo puts back goes where it was, whatever else was taken out and put back meanwhile
+// and in whatever order. sceneWas is the tour's order and hsWas each scene's hotspot order
+// (by id), as they were with everything taken out since; ghostMerge() brings such an order up
+// to date with the list as it is now, keeping what is gone after what came before it.
+let sceneWas = [],
+  hsWas = new Map(),
+  // Links taken out with a deleted scene, or brought back by undo while their destination is
+  // deleted, as [scene id, hotspot]. Each goes back once both of its scenes are there again.
+  heldLinks = [];
+const idsOf = a => a.map(x => x.id);
+function ghostMerge(ids, was) {
+  const here = new Set(ids),
+    out = ids.slice();
+  was.forEach((id, k) => {
+    if (here.has(id)) return;
+    let j = -1;
+    for (let m = k - 1; m >= 0 && j < 0; m--) j = out.indexOf(was[m]);
+    out.splice(j + 1, 0, id);
+  });
+  return out;
+}
+// Where id goes back into ids: after the nearest thing before it that is there now, or -1
+// when the order never had it.
+function ghostPlace(ids, was, id) {
+  const all = ghostMerge(ids, was),
+    k = all.indexOf(id);
+  if (k < 0) return -1;
+  for (let m = k - 1; m >= 0; m--) {
+    const j = ids.indexOf(all[m]);
+    if (j >= 0) return j + 1;
+  }
+  return 0;
+}
+// Takes the hotspots f picks out of scene o, remembering where they were; returns them.
+function takeHs(o, f) {
+  hsWas.set(o.id, ghostMerge(idsOf(o.hs), hsWas.get(o.id) || []));
+  const out = o.hs.filter(f);
+  o.hs = o.hs.filter(h => !f(h));
+  return out;
+}
+// Puts hotspot h back into scene o where it was.
+function putHs(o, h) {
+  const k = ghostPlace(idsOf(o.hs), hsWas.get(o.id) || [], h.id);
+  o.hs = k < 0 ? [...o.hs, h] : [...o.hs.slice(0, k), h, ...o.hs.slice(k)];
+}
+function relink() {
+  const has = id => scenes.some(s => s.id == id);
+  heldLinks = heldLinks.filter(([sid, h]) => {
+    const o = scenes.find(s => s.id == sid);
+    if (!o || !has(h.to)) return true;
+    if (!o.hs.some(x => x.id == h.id)) putHs(o, h);
+    return false;
+  });
+}
+// Brings a deleted scene back at its place in the tour, with the links into it and out of it
+// whose other end is there too. The
+// scene object kept its images, clip and thumbnail; the autosave since has taken its images
+// and clip out of storage, so they are marked to be written again (a clip is written whenever
 // it differs from what storage holds). Marked whatever storedSceneIds says, since an autosave
 // may be between reading the scene list and deleting the files.
-function undeleteScene(pid, at, s, links) {
+function undeleteScene(pid, at, s) {
   if (pid != projectId || scenes.some(x => x.id == s.id)) return;
-  const i = Math.min(at, scenes.length);
+  const k = ghostPlace(idsOf(scenes), sceneWas, s.id),
+    i = k < 0 ? Math.min(at, scenes.length) : k,
+    dead = h => h.type == 'link' && !scenes.some(x => x.id == h.to);
   scenes.splice(i, 0, s);
-  for (const [sid, k, h] of links) {
-    const o = scenes.find(x => x.id == sid);
-    if (o && !o.hs.some(x => x.id == h.id)) o.hs = [...o.hs.slice(0, k), h, ...o.hs.slice(k)];
-  }
+  // Its own links to scenes deleted since it went wait for those.
+  if (s.hs.some(dead)) heldLinks.push(...takeHs(s, dead).map(h => [s.id, h]));
+  relink();
   if (s.blob) dirtyScenes.add(s.id);
   save();
   showScene(i);
@@ -4186,6 +4255,9 @@ function setProject(id, d) {
   storedSceneIds = new Set(scenes.map(s => s.id));
   storedSnd = new Map(scenes.filter(s => s.snd).map(s => [s.id, s.snd.blob]));
   editCount = 0;
+  heldLinks = [];
+  sceneWas = [];
+  hsWas = new Map();
   $('ptitle').value = project.title || '';
   syncAuto();
   $('trn').value = transition();
