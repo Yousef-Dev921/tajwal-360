@@ -1750,6 +1750,13 @@ canvas {
 #stage:has(> #start:not([hidden])) #logo {
   z-index: 16;
 }
+/* in Preview the way back to the editor stays above it; nothing else of the title row does */
+#stage:has(> #start:not([hidden])) #top {
+  z-index: 16;
+}
+#stage:has(> #start:not([hidden])) #top > :not(#back) {
+  visibility: hidden;
+}
 /* make room for a top logo in the title row, and move the compass below it */
 .logo-tl #top {
   padding-left: calc(var(--logo-w, 0px) + var(--s3));

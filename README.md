@@ -242,7 +242,11 @@ that isn't granted it says once per session that the browser may clear the work.
   grid or the enlarged plan.
 - A hotspot under the pointer, aimed at by click anywhere, or showing its label after a tap
   grows smoothly to 1.2 times its size, at the same pace at any frame rate.
-- A start screen built from the first scene.
+- A start screen with the tour's title and description over its cover, or over the first
+  panorama. Preview opens on it too, each time, so the author sees what a visitor sees first;
+  Shift-click on Preview skips it, and Escape or Back to editor leaves it. Behind it nothing
+  takes the keyboard, auto-rotate waits and no sound starts, music included, until Start tour
+  is pressed. Focus then goes to the panorama.
 - A scene with notes gets an "i" button in the title row. It opens a card at the end of the
   reading direction, 320 px wide, with the scene's number and name, its capture date when the
   tour shows it, and the notes. Each line of the notes takes its own direction, so an Arabic

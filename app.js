@@ -110,6 +110,7 @@ const I18N = {
     'act.redo': 'إعادة',
     'act.redoTitle': 'إعادة (Ctrl+Shift+Z)',
     'act.preview': 'معاينة',
+    'act.previewTitle': 'الجولة كما يراها الزائر، من شاشة البداية (Shift مع النقر لتخطّيها)',
     'act.export': 'تصدير HTML',
     'act.exportTitle':
       'ملف HTML واحد يُفتح في أي مكان، حتى من الجهاز مباشرة. يناسب الجولات الصغيرة.',
@@ -487,6 +488,8 @@ const I18N = {
     'act.redo': 'Redo',
     'act.redoTitle': 'Redo (Ctrl+Shift+Z)',
     'act.preview': 'Preview',
+    'act.previewTitle':
+      'The tour as visitors see it, from the start screen (Shift-click to skip it)',
     'act.export': 'Export HTML',
     'act.exportTitle':
       'One HTML file that opens anywhere, even straight from disk. Best for small tours.',
@@ -3923,6 +3926,7 @@ function ui() {
   $('sset').hidden = $('hsec').hidden = !scenes[current];
   $('cmp').hidden = scenes[current]?.n == null;
   $('back').hidden = !(mode == 'view' && !EMBED);
+  if (!EMBED && mode != 'view' && !$('start').hidden) setStart(false);
   syncFs();
   if (scenes[current] && document.activeElement != $('sname'))
     $('sname').value = scenes[current].name;
@@ -4327,11 +4331,15 @@ $('addi').onclick = () => {
   renderHotspotList();
   renderHotspotProps();
 };
-$('prev').onclick = () => {
+// Preview opens on the start screen, as the tour does; Shift skips it.
+$('prev').onclick = e => {
   mode = 'view';
   selId = placing = null;
   buildHotspots();
+  const st = !e.shiftKey && !!scenes.length;
+  if (st) setStart(true);
   ui();
+  if (st) $('sgo').focus();
 };
 $('back').onclick = () => {
   closeGrid();
@@ -5744,7 +5752,9 @@ addEventListener('keydown', e => {
   if (e.key != 'Escape') return;
   // The library and the enlarged plan cover the stage and take Escape for themselves.
   if (!$('libm').hidden || planBig) return;
-  if (!$('pop').hidden) closePop();
+  // In Preview, the start screen goes back to the editor.
+  if (!EMBED && mode == 'view' && !$('start').hidden) $('back').click();
+  else if (!$('pop').hidden) closePop();
   else if (!$('snapm').hidden)
     setSnapMenu(
       false,
@@ -6379,8 +6389,23 @@ $('pdesc').oninput = e => {
   project.desc = e.target.value;
   save();
 };
+// The start screen: the tour's title and description over its cover, or over the first
+// panorama. An exported tour opens on it, and so does each visit to Preview, so the author sees
+// what a visitor sees first. While it shows, nothing behind it takes the keyboard, auto-rotate
+// waits and no sound plays.
+function setStart(on) {
+  const st = $('start');
+  if (on) {
+    $('stt').textContent = project.title || '';
+    $('std').textContent = project.desc || '';
+    st.style.backgroundImage = `linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.7)),url("${project.cover?.img || scenes[0].img}")`;
+  }
+  st.hidden = !on;
+  for (const e of [glCanvas, $('sb'), $('plan'), $('cmp'), $('note'), $('sgm')]) e.inert = on;
+}
 $('sgo').onclick = () => {
-  $('start').hidden = true;
+  setStart(false);
+  glCanvas.focus({ preventScroll: true }); // the button that had focus is gone
   gestured = true;
   startAudio();
   syncClip();
@@ -6499,7 +6524,14 @@ function syncAudio() {
 }
 function startAudio() {
   // Where the volume can't be lowered, the music waits for a scene's clip to finish.
-  if (audioEl && !muted && audioEl.paused && mode == 'view' && (duck == 1 || volumeWorks()))
+  if (
+    audioEl &&
+    !muted &&
+    audioEl.paused &&
+    mode == 'view' &&
+    $('start').hidden &&
+    (duck == 1 || volumeWorks())
+  )
     audioEl.play().catch(() => {});
 }
 // ── scene audio ──
@@ -7932,13 +7964,9 @@ if (!EMBED) {
   $('sbar').value = barKind();
   resetHist();
   if (EMBED && scenes.length) {
-    $('stt').textContent = project.title || '';
-    $('std').textContent = project.desc || '';
-    $('start').style.backgroundImage =
-      `linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.7)),url("${project.cover?.img || scenes[0].img}")`;
+    setStart(true);
     $('sgo').disabled = true;
     $('sgo').textContent = t('view.loading');
-    $('start').hidden = false;
     // A folder tour opened from disk: browsers such as Chrome refuse to hand a file:// image
     // to WebGL, so every scene would fail. Say why, in both languages, and how to open it.
     if (location.protocol == 'file:' && !/^data:/.test(scenes[0].img)) {
