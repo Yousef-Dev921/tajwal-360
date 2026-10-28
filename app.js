@@ -255,16 +255,39 @@ const I18N = {
     'msg.quotaWarn':
       'استُهلك \u2066{p}%\u2069 من مساحة التخزين في المتصفح. احفظ نسخاً من مشاريعك المهمة على جهازك.',
     'msg.autosaveBack': 'عاد الحفظ التلقائي إلى العمل.',
-    'msg.notPano': {
-      one: '«\u2068{name}\u2069» ليست بانوراما \u2066360°\u2069، فوُضعت كلوحة مسطّحة داخل المشهد.',
-      two: 'صورتان ليستا بانوراما \u2066360°\u2069، فوُضعتا كلوحتين مسطّحتين داخل مشهديهما.',
-      other: '{n} من الصور ليست بانوراما \u2066360°\u2069، فوُضعت كلوحات مسطّحة داخل مشاهدها.',
+    'iq.title': 'إضافة الصور \u2066{i}\u2069 من \u2066{n}\u2069',
+    'iq.finished': {
+      zero: 'لم تُضف أي صورة.',
+      one: 'أُضيفت صورة واحدة.',
+      two: 'أُضيفت صورتان.',
+      few: 'أُضيفت \u2066{n}\u2069 صور.',
+      many: 'أُضيفت \u2066{n}\u2069 صورة.',
+      other: 'أُضيفت \u2066{n}\u2069 صورة.',
     },
-    'msg.readFail': {
-      one: 'تعذّرت قراءة «\u2068{name}\u2069».',
-      two: 'تعذّرت قراءة ملفين.',
-      other: 'تعذّرت قراءة {n} من الملفات.',
+    'iq.wait': 'في الانتظار',
+    'iq.read': 'قراءة الصورة…',
+    'iq.scale': 'تجهيز النسخ…',
+    'iq.done': 'أُضيفت',
+    'iq.fail': 'تعذّرت قراءة الملف',
+    'iq.cancel': 'إيقاف',
+    'iq.close': 'إغلاق',
+    'iq.stopped': {
+      zero: 'توقفت الإضافة قبل إضافة أي صورة.',
+      one: 'توقفت الإضافة بعد صورة واحدة.',
+      two: 'توقفت الإضافة بعد صورتين.',
+      few: 'توقفت الإضافة بعد \u2066{n}\u2069 صور.',
+      many: 'توقفت الإضافة بعد \u2066{n}\u2069 صورة.',
+      other: 'توقفت الإضافة بعد \u2066{n}\u2069 صورة.',
     },
+    'iq.dup': 'هذه الصورة موجودة في المشهد «\u2068{name}\u2069».',
+    'iq.dupMaybe': 'قد تكون مكرّرة مع المشهد «\u2068{name}\u2069».',
+    'iq.skip': 'تخطٍّ',
+    'iq.addAnyway': 'أضفها على أي حال',
+    'iq.skipAll': 'تخطّي كل المكرّرات',
+    'iq.flat': 'هذه ليست صورة بانوراما \u2066360°\u2069 (النسبة \u2066{r}\u2069).',
+    'iq.asFlat': 'اعرضها صورة مسطّحة',
+    'iq.stretch': 'مدّها لتملأ البانوراما',
+    'drop.here': 'أفلت الصور هنا لإضافتها مشاهد',
     'msg.imgFail': 'تعذّرت قراءة الصورة.',
     'msg.sceneFail': 'تعذّر تحميل هذا المشهد.',
     'msg.startSaved': 'حُفظت زاوية البداية لهذا المشهد.',
@@ -542,11 +565,25 @@ const I18N = {
     'msg.quotaWarn':
       '{p}% of this browser’s storage is in use. Save copies of the projects that matter to your device.',
     'msg.autosaveBack': 'Autosave is working again.',
-    'msg.notPano': {
-      one: '“{name}” isn’t a 360° panorama, so it was placed as a flat panel in its scene.',
-      other: '{n} images aren’t 360° panoramas, so they were placed as flat panels.',
-    },
-    'msg.readFail': { one: '“{name}” could not be read.', other: '{n} files could not be read.' },
+    'iq.title': 'Adding images {i} of {n}',
+    'iq.finished': { one: 'Added 1 image.', other: 'Added {n} images.' },
+    'iq.wait': 'Waiting',
+    'iq.read': 'Reading…',
+    'iq.scale': 'Preparing copies…',
+    'iq.done': 'Added',
+    'iq.fail': 'Couldn’t read this file',
+    'iq.cancel': 'Stop',
+    'iq.close': 'Close',
+    'iq.stopped': { one: 'Stopped after 1 image.', other: 'Stopped after {n} images.' },
+    'iq.dup': 'This image is already in scene “{name}”.',
+    'iq.dupMaybe': 'This may duplicate scene “{name}”.',
+    'iq.skip': 'Skip',
+    'iq.addAnyway': 'Add anyway',
+    'iq.skipAll': 'Skip all duplicates',
+    'iq.flat': 'This isn’t a 360° panorama (ratio {r}).',
+    'iq.asFlat': 'Show as a flat photo',
+    'iq.stretch': 'Stretch to fill the panorama',
+    'drop.here': 'Drop images here to add them as scenes',
     'msg.imgFail': 'The image could not be read.',
     'msg.sceneFail': 'This scene could not be loaded.',
     'msg.startSaved': 'Start angle saved for this scene.',
@@ -658,6 +695,8 @@ function setLang(l) {
   glCanvas.setAttribute('aria-label', t('aria.canvas'));
   ui();
   if (!$('libm').hidden) renderLibrary();
+  iq?.rows.forEach(r => r.el.isConnected && iqPaint(r));
+  iqHead();
 }
 const THEMES = ['auto', 'light', 'dark'];
 let THEME = lsGet('vrt.theme');
@@ -1837,92 +1876,462 @@ async function storageKept() {
     return false;
   }
 }
-async function addFiles(files) {
-  let first = -1;
-  const flatNames = [],
-    failedNames = [];
-  for (const f of files) {
+// ───────────── import queue ─────────────
+// Files from the picker and from a drop share one queue and are read one at a time, taking a
+// turn with the panorama decodes, so a phone holds one decoded original at once. Each file
+// has a row in #iq that shows how far it has got: waiting, reading, preparing the stored
+// copies, then added, failed, or waiting for a choice (a duplicate, or an image that isn't
+// 2:1). A row waiting for a choice doesn't hold up the others.
+const IQ_STEP = { wait: 0, read: 0.33, scale: 0.66, dup: 0.33, flat: 0.33, done: 1, fail: 1 },
+  IQ_END = { done: 1, fail: 1, skip: 1 },
+  iqMq = matchMedia('(max-width: 760px)');
+// The open queue: Q, the project it adds to; rows, one per file of this batch; run, while
+// a file is being read; stop, once Stop is pressed; added, scenes added so far. iqRuns counts
+// the queues reading a file, and iqLast settles when the latest of them is done.
+let iq = null,
+  iqRuns = 0,
+  iqLast = Promise.resolve(),
+  iqUiAt = 0,
+  iqUiT;
+function addFiles(files) {
+  if (EMBED || !files.length) return;
+  // A finished queue gives way to a new one; a busy one takes the files on.
+  if (!iq || iq.Q !== project || iq.stop || !iqBusy()) iqClear();
+  iq = iq || { Q: project, rows: [], run: false, stop: false, added: 0, shown: false };
+  for (const f of files) iqRow({ f, st: 'wait' });
+  const p = $('iq');
+  if (p.hidden) {
+    p.hidden = false;
+    if (!iqMq.matches) p.scrollIntoView({ block: 'nearest' });
+  }
+  iqHead();
+  iqRun();
+}
+const iqBusy = () => iq && (iq.run || iq.rows.some(r => !IQ_END[r.st]));
+// Closes the panel. drop also gives up the file in hand, for a project that is being closed:
+// one added while it is saved for the last time would be lost with an "Added" beside it.
+function iqClear(drop) {
+  if (iq) {
+    iq.stop = true;
+    if (drop) iq.Q = null;
+  }
+  iq = null;
+  const p = $('iq');
+  if (!p) return;
+  if (p.contains(document.activeElement)) iqFocusOut();
+  p.hidden = true;
+  $('iql').textContent = '';
+  document.title = t('doc.title');
+}
+// Off a panel that is closing: to the current scene in the list, or else to Preview.
+function iqFocusOut() {
+  ($('scenes').querySelector('.on') || $('prev')).focus();
+}
+// Small screens show the panel as a sheet under the stage; the queue floats at the bottom
+// of the stage there, where it stays in sight while the sheet is scrolled.
+function iqPlace() {
+  const p = $('iq'),
+    a = p.contains(document.activeElement) && document.activeElement;
+  if (iqMq.matches) $('stage').appendChild(p);
+  else $('sfilt').before(p);
+  if (a) a.focus(); // moving a node blurs what has focus inside it
+}
+// The first 4 MB and the size tell files apart well enough, at 10–30 ms a file. crypto.subtle
+// exists only in a secure context (https, localhost); elsewhere there is no hash, and a
+// duplicate is a scene made from a file with the same name and byte size.
+async function fileHash(f) {
+  try {
+    const d = await crypto.subtle.digest(
+      'SHA-256',
+      await new Blob([f.slice(0, 4 << 20), ':' + f.size]).arrayBuffer()
+    );
+    return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (e) {
+    return null;
+  }
+}
+// The pixel size in a JPEG's frame header, without decoding it.
+async function jpegSize(b) {
+  try {
+    const v = new DataView(await b.slice(0, 1 << 16).arrayBuffer());
+    if (v.getUint16(0) != 0xffd8) return null;
+    for (let p = 2; p + 9 <= v.byteLength; ) {
+      const m = v.getUint16(p);
+      if (m >> 8 != 0xff || m == 0xffda) break;
+      // SOF0–SOF15, less DHT (c4), JPG (c8) and DAC (cc), which share the range
+      if (m >= 0xffc0 && m <= 0xffcf && m != 0xffc4 && m != 0xffc8 && m != 0xffcc)
+        return [v.getUint16(p + 7), v.getUint16(p + 5)];
+      p += 2 + v.getUint16(p + 2);
+    }
+  } catch (e) {}
+  return null;
+}
+// A scene made from the same file: the same hash, or the same name and byte size where
+// either side has no hash.
+const srcName = n => n.trim().slice(0, 120), // as cleanSrc keeps it
+  iqDupOf = r =>
+    scenes.find(
+      s =>
+        s.src &&
+        (r.h && s.src.h
+          ? s.src.h == r.h
+          : s.src.name == srcName(r.f.name) && s.src.bytes == r.f.size)
+    );
+// Scenes added before scenes recorded their file can only be guessed at: the same name, and
+// a stored copy of the size this image would make. Only the first decode tells that size.
+async function iqMaybeDup(r, w, h, flat) {
+  const name = r.f.name.replace(/\.[^.]+$/, ''),
+    k = Math.min(1, 4096 / w),
+    want = flat ? '4096x2048' : Math.round(w * k) + 'x' + Math.round(h * k);
+  for (const s of scenes) {
+    if (s.src || s.name != name) continue;
+    const d = s.blob && (await jpegSize(s.blob));
+    if (!d || d.join('x') == want) return s;
+  }
+  return null;
+}
+async function iqRun() {
+  const q = iq;
+  if (!q || q.run) return;
+  q.run = true;
+  iqRuns++;
+  busy(1);
+  syncUndoButtons();
+  // A queue stopped a moment ago may still be finishing its file; this one waits for it.
+  const prev = iqLast,
+    a0 = q.added;
+  let r, done;
+  iqLast = new Promise(res => (done = res));
+  try {
+    await prev;
+    while (!q.stop && q.Q === project && (r = q.rows.find(x => x.st == 'wait'))) await iqOne(q, r);
+  } finally {
+    q.run = false;
+    iqRuns--;
+    busy(-1);
+    done();
+    syncUndoButtons();
+  }
+  if (q.Q !== project) return;
+  if (q.added > a0) {
+    // The list was redrawn at most every 250 ms; now it shows them all, and the files this
+    // run added are one step of undo.
+    clearTimeout(iqUiT);
+    iqList();
+    save();
+  }
+  if (q.stop) toast(t('iq.stopped', { n: q.added }));
+  if (iq === q) {
+    iqHead();
+    iqTidy();
+  }
+  if (q.added && !q.stop && !iqBusy() && !(await storageKept()))
+    toast(t('msg.notPersisted'), 14000);
+}
+async function iqOne(q, r) {
+  const f = r.f;
+  iqSet(r, 'read');
+  let s = null,
+    ask = null;
+  try {
     // Some sources (a zip viewer, some Android apps) hand over a file with no type at all, so
     // an empty type is decoded like an image; anything that isn't one fails below.
-    if (f.type && !f.type.startsWith('image/')) {
-      failedNames.push(f.name);
-      continue;
-    }
-    let hdBlob = null;
+    if (f.type && !f.type.startsWith('image/')) throw new Error('type');
+    if (r.h === undefined) r.h = await fileHash(f);
+    const d = !r.force && iqDupOf(r);
+    if (d) return iqAsk(q, r, 'dup', { name: d.name });
+    const cap = await readCapture(f);
+    await decodeTurn('iq');
     try {
-      const im = await createImageBitmap(f),
-        flat = Math.abs(im.width / im.height - 2) > 0.15,
-        canvas = document.createElement('canvas'),
-        ctx = canvas.getContext('2d');
-      if (flat) {
-        const W = 4096,
-          H = 2048,
-          s = Math.min(W / 4 / im.width, (H * 0.7) / im.height),
-          w = im.width * s,
-          h = im.height * s;
-        canvas.width = W;
-        canvas.height = H;
-        ctx.fillStyle = '#111';
-        ctx.fillRect(0, 0, W, H);
-        ctx.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
-        flatNames.push(f.name);
-      } else {
-        // With high resolution on, a panorama wider than 4096 also keeps a master of up to
-        // 8192, and the 4096 copy is drawn from that master: halving gives a cleaner result
-        // than a single large step down. iOS refuses a canvas this size, so there the master
-        // is skipped and the scene keeps its 4096 copy only.
-        let src = im;
-        if (project.hd && im.width > 4096) {
-          const m = document.createElement('canvas'),
-            k = Math.min(1, 8192 / im.width);
-          m.width = Math.round(im.width * k);
-          m.height = Math.round(im.height * k);
-          const mx = m.getContext('2d');
-          mx?.drawImage(im, 0, 0, m.width, m.height);
-          // A browser over its canvas limit can hand back no context, or one that silently
-          // draws nothing; a decoded photo is opaque, so a transparent middle gives it away.
-          if (mx?.getImageData(m.width >> 1, m.height >> 1, 1, 1).data[3] == 255) {
-            hdBlob = await canvasBlob(m, 'image/jpeg', 0.86);
-            if (hdBlob) src = m;
-          }
-        }
-        const k = Math.min(1, 4096 / im.width);
-        canvas.width = Math.round(im.width * k);
-        canvas.height = Math.round(im.height * k);
-        ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
-        if (src != im) src.width = src.height = 0; // let the 128 MB master go now
-      }
-      im.close();
-      const blob = await canvasBlob(canvas, 'image/jpeg', 0.86),
-        sid = uid();
-      scenes.push({
-        id: sid,
-        name: f.name.replace(/\.[^.]+$/, ''),
-        img: objURL(blob),
-        blob,
-        ...(hdBlob && { hd: objURL(hdBlob), hdBlob }),
-        th: sceneThumb(canvas),
-        u0: flat ? 0.5 : 0,
-        p0: 0,
-        hs: [],
-        ...(await readCapture(f)),
-      });
-      dirtyScenes.add(sid);
-      if (first < 0) first = scenes.length - 1;
-    } catch (e) {
-      failedNames.push(f.name);
+      [s, ask] = await iqMake(r, cap);
+    } finally {
+      decodeDone();
     }
+  } catch (e) {
+    iqSet(r, 'fail');
+    return;
   }
-  const notes = [];
-  if (flatNames.length) notes.push(t('msg.notPano', { n: flatNames.length, name: flatNames[0] }));
-  if (failedNames.length)
-    notes.push(t('msg.readFail', { n: failedNames.length, name: failedNames[0] }));
-  if (notes.length) toast(notes.join(' '), 8000);
-  save();
-  if (first >= 0) showScene(first);
-  else ui();
-  if (first >= 0 && !(await storageKept()))
-    toast([...notes, t('msg.notPersisted')].join(' '), 14000);
+  if (ask) return iqAsk(q, r, ask[0], ask[1]);
+  // Opening another project meanwhile drops the file; Stop lets it finish.
+  if (q.Q !== project) {
+    freeURL(s.img);
+    freeURL(s.hd);
+    return;
+  }
+  scenes.push(s);
+  q.added++;
+  // Written as it comes, so a closed tab or a reloading phone keeps what was added. The undo
+  // step is taken once, at the end.
+  dirtyScenes.add(s.id);
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flush, 400);
+  r.th = s.th;
+  iqSet(r, 'done');
+  if (!q.shown) {
+    q.shown = true;
+    await showScene(scenes.length - 1);
+  } else iqUi();
+}
+// Decodes the file and makes the scene, or says what to ask first.
+async function iqMake(r, cap) {
+  const im = await createImageBitmap(r.f);
+  try {
+    return await iqDraw(r, cap, im);
+  } finally {
+    im.close();
+  }
+}
+async function iqDraw(r, cap, im) {
+  const f = r.f;
+  iqSet(r, 'scale');
+  const ratio = im.width / im.height;
+  let flat = Math.abs(ratio - 2) > 0.15;
+  if (!r.force) {
+    const d = await iqMaybeDup(r, im.width, im.height, flat);
+    if (d) return [null, ['dup', { name: d.name, maybe: 1 }]];
+  }
+  if (flat && !r.mode) return [null, ['flat', { ratio }]];
+  // Stretched, a near-panorama is drawn at 2:1 and fills the sphere.
+  if (r.mode == 'stretch') flat = false;
+  const ar = r.mode == 'stretch' ? 2 : ratio,
+    canvas = document.createElement('canvas'),
+    ctx = canvas.getContext('2d');
+  let hdBlob = null;
+  if (flat) {
+    const W = 4096,
+      H = 2048,
+      s = Math.min(W / 4 / im.width, (H * 0.7) / im.height),
+      w = im.width * s,
+      h = im.height * s;
+    canvas.width = W;
+    canvas.height = H;
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
+  } else {
+    // With high resolution on, a panorama wider than 4096 also keeps a master of up to
+    // 8192, and the 4096 copy is drawn from that master: halving gives a cleaner result
+    // than a single large step down. iOS refuses a canvas this size, so there the master
+    // is skipped and the scene keeps its 4096 copy only.
+    let src = im;
+    if (project.hd && im.width > 4096) {
+      const m = document.createElement('canvas'),
+        k = Math.min(1, 8192 / im.width);
+      m.width = Math.round(im.width * k);
+      m.height = Math.round(m.width / ar);
+      const mx = m.getContext('2d');
+      mx?.drawImage(im, 0, 0, m.width, m.height);
+      // A browser over its canvas limit can hand back no context, or one that silently
+      // draws nothing; a decoded photo is opaque, so a transparent middle gives it away.
+      if (mx?.getImageData(m.width >> 1, m.height >> 1, 1, 1).data[3] == 255) {
+        hdBlob = await canvasBlob(m, 'image/jpeg', 0.86);
+        if (hdBlob) src = m;
+      }
+    }
+    const k = Math.min(1, 4096 / im.width);
+    canvas.width = Math.round(im.width * k);
+    canvas.height = Math.round(canvas.width / ar);
+    ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+    if (src != im) src.width = src.height = 0; // let the 128 MB master go now
+  }
+  const w = im.width,
+    h = im.height;
+  im.close(); // closed again by iqMake, which does nothing
+  const blob = await canvasBlob(canvas, 'image/jpeg', 0.86),
+    th = sceneThumb(canvas);
+  canvas.width = canvas.height = 0; // and the 32 MB copy, before the next file
+  return [
+    {
+      id: uid(),
+      name: f.name.replace(/\.[^.]+$/, ''),
+      img: objURL(blob),
+      blob,
+      ...(hdBlob && { hd: objURL(hdBlob), hdBlob }),
+      th,
+      u0: flat ? 0.5 : 0,
+      p0: 0,
+      hs: [],
+      ...cap,
+      // The original file, as it was before the copies were made.
+      src: {
+        ...(r.h && { h: r.h }),
+        name: srcName(f.name),
+        w,
+        h0: h,
+        bytes: f.size,
+        ...(f.type && { type: f.type.slice(0, 40) }),
+      },
+    },
+    null,
+  ];
+}
+// Each added scene redraws the scene list, at most every 250 ms: with 150 scenes it carries
+// a few hundred KB of thumbnails. Only the list: the rest of the panel, a hotspot's fields
+// say, may be in use while the files come in.
+function iqUi() {
+  clearTimeout(iqUiT);
+  const w = 250 - (performance.now() - iqUiAt);
+  if (w > 0) iqUiT = setTimeout(iqUi, w);
+  else {
+    iqUiAt = performance.now();
+    iqList();
+  }
+}
+function iqList() {
+  $('empty').hidden = scenes.length > 0;
+  renderScenes();
+}
+function iqRow(r) {
+  const li = document.createElement('li');
+  li.className = 'iqr';
+  li.innerHTML =
+    '<span class="iqt"></span><span class="iqn" dir="auto"></span><span class="iqs"></span><span class="iqp"><i></i></span><div class="iqa"></div>';
+  li.children[1].textContent = li.title = r.f.name;
+  r.el = li;
+  iq.rows.push(r);
+  $('iql').appendChild(li);
+  iqSet(r, r.st);
+}
+function iqAsk(q, r, st, o) {
+  // Stopped while this file was being read: nothing more is asked.
+  if (q.stop) return iqSet(r, 'skip');
+  Object.assign(r, o);
+  iqSet(r, st);
+  // The choice that fits takes focus, unless the author is busy elsewhere in the editor.
+  const a = document.activeElement;
+  if (!a || a == document.body || a == glCanvas || ($('iq').contains(a) && !a.closest('.iqa')))
+    iqFocus();
+}
+// Moves focus to the default choice of the first row that waits for one, or to the header.
+function iqFocus() {
+  const b = $('iql').querySelector('.iqa .pri') || (!$('iqall').hidden && $('iqall')) || $('iqx');
+  b.focus();
+}
+// Moves a row on to a state.
+function iqSet(r, st) {
+  r.st = st;
+  iqPaint(r);
+  if (st == 'done' || st == 'skip') iqCollapse(r, st == 'done' ? 2000 : 0);
+  iqHead();
+}
+// Shows a row's state in the current language.
+function iqPaint(r) {
+  const st = r.st,
+    e = r.el,
+    [tb, , txt, bar, act] = e.children;
+  e.dataset.st = st;
+  txt.textContent =
+    st == 'dup'
+      ? t(r.maybe ? 'iq.dupMaybe' : 'iq.dup', { name: r.name })
+      : st == 'flat'
+        ? t('iq.flat', { r: r.ratio.toFixed(1) + '\u00a0:\u00a01' })
+        : IQ_END[st] || IQ_STEP[st] != null
+          ? t('iq.' + st)
+          : '';
+  bar.firstChild.style.width = (IQ_STEP[st] || 0) * 100 + '%';
+  if (r.th && !tb.firstChild) tb.innerHTML = `<img src="${esc(r.th)}" alt="">`;
+  // Stretching suits a near-panorama, 1.7 to 2.4, such as a cropped one. A wider image is part
+  // of a panorama, and a narrower one an ordinary photo: stretched around the whole sphere,
+  // either would be distorted beyond use.
+  const near = r.ratio >= 1.7 && r.ratio <= 2.4,
+    ch =
+      st == 'dup'
+        ? ['skip', 'add']
+        : st != 'flat'
+          ? []
+          : near
+            ? ['stretch', 'flat', 'skip']
+            : ['flat', 'skip'],
+    def = st == 'dup' ? 'skip' : near ? 'stretch' : 'flat',
+    had = act.contains(document.activeElement) && document.activeElement.dataset.a;
+  act.innerHTML = ch
+    .map(
+      a =>
+        `<button data-a="${a}"${a == def ? ' class="pri"' : ''}>${esc(t({ skip: 'iq.skip', add: 'iq.addAnyway', flat: 'iq.asFlat', stretch: 'iq.stretch' }[a]))}</button>`
+    )
+    .join('');
+  if (had) act.querySelector(`[data-a="${had}"]`)?.focus();
+}
+// An added row shows its thumbnail for two seconds, then folds away; a skipped one at once.
+function iqCollapse(r, ms) {
+  setTimeout(() => {
+    const e = r.el;
+    if (!e.isConnected) return;
+    if (e.contains(document.activeElement)) iqFocus();
+    e.classList.add('out');
+    setTimeout(
+      () => {
+        e.remove();
+        iqTidy();
+      },
+      reduceMotion.matches ? 0 : 200
+    );
+  }, ms);
+}
+// The panel closes by itself once every row has folded away and nothing is left to do.
+function iqTidy() {
+  if (iq && !iqBusy() && !$('iql').children.length) iqClear();
+}
+// The header names how far the queue has got, and is the only part a screen reader hears
+// change. The tab's title carries the same count, for an author working in another tab.
+function iqHead() {
+  const q = iq;
+  if (!q) return;
+  // i counts the files started, so rows that wait for a choice don't hold the count back.
+  const n = q.rows.length,
+    busyNow = iqBusy(),
+    i = Math.max(1, q.rows.filter(r => r.st != 'wait').length),
+    dups = q.rows.filter(r => r.st == 'dup').length,
+    h = busyNow ? t('iq.title', { i, n }) : t('iq.finished', { n: q.added });
+  if ($('iqh').textContent != h) $('iqh').textContent = h;
+  $('iqall').hidden = dups < 2;
+  setText($('iqx'), t(busyNow ? 'iq.cancel' : 'iq.close'));
+  document.title = (busyNow ? `(${i}/${n}) ` : '') + t('doc.title');
+}
+// Stop finishes the file being read and drops the rest; Close, once nothing is left to do,
+// clears the rows that failed.
+function iqStop() {
+  const q = iq;
+  if (!q) return;
+  if (!iqBusy()) return iqClear();
+  // Skipping a row takes away its buttons, and the focus with them.
+  const had = $('iq').contains(document.activeElement) || document.activeElement == document.body;
+  q.stop = true;
+  q.rows.forEach(r => {
+    if (r.st == 'wait' || r.st == 'dup' || r.st == 'flat') iqSet(r, 'skip');
+  });
+  if (!q.run) toast(t('iq.stopped', { n: q.added }));
+  iqHead();
+  if (had && iq) iqFocus();
+}
+if (!EMBED) {
+  iqPlace();
+  iqMq.addEventListener?.('change', iqPlace);
+  $('iqx').onclick = iqStop;
+  $('iqall').onclick = () => {
+    iq?.rows.forEach(r => r.st == 'dup' && iqSet(r, 'skip'));
+    iqFocus();
+  };
+  $('iq').addEventListener('keydown', e => {
+    if (e.key != 'Escape') return;
+    e.preventDefault();
+    e.stopPropagation();
+    iqStop();
+  });
+  $('iql').onclick = e => {
+    const b = e.target.closest('button'),
+      r = b && iq?.rows.find(x => x.el.contains(b));
+    if (!r) return;
+    const a = b.dataset.a;
+    if (a == 'skip') iqSet(r, 'skip');
+    else {
+      if (a == 'add') r.force = true;
+      else r.mode = a;
+      iqSet(r, 'wait');
+      iqRun();
+    }
+    iqFocus();
+  };
 }
 // ───────────── ui ─────────────
 const selHotspot = () => scenes[current]?.hs.find(h => h.id == selId);
@@ -2488,11 +2897,46 @@ $('file').onchange = e => {
   addFiles([...e.target.files]);
   e.target.value = '';
 };
-$('stage').ondragover = e => e.preventDefault();
-$('stage').ondrop = e => {
+// Files dragged over the editor's stage show where they will land. A tour, and the editor in
+// Preview, take no files, but still have to refuse them: a file dropped where nothing takes
+// it is opened by the browser in place of the page, and the visitor loses the tour.
+const dragsFiles = e => [...(e.dataTransfer?.types || [])].includes('Files'),
+  takesFiles = () => !EMBED && mode == 'edit';
+let dragN = 0; // dragenter and dragleave come in pairs for every child crossed
+function dropShown(on) {
+  if (!on) dragN = 0;
+  $('drop').hidden = !on;
+}
+$('stage').addEventListener('dragenter', e => {
+  if (!dragsFiles(e) || !takesFiles()) return;
   e.preventDefault();
+  if (!dragN++) dropShown(true);
+});
+$('stage').addEventListener('dragleave', e => {
+  if (dragN && !--dragN) dropShown(false);
+});
+$('stage').addEventListener('dragover', e => {
+  if (!dragsFiles(e) || !takesFiles()) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+});
+$('stage').addEventListener('drop', e => {
+  if (!dragsFiles(e) || !takesFiles()) return;
+  e.preventDefault();
+  dropShown(false);
   addFiles([...e.dataTransfer.files]);
-};
+});
+// Anywhere nothing has taken the files, the drop is refused, and the pointer says so.
+addEventListener('dragover', e => {
+  if (!dragsFiles(e) || e.defaultPrevented) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'none';
+});
+addEventListener('drop', e => {
+  if (dragN) dropShown(false);
+  if (dragsFiles(e) && !e.defaultPrevented) e.preventDefault();
+});
+addEventListener('dragend', () => dragN && dropShown(false));
 $('ptitle').oninput = e => {
   project.title = e.target.value;
   save();
@@ -2773,6 +3217,11 @@ async function toPortable(Q, forTour, put) {
     if (forTour && !Q.meta) {
       delete r.taken;
       delete r.gps;
+    }
+    // The hash only finds duplicates in the editor; a .json backup keeps it for that.
+    if (forTour && r.src) {
+      const { h, ...o } = r.src;
+      r.src = o;
     }
     // The tour's scene grid loads thumbnails lazily, as files of their own.
     if (zip && r.th) r.th = await inline(r.th, 'thumbs/' + s.id);
@@ -3169,8 +3618,25 @@ const cleanScene = s => {
       lon = num(s.gps.lon, NaN);
     if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) out.gps = { lat, lon };
   }
+  const src = cleanSrc(s.src);
+  if (src) out.src = src;
   return out;
 };
+// The file a scene was made from: its hash (for finding duplicates), name, pixel size, size
+// in bytes and type. Whatever doesn't check out is left out.
+function cleanSrc(o) {
+  if (!o || typeof o != 'object' || Array.isArray(o)) return null;
+  const out = {},
+    int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi,
+    str = (v, n) => typeof v == 'string' && v.trim().slice(0, n);
+  if (typeof o.h == 'string' && /^[0-9a-f]{64}$/.test(o.h)) out.h = o.h;
+  if (str(o.name, 120)) out.name = str(o.name, 120);
+  if (int(o.w, 1, 65535)) out.w = o.w;
+  if (int(o.h0, 1, 65535)) out.h0 = o.h0;
+  if (int(o.bytes, 0, Number.MAX_SAFE_INTEGER)) out.bytes = o.bytes;
+  if (str(o.type, 40)) out.type = str(o.type, 40);
+  return Object.keys(out).length ? out : null;
+}
 $('pfile').onchange = async e => {
   const f = e.target.files[0];
   e.target.value = '';
@@ -3260,6 +3726,7 @@ $('pfile').onchange = async e => {
       d.cover.img = objURL(d.cover.blob);
     }
     d.title = d.title || t('def.imported');
+    iqClear(true);
     await flush();
     const nid = uid() + uid();
     setProject(nid, d);
@@ -3289,6 +3756,7 @@ function closeLib() {
   $('lib').focus();
 }
 function setProject(id, d) {
+  iqClear(true);
   if (project !== d) revokeProject(project);
   projectId = id;
   project = d;
@@ -3325,6 +3793,7 @@ function setProject(id, d) {
 }
 async function openProject(id) {
   if (id == projectId) return;
+  iqClear(true);
   await flush();
   try {
     const d = await loadProject(id);
@@ -3337,6 +3806,7 @@ async function openProject(id) {
   }
 }
 async function newProject() {
+  iqClear(true);
   await flush();
   setProject(uid() + uid(), { v: SCHEMA, title: t('def.newProj'), scenes: [] });
   await flush();
@@ -4440,8 +4910,10 @@ const cloneScene = s => ({
 function syncUndoButtons() {
   const u = $('undo'),
     r = $('redo');
-  if (u) u.disabled = undoPos <= 0;
-  if (r) r.disabled = undoPos >= undoStack.length - 1;
+  // Not while an import is adding scenes: undo would take back the ones added so far, and the
+  // rest would still come in.
+  if (u) u.disabled = undoPos <= 0 || iqRuns > 0;
+  if (r) r.disabled = undoPos >= undoStack.length - 1 || iqRuns > 0;
 }
 function snapshotNow() {
   clearTimeout(snapTimer);
@@ -4497,10 +4969,12 @@ function restoreSnapshot(i) {
   }
 }
 const undo = () => {
+    if (iqRuns) return;
     snapshotNow();
     restoreSnapshot(undoPos - 1);
   },
   redo = () => {
+    if (iqRuns) return;
     snapshotNow();
     restoreSnapshot(undoPos + 1);
   };
