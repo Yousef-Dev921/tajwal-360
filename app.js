@@ -135,6 +135,7 @@ const I18N = {
     'snap.hs': 'مع النقاط التفاعلية',
     'snap.save': 'حفظ الصورة',
     'msg.snapSaved': 'حُفظت الصورة «\u2068{name}\u2069».',
+    'msg.snapFail': 'تعذّر حفظ الصورة.',
     'nav.bar': 'التنقّل بين المشاهد',
     'nav.all': 'كل المشاهد',
     'nav.gridAria': 'كل المشاهد. أنت في المشهد {i} من {n}',
@@ -419,6 +420,7 @@ const I18N = {
     'snap.hs': 'Include hotspots',
     'snap.save': 'Save image',
     'msg.snapSaved': 'Saved “\u2068{name}\u2069”.',
+    'msg.snapFail': 'The image could not be saved.',
     'nav.bar': 'Scene navigation',
     'nav.all': 'All scenes',
     'nav.gridAria': 'All scenes. You are on scene {i} of {n}',
@@ -2382,7 +2384,7 @@ function syncNote() {
     .split('\n')
     .map(l => (l.trim() ? `<p dir="auto">${esc(l)}</p>` : '<p class="gap"></p>'))
     .join('');
-  card.scrollTop = 0;
+  $('noteb').scrollTop = 0;
 }
 function setNote(on) {
   const had = $('note').contains(document.activeElement);
@@ -3849,9 +3851,15 @@ function closePop() {
 // Escape closes the topmost of the hotspot popup, the image options and the notes card.
 addEventListener('keydown', e => {
   if (e.key != 'Escape') return;
+  // The library and the enlarged plan cover the stage and take Escape for themselves.
+  if (!$('libm').hidden || planBig) return;
   if (!$('pop').hidden) closePop();
-  else if (!$('snapm').hidden) setSnapMenu(false, true);
-  else if (!$('note').hidden && !planBig) setNote(false);
+  else if (!$('snapm').hidden)
+    setSnapMenu(
+      false,
+      $('snapm').contains(document.activeElement) || document.activeElement == $('snap')
+    );
+  else if (!$('note').hidden) setNote(false);
 });
 glCanvas.addEventListener('pointerdown', e => {
   if (walking) return;
@@ -5148,28 +5156,56 @@ function snapName(s, i) {
     ` - ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}.jpg`
   );
 }
-const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+// Rebuilds the hotspots, for a change of selection, and gives the new objects the layout the
+// render loop gave the old ones last frame (size, turn, label side and fade), so the scene can
+// be rendered at once rather than a frame later. A text-only label drawn for the selection has
+// another size, so its scale follows its width.
+function rebuildLaidOut() {
+  const old = hsParts;
+  buildHotspots();
+  hsParts.forEach((e, k) => {
+    const o = old[k];
+    if (!o || o.h !== e.h) return;
+    e.a = o.a;
+    for (const p of ['ic', 'dc', 'lb']) {
+      const a = e[p],
+        b = o[p];
+      if (!a || !b) continue;
+      a.scale.copy(b.scale);
+      a.quaternion.copy(b.quaternion);
+      a.visible = b.visible;
+      a.material.opacity = b.material.opacity;
+      if (a.center) a.center.copy(b.center);
+    }
+    if (e.lb && o.lb) e.lb.scale.multiplyScalar(e.lW / o.lW);
+  });
+}
 async function saveView() {
   const i = current,
     s = scenes[i];
   if (!s || snapping || walking || !textures[s.id]) return;
   snapping = true;
   const hs = $('snaphs').checked,
-    sel = mode == 'edit' && selId;
+    // The dashed ring round a selected hotspot is the editor's, not part of the place, so the
+    // hotspots are drawn without it for the picture and with it again straight after.
+    sel = hs && mode == 'edit' && selId;
   try {
-    // The dashed ring round a selected hotspot is the editor's, not part of the place. The
-    // hotspots are rebuilt without it and laid out by two frames of the render loop first.
-    if (hs && sel) {
-      selId = null;
-      buildHotspots();
-      await nextFrame();
-      await nextFrame();
-      if (current != i) return;
-    }
     const cw = glCanvas.clientWidth || 1,
       ch = glCanvas.clientHeight || 1,
-      k = Math.min(SNAP_PX, renderer.capabilities.maxTextureSize) / Math.max(cw, ch),
+      k = Math.min(SNAP_PX, renderer.capabilities.maxTextureSize) / Math.max(cw, ch);
+    let c;
+    if (sel) {
+      selId = null;
+      rebuildLaidOut();
+    }
+    try {
       c = renderView(Math.round(cw * k), Math.round(ch * k), hs);
+    } finally {
+      if (sel) {
+        selId = sel;
+        rebuildLaidOut();
+      }
+    }
     const blob = await canvasBlob(c, 'image/jpeg', 0.9);
     c.width = c.height = 0;
     if (!blob) throw new Error('encode');
@@ -5177,12 +5213,8 @@ async function saveView() {
     saveFile(name, blob, 'image/jpeg');
     toast(t('msg.snapSaved', { name }));
   } catch (x) {
-    toast(t('msg.imgFail'));
+    toast(t('msg.snapFail'));
   } finally {
-    if (sel && selId === null && scenes[current] === s) {
-      selId = sel;
-      buildHotspots();
-    }
     snapping = false;
   }
 }

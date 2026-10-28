@@ -886,6 +886,7 @@ canvas {
 }
 @media (pointer: coarse) {
   #top button,
+  #top > .chip,
   #snapm .opt {
     min-height: 44px;
   }
@@ -1149,8 +1150,9 @@ canvas {
    for reading paragraphs: white text stays above 10:1 over a white photo. It sits at the inline
    end, under the title row (--top-b is that row's bottom) and above the scene bar, and clears a
    logo in either corner on its side. In the stack it is above the title row, compass, bar and
-   logo (3–4) and level with the small plan (5) on the other side; the hotspot popup (6), the
-   enlarged plan (8), the scene grid (12) and the start screen (15) cover it. */
+   logo (3–4) and level with the small plan (5), which is on the other side on a wide stage and
+   under the sheet on a phone, where closing the notes brings it back; the hotspot popup (6),
+   the enlarged plan (8), the scene grid (12) and the start screen (15) cover it. */
 #note {
   --note-t: calc(var(--top-b, 58px) + var(--s3));
   --note-b: calc(env(safe-area-inset-bottom, 0px) + var(--s4) + var(--sb-h, 0px) + var(--s3));
