@@ -118,8 +118,8 @@ that isn't granted it says once per session that the browser may clear the work.
 - 60 steps of undo and redo.
 - Scene thumbnails, drag-to-reorder, rename and delete. Reordering is a pointer drag, so it
   works with a finger too: hold a scene for a quarter of a second, then drag it.
-- A scene manager for large tours: "Manage scenes" over the scene list, or Ctrl+Shift+M
-  (Cmd+Shift+M on a Mac), opens every scene as a card on the whole screen, as large cards,
+- A scene manager for large tours: "Manage scenes" over the scene list, or Cmd+Shift+M on a
+  Mac (Ctrl+Shift+M elsewhere, where the browser doesn't keep it for itself), opens every scene as a card on the whole screen, as large cards,
   small cards or a list with the capture date, the original's pixel size and its file size.
   Each card shows the scene's place in the tour, Start, Hidden and HD badges and its links
   out and in (→ 3 ← 2), and can be renamed in place (the pencil, or F2; Enter keeps the
