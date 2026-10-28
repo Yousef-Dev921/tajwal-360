@@ -159,12 +159,32 @@ const I18N = {
     'opt.hd': 'الاحتفاظ بنسخة عالية الدقة (\u20668192\u2069 بكسل)',
     'hint.hd':
       'يسري على الصور التي تُضاف بعد تفعيله. تُحفظ لكل بانوراما أعرض من \u20664096\u2069 بكسل نسختان: حتى \u20668192\u2069 لأجهزة الكمبيوتر، و\u20664096\u2069 للهواتف والأجهزة اللوحية. يحمل التصدير كمجلد النسختين، أما ملف HTML فيحمل نسخة \u20664096\u2069 وحدها.',
-    'f.hdScene': 'لهذا المشهد نسخة عالية الدقة تظهر على أجهزة الكمبيوتر.',
     'msg.hdLeft':
       'تُركت النسخ عالية الدقة خارج الملف لأنه كان سيتجاوز حجماً يمكن استيراده مرة أخرى، وبقيت في هذا المتصفح.',
     'msg.exportedHd':
       'يحمل الملف نسخ \u20664096\u2069 بكسل وحدها، فالنسخ عالية الدقة في التصدير كمجلد.',
     'f.captured': 'التُقطت:',
+    'f.imgInfo': 'معلومات الصورة',
+    'f.original': 'الملف الأصلي',
+    'f.stored': 'النسخة المحفوظة',
+    'f.hdCopy': 'النسخة عالية الدقة',
+    'f.takenAt': 'تاريخ التصوير',
+    'f.place': 'الموقع',
+    'f.camera': 'الكاميرا',
+    'f.unknown': 'غير معروف',
+    'f.none': 'لا يوجد',
+    'f.px': '\u2066{w} × {h}\u2069',
+    'f.mb': '\u2066{n}\u2069 ميجابايت',
+    'msg.lowRes': 'دقة منخفضة: قد تبدو التفاصيل ناعمة عند التكبير.',
+    'act.replaceImg': 'استبدال الصورة',
+    'act.replacing': 'جارٍ الاستبدال…',
+    'hint.replaceImg': 'تبقى النقاط التفاعلية وزاوية البداية واتجاه الشمال كما هي.',
+    'msg.replaced':
+      'استُبدلت صورة المشهد «\u2068{name}\u2069». تأكّد من أن النقاط ما زالت في أماكنها.',
+    'act.dlImg': 'تنزيل الصورة',
+    'hint.dlImg': 'لا يُحتفظ بالملف الأصلي، فالتنزيل هو أفضل نسخة محفوظة منه.',
+    'msg.dlImg': 'نُزّلت الصورة «\u2068{name}\u2069».',
+    'act.cancel': 'إلغاء',
     'act.openMap': 'فتح الموقع على الخريطة',
     'act.planBig': 'تكبير المخطط',
     'act.planSmall': 'تصغير المخطط',
@@ -475,12 +495,32 @@ const I18N = {
     'opt.hd': 'Keep high-resolution panoramas (8192 px)',
     'hint.hd':
       'Applies to images added from now on. Each panorama wider than 4096 px keeps two copies: up to 8192 px for desktops, and 4096 px for phones and tablets. The folder export carries both; the HTML file carries the 4096 px copy only.',
-    'f.hdScene': 'This scene has a high-resolution copy, shown on desktops.',
     'msg.hdLeft':
       'The high-resolution copies were left out, since the file would be too large to import again; they stay in this browser.',
     'msg.exportedHd':
       'It carries the 4096 px copies only; the high-resolution ones are in the folder export.',
     'f.captured': 'Captured:',
+    'f.imgInfo': 'Image information',
+    'f.original': 'Original file',
+    'f.stored': 'Stored copy',
+    'f.hdCopy': 'High-resolution copy',
+    'f.takenAt': 'Taken',
+    'f.place': 'Location',
+    'f.camera': 'Camera',
+    'f.unknown': 'Unknown',
+    'f.none': 'None',
+    'f.px': '{w} × {h}',
+    'f.mb': '{n} MB',
+    'msg.lowRes': 'Low resolution: details may look soft when zoomed.',
+    'act.replaceImg': 'Replace image',
+    'act.replacing': 'Replacing…',
+    'hint.replaceImg': 'Hotspots, start view and north stay as they are.',
+    'msg.replaced':
+      'Replaced the image of “\u2068{name}\u2069”. Check that the hotspots still sit in the right places.',
+    'act.dlImg': 'Download image',
+    'hint.dlImg': 'The original file isn’t kept: this downloads the best copy stored.',
+    'msg.dlImg': 'Downloaded “\u2068{name}\u2069”.',
+    'act.cancel': 'Cancel',
     'act.openMap': 'Open this location on a map',
     'act.planBig': 'Enlarge plan',
     'act.planSmall': 'Shrink plan',
@@ -829,6 +869,7 @@ let library = [],
   dirtyScenes = new Set(),
   storedSceneIds = new Set(),
   storedSnd = new Map(), // scene id → the clip Blob in storage
+  hdGone = new Set(), // scenes whose high-resolution master went with a replaced image
   audioDirty = false,
   planDirty = false,
   coverDirty = false,
@@ -1053,6 +1094,8 @@ async function flush() {
       const s = Q.scenes.find(x => x.id == sid);
       if (s && s.blob) await dbOp('put', 'b:' + id + ':' + sid, s.blob);
       if (s && s.hdBlob) await dbOp('put', 'h:' + id + ':' + sid, s.hdBlob);
+      else if (s && hdGone.has(sid)) await dbOp('del', 'h:' + id + ':' + sid).catch(() => {});
+      hdGone.delete(sid);
       dirtyScenes.delete(sid);
     }
     // Taken now rather than cleared after the write: opening another project during the
@@ -1114,9 +1157,10 @@ async function flush() {
     e.title = Q.title || t('def.untitled');
     e.n = Q.scenes.length;
     e.t = Date.now();
-    // The library shows the cover, or else the first scene.
+    // The library shows the cover, or else the first scene; a new image in that scene (a
+    // replace) gives it a new thumbnail, so the end of that tells them apart too.
     const f = Q.scenes[0],
-      thid = Q.cover ? 'cv' + Q.cover.t : f?.id;
+      thid = Q.cover ? 'cv' + Q.cover.t : f && f.id + ':' + (f.th || '').slice(-24);
     if (!f) {
       e.th = null;
       e.thid = null;
@@ -1155,6 +1199,7 @@ const migrated = new WeakMap();
 function applyMigration(d) {
   const m = migrated.get(d);
   dirtyScenes = new Set(m?.scenes);
+  hdGone = new Set();
   audioDirty = !!m?.audio;
   planDirty = !!m?.plan;
   coverDirty = false;
@@ -1781,7 +1826,8 @@ async function showScene(i, o = {}) {
 // GPS heights are rough and their datum varies, which would mislead anyone who relies on
 // a level.
 const EXIF_DATE = /^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d)(?::(\d\d))?/,
-  TAKEN = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/;
+  TAKEN = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/,
+  CAM_MAX = 80;
 async function readCapture(f) {
   const out = {};
   let v, tiff;
@@ -1831,12 +1877,43 @@ async function readCapture(f) {
   } catch (e) {
     return out;
   }
+  let ex = new Map(); // the Exif IFD
   try {
-    const ex = ifd0.has(0x8769) ? ifd(u32(ifd0.get(0x8769) + 8)) : new Map(),
-      e = ex.get(0x9003) ?? ifd0.get(0x0132), // DateTimeOriginal, else DateTime
+    if (ifd0.has(0x8769)) ex = ifd(u32(ifd0.get(0x8769) + 8));
+  } catch (e) {}
+  try {
+    const e = ex.get(0x9003) ?? ifd0.get(0x0132), // DateTimeOriginal, else DateTime
       d = e != null && ascii(e).match(EXIF_DATE);
     if (d && +d[1] > 1990 && +d[2] >= 1 && +d[2] <= 12 && +d[3] >= 1 && +d[3] <= 31)
       out.taken = `${d[1]}-${d[2]}-${d[3]}T${d[4]}:${d[5]}:${d[6] || '00'}`;
+  } catch (e) {}
+  // The camera, for the author's record only: Make and Model from IFD0 and the lens's focal
+  // length from the Exif IFD, as "RICOH THETA Z1, 2.6 mm". Each value must have the type it
+  // should (ASCII, or one RATIONAL); text keeps printable ASCII only, and a model that already
+  // starts with its make doesn't repeat it.
+  try {
+    const text = k => {
+        const e = ifd0.get(k);
+        return e != null && u16(e + 2) == 2
+          ? ascii(e)
+              .replace(/[^\x20-\x7e]/g, '')
+              .trim()
+          : '';
+      },
+      make = text(0x010f),
+      model = text(0x0110),
+      fe = ex.get(0x920a);
+    let fl = 0;
+    if (fe != null && u16(fe + 2) == 5 && u32(fe + 4) == 1) {
+      const at = u32(fe + 8),
+        d = u32(at + 4);
+      fl = d ? u32(at) / d : 0;
+    }
+    const body = [model.toLowerCase().startsWith(make.toLowerCase()) ? '' : make, model]
+        .filter(Boolean)
+        .join(' '),
+      cam = [body, fl > 0 && fl < 1000 && +fl.toFixed(1) + ' mm'].filter(Boolean).join(', ');
+    if (cam) out.cam = cam.slice(0, CAM_MAX);
   } catch (e) {}
   try {
     if (!ifd0.has(0x8825)) return out;
@@ -2084,16 +2161,55 @@ async function iqMake(r, cap) {
 async function iqDraw(r, cap, im) {
   const f = r.f;
   iqSet(r, 'scale');
-  const ratio = im.width / im.height;
-  let flat = Math.abs(ratio - 2) > 0.15;
+  const ratio = im.width / im.height,
+    flat = notPano(ratio);
   if (!r.force) {
     const d = await iqMaybeDup(r, im.width, im.height, flat);
     if (d) return [null, ['dup', { name: d.name, maybe: 1 }]];
   }
   if (flat && !r.mode) return [null, ['flat', { ratio }]];
+  const w = im.width,
+    h = im.height,
+    p = await encodePano(im, r.mode);
+  return [
+    {
+      id: uid(),
+      name: f.name.replace(/\.[^.]+$/, ''),
+      img: objURL(p.blob),
+      blob: p.blob,
+      ...(p.hdBlob && { hd: objURL(p.hdBlob), hdBlob: p.hdBlob }),
+      th: p.th,
+      u0: p.flat ? 0.5 : 0,
+      p0: 0,
+      hs: [],
+      ...cap,
+      src: srcOf(f, r.h, w, h),
+    },
+    null,
+  ];
+}
+// An image further than this from 2:1 is not a panorama, and is not placed until the author
+// chooses how.
+const notPano = ratio => Math.abs(ratio - 2) > 0.15;
+// The original file, as it was before the copies were made.
+const srcOf = (f, hash, w, h) => ({
+  ...(hash && { h: hash }),
+  name: srcName(f.name),
+  w,
+  h0: h,
+  bytes: f.size,
+  ...(f.type && { type: f.type.slice(0, 40) }),
+});
+// The stored copies of a decoded image, for the import and for a replaced image alike: the
+// copy of at most 4096 px, with high resolution on a master of up to 8192 px, and the 2:1
+// thumbnail. mode is the author's choice for an image that isn't 2:1: 'stretch' fills the
+// sphere, anything else lays it flat on a dark panorama. Closes im as soon as it is drawn.
+async function encodePano(im, mode) {
+  const ratio = im.width / im.height;
+  let flat = notPano(ratio);
   // Stretched, a near-panorama is drawn at 2:1 and fills the sphere.
-  if (r.mode == 'stretch') flat = false;
-  const ar = r.mode == 'stretch' ? 2 : ratio,
+  if (mode == 'stretch') flat = false;
+  const ar = mode == 'stretch' ? 2 : ratio,
     canvas = document.createElement('canvas'),
     ctx = canvas.getContext('2d');
   let hdBlob = null;
@@ -2134,36 +2250,12 @@ async function iqDraw(r, cap, im) {
     ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
     if (src != im) src.width = src.height = 0; // let the 128 MB master go now
   }
-  const w = im.width,
-    h = im.height;
-  im.close(); // closed again by iqMake, which does nothing
+  im.close(); // closed again by the caller, which does nothing
   const blob = await canvasBlob(canvas, 'image/jpeg', 0.86),
     th = sceneThumb(canvas);
   canvas.width = canvas.height = 0; // and the 32 MB copy, before the next file
-  return [
-    {
-      id: uid(),
-      name: f.name.replace(/\.[^.]+$/, ''),
-      img: objURL(blob),
-      blob,
-      ...(hdBlob && { hd: objURL(hdBlob), hdBlob }),
-      th,
-      u0: flat ? 0.5 : 0,
-      p0: 0,
-      hs: [],
-      ...cap,
-      // The original file, as it was before the copies were made.
-      src: {
-        ...(r.h && { h: r.h }),
-        name: srcName(f.name),
-        w,
-        h0: h,
-        bytes: f.size,
-        ...(f.type && { type: f.type.slice(0, 40) }),
-      },
-    },
-    null,
-  ];
+  if (!blob) throw new Error('encode');
+  return { blob, hdBlob, th, flat };
 }
 // Each added scene redraws the scene list, at most every 250 ms: with 150 scenes it carries
 // a few hundred KB of thumbnails. Only the list: the rest of the panel, a hotspot's fields
@@ -2784,17 +2876,236 @@ function syncMeta() {
   }
   if (EMBED) return;
   $('metaon').checked = !!project.meta;
-  $('shd').hidden = !s?.hd;
-  $('scap').hidden = !has;
-  if (has)
-    $('scap').textContent =
-      t('f.captured') +
-      ' ' +
-      // The pair sits in a left-to-right isolate: in the Arabic interface the bidi algorithm
-      // would otherwise show it as "lon, lat".
-      [s.taken && fmtTaken(s.taken), s.gps && '⁦' + fmtGps(s.gps) + '⁩']
-        .filter(Boolean)
-        .join(' · ');
+  syncImage();
+}
+// ───────────── the scene's image: information, replace, download ─────────────
+// What the image is (the file it was made from, the copies kept, when and with what it was
+// taken) in a block that folds to one line, and the two things to do with it: replace it,
+// keeping everything placed on it, or download the best copy kept. The original file itself
+// is not kept, and the hint under the buttons says so.
+const LOW_RES = 6000, // narrower originals look soft when a detail is zoomed in on
+  blobPx = new WeakMap(); // Blob → [w, h] from its JPEG header, read once
+const fmtMB = n => t('f.mb', { n: (n / 1048576).toFixed(1) }),
+  fmtPx = (w, h) => t('f.px', { w, h });
+// A stored copy's pixel size, or null until its header has been read; the panel is drawn
+// again once it has.
+function pxOf(b) {
+  if (!b) return null;
+  if (!blobPx.has(b)) {
+    blobPx.set(b, null);
+    jpegSize(b).then(d => {
+      blobPx.set(b, d);
+      const s = scenes[current];
+      if (d && s && (s.blob === b || s.hdBlob === b)) syncImage();
+    });
+  }
+  return blobPx.get(b);
+}
+let repBusy = false, // a replacement image is being read
+  repAsk = null; // { sid, f, h, cap, ratio } while one that isn't 2:1 waits for a choice
+function syncImage() {
+  const s = scenes[current];
+  if (!s) return;
+  if (repAsk && repAsk.sid != s.id) repAsk = null;
+  const o = s.src || {},
+    lo = pxOf(s.blob),
+    hi = pxOf(s.hdBlob),
+    unk = `<span class="unk">${esc(t('f.unknown'))}</span>`,
+    join = a => a.filter(Boolean).join(' · '),
+    // Values break between their parts only, never inside "8192 × 4096".
+    nw = v => v && `<span class="nw">${esc(v)}</span>`,
+    copy = (b, d) => join([nw(d && fmtPx(d[0], d[1])), nw(b && fmtMB(b.size))]),
+    // A file name keeps its own direction inside either language.
+    orig = join([
+      o.name && `<bdi>${esc(o.name)}</bdi>`,
+      nw(o.w && o.h0 && fmtPx(o.w, o.h0)),
+      nw(o.bytes != null && fmtMB(o.bytes)),
+      nw(o.type && o.type.replace(/^image\//, '').toUpperCase()),
+    ]),
+    rows = [
+      ['f.original', orig || unk],
+      ['f.stored', copy(s.blob, lo) || unk],
+      ['f.hdCopy', s.hdBlob ? copy(s.hdBlob, hi) : esc(t('f.none'))],
+      ['f.takenAt', s.taken ? esc(fmtTaken(s.taken)) : unk],
+      // In a left-to-right isolate: the Arabic interface would otherwise show "lon, lat".
+      [
+        'f.place',
+        s.gps
+          ? `<a href="${esc(mapUrl(s.gps))}" target="_blank" rel="noopener" dir="ltr" title="${esc(t('act.openMap'))}">${esc(fmtGps(s.gps))}</a>`
+          : unk,
+      ],
+      ['f.camera', s.cam ? `<bdi>${esc(s.cam)}</bdi>` : unk],
+    ];
+  $('sinfol').innerHTML = rows.map(([k, v]) => `<dt>${esc(t(k))}</dt><dd>${v}</dd>`).join('');
+  // Folded, one line: the original's size and weight, or the stored copy's, and the date.
+  $('sinfos').textContent = join([
+    o.w && o.h0 ? fmtPx(o.w, o.h0) : lo && fmtPx(lo[0], lo[1]),
+    o.bytes != null ? fmtMB(o.bytes) : s.blob && fmtMB(s.blob.size),
+    s.taken && fmtTaken(s.taken),
+  ]);
+  // Only a panorama: a photo laid flat is small on the sphere at any resolution.
+  const r = o.w / o.h0;
+  $('slow').hidden = !(o.w < LOW_RES && r >= 1.7 && r <= 2.4);
+  const best = s.hdBlob || s.blob,
+    bp = s.hdBlob ? hi : lo;
+  $('sdl').disabled = !best;
+  $('sdls').textContent = best ? join([bp && fmtPx(bp[0], bp[1]), fmtMB(best.size)]) : '';
+  // Kept focusable while busy, so focus stays on it through a replace.
+  $('srep').setAttribute('aria-disabled', repBusy);
+  setText($('srept'), t(repBusy ? 'act.replacing' : 'act.replaceImg'));
+  const a = repAsk,
+    box = $('srask');
+  box.hidden = !a;
+  if (!a) return;
+  const near = a.ratio >= 1.7 && a.ratio <= 2.4,
+    had = box.contains(document.activeElement) && document.activeElement.dataset.a;
+  $('srq').textContent = t('iq.flat', { r: a.ratio.toFixed(1) + ' : 1' });
+  $('sra').innerHTML = (near ? ['stretch', 'flat', 'cancel'] : ['flat', 'cancel'])
+    .map(
+      (k, i) =>
+        `<button data-a="${k}"${i ? '' : ' class="pri"'}>${esc(t({ stretch: 'iq.stretch', flat: 'iq.asFlat', cancel: 'act.cancel' }[k]))}</button>`
+    )
+    .join('');
+  if (had) $('sra').querySelector(`[data-a="${had}"]`)?.focus();
+}
+// A scene's image changed (replaced, or a replace undone): its texture is made again. The old
+// one stays on screen until the new one is ready, so the view neither flashes nor moves, and is
+// released then. A scene that isn't on show only drops its texture.
+async function swapPano(id) {
+  const old = textures[id],
+    free = () => old && old !== sphereMat.map && old !== fadeMesh.material.map && old.dispose();
+  delete textures[id];
+  delete texLoads[id]; // a decode of the old image still running is now stale
+  urgentIds.delete(id);
+  texOrder = texOrder.filter(x => x != id);
+  await null; // undo sets the current scene after asking for this
+  const i = scenes.findIndex(x => x.id == id);
+  if (i < 0 || i != current) return free();
+  if (!old || sphereMat.map !== old) {
+    free();
+    return showScene(i);
+  }
+  let tex = null;
+  busy(1);
+  try {
+    tex = await loadTexture(scenes[i], true);
+  } catch (e) {}
+  busy(-1);
+  if (sphereMat.map === old) {
+    sphereMat.map = tex;
+    sphereMat.needsUpdate = true;
+    if (!tex) toast(t('msg.sceneFail'));
+  }
+  free();
+}
+// Replaces scene sid's image with file f, keeping its id, name, hotspots, start view, north,
+// level, plan position, clip and notes. The new copies are made as an import makes them; the
+// capture date, position, camera and file record are the new file's, and a high-resolution
+// master goes when the new image gives none. mode answers the question asked for an image that
+// isn't 2:1; known carries what was read of the file before asking.
+async function replaceImage(sid, f, mode, known) {
+  if (repBusy || EMBED) return;
+  const pid = projectId;
+  let p = null,
+    ask = false,
+    w = 0,
+    h = 0,
+    hash = known?.h,
+    cap = known?.cap;
+  repBusy = true;
+  repAsk = null;
+  busy(1);
+  syncImage();
+  try {
+    if (f.type && !f.type.startsWith('image/')) throw new Error('type');
+    if (!known) {
+      hash = await fileHash(f);
+      cap = await readCapture(f);
+    }
+    // Takes its turn with the imports and the panorama decodes: a phone holds one decoded
+    // original at a time.
+    await decodeTurn('rep');
+    let im = null;
+    try {
+      im = await createImageBitmap(f);
+      w = im.width;
+      h = im.height;
+      ask = notPano(w / h) && !mode;
+      if (!ask) p = await encodePano(im, mode);
+    } finally {
+      im?.close();
+      decodeDone();
+    }
+  } catch (e) {
+    if (pid == projectId) toast(t('msg.imgFail'));
+  } finally {
+    repBusy = false;
+    busy(-1);
+  }
+  const i = scenes.findIndex(x => x.id == sid);
+  // Another project was opened, or the scene deleted, while the file was read.
+  if (pid != projectId || i < 0) return syncImage();
+  if (ask) {
+    repAsk = { sid, f, h: hash, cap, ratio: w / h };
+    syncImage();
+    if (i == current) $('sra').querySelector('.pri')?.focus();
+    return;
+  }
+  if (!p) return syncImage();
+  // The step before is taken now, so undo brings back the old image as it was.
+  snapshotNow();
+  const o = scenes[i],
+    n = { ...o, img: objURL(p.blob), blob: p.blob, th: p.th, src: srcOf(f, hash, w, h) };
+  for (const k of ['hd', 'hdBlob', 'taken', 'gps', 'cam']) delete n[k];
+  if (p.hdBlob) Object.assign(n, { hd: objURL(p.hdBlob), hdBlob: p.hdBlob });
+  Object.assign(n, cap);
+  scenes[i] = n;
+  freeURL(o.img);
+  freeURL(o.hd);
+  if (o.hdBlob && !p.hdBlob) hdGone.add(sid);
+  dirtyScenes.add(sid);
+  save();
+  swapPano(sid);
+  // The start view and north were kept; the guides help check that the new photo still
+  // stands level where the old one did.
+  if (i == current) showGuides();
+  ui();
+  toast(t('msg.replaced', { name: n.name }), 9000);
+}
+if (!EMBED) {
+  $('srep').onclick = () => repBusy || $('srfile').click();
+  $('srfile').onchange = e => {
+    const f = e.target.files[0],
+      s = scenes[current];
+    e.target.value = '';
+    if (f && s) replaceImage(s.id, f);
+  };
+  $('sra').onclick = e => {
+    const b = e.target.closest('button'),
+      a = repAsk;
+    if (!b || !a) return;
+    repAsk = null;
+    if (b.dataset.a == 'cancel') syncImage();
+    else replaceImage(a.sid, a.f, b.dataset.a, a);
+    $('srep').focus();
+  };
+  $('srask').addEventListener('keydown', e => {
+    if (e.key != 'Escape' || !repAsk) return;
+    e.preventDefault();
+    e.stopPropagation();
+    repAsk = null;
+    syncImage();
+    $('srep').focus();
+  });
+  // The best copy kept, named after the scene: the 8192 master when there is one.
+  $('sdl').onclick = () => {
+    const s = scenes[current],
+      b = s && (s.hdBlob || s.blob);
+    if (!b) return;
+    const name = (namePart(s.name, 120) || String(current + 1)) + '.jpg';
+    saveFile(name, b, 'image/jpeg');
+    toast(t('msg.dlImg', { name }));
+  };
 }
 // ───────────── scene notes ─────────────
 // A scene's notes, for visitors, in a card at the inline end of the stage (a sheet on a phone).
@@ -3223,6 +3534,7 @@ async function toPortable(Q, forTour, put) {
       const { h, ...o } = r.src;
       r.src = o;
     }
+    if (forTour) delete r.cam; // the author's record, not the visitor's
     // The tour's scene grid loads thumbnails lazily, as files of their own.
     if (zip && r.th) r.th = await inline(r.th, 'thumbs/' + s.id);
     // The single file carries the 4096 copies only: at 8192 it would grow about fourfold.
@@ -3620,6 +3932,15 @@ const cleanScene = s => {
   }
   const src = cleanSrc(s.src);
   if (src) out.src = src;
+  // The camera, as readCapture() writes it: printable text of at most CAM_MAX characters.
+  const cam =
+    typeof s.cam == 'string' &&
+    s.cam
+      .replace(/[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, '')
+      .trim()
+      .slice(0, CAM_MAX)
+      .trim();
+  if (cam) out.cam = cam;
   return out;
 };
 // The file a scene was made from: its hash (for finding duplicates), name, pixel size, size
@@ -4941,10 +5262,30 @@ function restoreSnapshot(i) {
   restoring = true;
   undoPos = i;
   const id = scenes[current]?.id;
-  const oth = Object.fromEntries(scenes.map(s => [s.id, s.th]));
+  const oth = Object.fromEntries(scenes.map(s => [s.id, s.th])),
+    live = new Map(scenes.map(s => [s.id, s]));
   project.scenes = scenes = undoStack[i].s.map(cloneScene);
   scenes.forEach(s => {
     if (!s.th && oth[s.id]) s.th = oth[s.id];
+  });
+  // A replaced image, undone or redone: the scene gets its other blobs back. The URLs a
+  // snapshot recorded may have been released since, so a blob that isn't the one on show gets
+  // a new URL, and the one that was on show lets its own go.
+  scenes.forEach(s => {
+    const o = live.get(s.id);
+    if (o && o.blob === s.blob) {
+      s.img = o.img;
+      if (s.hdBlob) s.hd = o.hd;
+      return;
+    }
+    if (s.blob) s.img = objURL(s.blob);
+    if (s.hdBlob) s.hd = objURL(s.hdBlob);
+    if (!o) return; // a deleted scene brought back
+    freeURL(o.img);
+    freeURL(o.hd);
+    if (o.hdBlob && !s.hdBlob) hdGone.add(s.id);
+    dirtyScenes.add(s.id);
+    swapPano(s.id);
   });
   scenes.forEach(s => {
     if (s.blob && !storedSceneIds.has(s.id)) dirtyScenes.add(s.id);
