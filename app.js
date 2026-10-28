@@ -195,6 +195,8 @@ const I18N = {
     'nav.filterAria': 'تصفية المشاهد بالاسم أو الملاحظات',
     'nav.none': 'لا يوجد مشهد يطابق البحث.',
     'nav.matches': '{n} من {t}',
+    'act.fs': 'ملء الشاشة',
+    'act.fsExit': 'الخروج من ملء الشاشة',
     'nav.strip': 'المشاهد',
     'nav.cell': '\u2066{n}\u2069. {name}',
     'nav.hideBar': 'إخفاء المشاهد',
@@ -570,6 +572,8 @@ const I18N = {
     'nav.filterAria': 'Filter scenes by name or notes',
     'nav.none': 'No scene matches.',
     'nav.matches': '{n} of {t}',
+    'act.fs': 'Full screen',
+    'act.fsExit': 'Exit full screen',
     'nav.strip': 'Scenes',
     'nav.cell': '{n}. {name}',
     'nav.hideBar': 'Hide scenes',
@@ -3919,6 +3923,7 @@ function ui() {
   $('sset').hidden = $('hsec').hidden = !scenes[current];
   $('cmp').hidden = scenes[current]?.n == null;
   $('back').hidden = !(mode == 'view' && !EMBED);
+  syncFs();
   if (scenes[current] && document.activeElement != $('sname'))
     $('sname').value = scenes[current].name;
   if (scenes[current] && document.activeElement != $('snote'))
@@ -4330,6 +4335,7 @@ $('prev').onclick = () => {
 };
 $('back').onclick = () => {
   closeGrid();
+  setFs(false);
   mode = 'edit';
   buildHotspots();
   ui();
@@ -5927,6 +5933,44 @@ if (navigator.xr)
       if (ok) $('vr').hidden = false;
     })
     .catch(() => {});
+// ── full screen ──
+// The whole tour, chrome included, fills the screen. Safari before 16.4 has only the webkit
+// names, and Safari on iPhone has no element full screen at all, so the button stays hidden.
+const fsOK = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
+  fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+function setFs(on) {
+  if (!fsOK || on == !!fsEl()) return;
+  const r = $('root');
+  try {
+    const p = on
+      ? (r.requestFullscreen || r.webkitRequestFullscreen).call(r)
+      : (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    p?.catch?.(() => {});
+  } catch (e) {}
+}
+function syncFs() {
+  const on = !!fsEl(),
+    l = t(on ? 'act.fsExit' : 'act.fs'),
+    b = $('fs');
+  b.hidden = !fsOK || mode != 'view';
+  b.title = l;
+  b.setAttribute('aria-label', l);
+  b.dataset.i18nAria = b.dataset.i18nTitle = on ? 'act.fsExit' : 'act.fs';
+  $('fsi').setAttribute('href', on ? '#i-shrink' : '#i-expand');
+}
+$('fs').onclick = () => setFs(!fsEl());
+['fullscreenchange', 'webkitfullscreenchange'].forEach(k => document.addEventListener(k, syncFs));
+// F toggles it in the tour, unless the key is typing into a field or a dialog has the focus.
+addEventListener('keydown', e => {
+  if (mode != 'view' || !fsOK || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  // A layout without Latin letters (Arabic) still has the F key where F is.
+  if (e.key != 'f' && e.key != 'F' && !(e.code == 'KeyF' && !/^[a-z]$/i.test(e.key))) return;
+  const a = document.activeElement;
+  if (a?.closest?.('input, textarea, select, [contenteditable], #sgm, #note, #pop, #snapm, #libm'))
+    return;
+  e.preventDefault();
+  setFs(!fsEl());
+});
 $('vr').onclick = async () => {
   try {
     mode = 'view';

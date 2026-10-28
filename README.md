@@ -316,6 +316,12 @@ that isn't granted it says once per session that the browser may clear the work.
   exports and in VR mode.
 - Pinch zoom on touch, wheel zoom on desktop, and full keyboard control.
 - Device gyroscope, and WebXR VR mode with an in-headset info panel.
+- Full screen, a button in the title row of the tour and of Preview, or the F key (not
+  while typing in a field or while the scene grid, the notes card or a popup has the focus).
+  It fills the screen with the whole tour, scene bar and buttons included, and its label and
+  icon follow the browser, so Escape leaves it too. It shows only where the browser allows
+  it: not on an iPhone, which has no full screen for a page element, nor in an `<iframe>`
+  without `allowfullscreen` (the generated embed code has it).
 
 ### Projects
 - A project library with thumbnails and timestamps.
