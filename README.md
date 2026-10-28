@@ -105,6 +105,8 @@ that isn't granted it says once per session that the browser may clear the work.
 - Tours of more than 12 scenes get a search field over the scene list and over a link's
   list of destinations. Search ignores case, accents and Arabic diacritics, treats the alef
   forms (أ إ آ ا) as one, and finds a scene by its number in the tour as well as by name.
+  The scene list and the tour's scene grid also search the scene notes; the grid lists
+  scenes found by name first and those found only in their notes after them.
   Scenes can still be dragged to a new place while the list is filtered; on Enter, the
   destination search takes its first match.
 - A company logo in any corner of the tour, over every scene, with adjustable size and
@@ -124,6 +126,9 @@ that isn't granted it says once per session that the browser may clear the work.
   map link, only when "Show capture date and location" is on, and an exported tour leaves
   them out entirely while it is off. Altitude is not read: camera GPS heights are too rough
   to put next to survey levels.
+- Scene notes: plain text of up to 2000 characters per scene, line breaks kept, such as
+  "East iwan, timber decay in the roof, visit of August 2024". Visitors read them in the
+  tour (see Viewing).
 - Per-scene start view and north direction. The start view keeps the zoom too, and it
   comes back exactly as it was set, level correction or not.
 - Level correction for a photo shot off level. Each press of the rotate buttons turns the
@@ -149,17 +154,59 @@ that isn't granted it says once per session that the browser may clear the work.
 - An exported tour opens in the language its author used, and carries no switcher.
 
 ### Viewing
-- Walkthrough transitions: the camera turns toward the hotspot, pushes in, then
-  cross-fades to the next scene while preserving heading. When both scenes have a north
-  direction, the compass heading carries over. Otherwise, when the next scene has a link
-  back, the visitor arrives facing away from it, turned by as much as they were looking
-  away from the hotspot they took; so return links keep the sense of direction with no
-  setup. Failing both, the next scene opens at its start angle.
+- Transition between scenes, a project option under Viewing options: Walk (the default),
+  Fade or None.
+  - Walk: the camera turns toward the hotspot, pushes in, then cross-fades to the next
+    scene while preserving heading. When both scenes have a north direction, the compass
+    heading carries over. Otherwise, when the next scene has a link back, the visitor
+    arrives facing away from it, turned by as much as they were looking away from the
+    hotspot they took; so return links keep the sense of direction with no setup. Failing
+    both, the next scene opens at its start angle.
+  - Fade: a 500 ms cross-fade without the turn, arriving with the same heading rules. The
+    zoom eases to the next scene's start zoom meanwhile.
+  - None: an instant cut to the next scene's start view. A project saved with the old
+    "smooth transitions" box unticked opens as None.
+- Jumps (the scene bar, previous and next, the scene grid and the floor plan) cross-fade
+  over 350 ms: the frame on screen stays where it is and fades out over the new scene,
+  whose hotspots fade in. A scene is never shown before its panorama is ready, so clicking
+  quickly through scenes never shows a blank frame. With None they cut. The editor's own
+  scene list switches instantly, for speed while authoring.
+- In a VR headset links and jumps always cut, since a fade or a walk would move the
+  visitor's whole field of view.
+- When the system asks for reduced motion, a link becomes a 250 ms cross-fade with no turn
+  and no animated zoom, whatever the transition, a jump fades in 150 ms, a hovered hotspot
+  grows at once, and auto-rotate stays off, which the option's hint says in the editor. A
+  change to the system setting takes effect at once, without a reload.
+- Auto-rotate, slow, normal or fast. It stops for any click, touch, key, wheel or mouse
+  movement over the panorama, and comes back 4 seconds after the last of them, easing up to
+  speed over a second. It never turns behind the start screen, an info popup, the scene
+  grid or the enlarged plan.
+- A hotspot under the pointer, aimed at by click anywhere, or showing its label after a tap
+  grows smoothly to 1.2 times its size, at the same pace at any frame rate.
 - A start screen built from the first scene.
+- A scene with notes gets an "i" button in the title row. It opens a card at the end of the
+  reading direction, 320 px wide, with the scene's number and name, its capture date when the
+  tour shows it, and the notes. Each line of the notes takes its own direction, so an Arabic
+  line reads right to left in an English tour. The card stays open from scene to scene, for
+  someone reading a survey room by room: a scene without notes hides it until the next one
+  that has some. Escape or its close button closes it and puts focus back on the button.
+  Below 760 px it is a sheet over at most the lower half of the stage, kept above the scene
+  bar so the bar stays usable. It is in the editor's Preview and in exported tours; the editor
+  itself has the notes in the panel.
+- Save view as image, a camera button in the title row, renders the current view again at
+  2400 px on its long side, in the stage's own proportions, so the picture is framed exactly as
+  the screen. It is saved as a JPEG named "tour - scene - yyyy-mm-dd.jpg", with characters
+  that file systems refuse replaced. "Include hotspots", on by default and remembered by the
+  browser, keeps the hotspots, floor decals and the labels on show; a label shown only on
+  hover is left out unless it is showing. In the editor the selection ring is left out. The
+  editor and Preview always have the button; an exported tour has it only when "Let visitors
+  save the view as an image" is on under Viewing options. The logo and the other screen
+  overlays are not part of the picture.
 - A scene bar with a counter (48/143) and a grid of every scene, with thumbnails and the
   same search as the editor. The grid is a dialog: arrow keys move through it, Enter opens
   a scene, Escape closes it, and focus goes back to the button that opened it. A scene
-  chosen there opens directly, without the walk, since it is a jump rather than a step.
+  chosen there opens with a cross-fade rather than the walk, since it is a jump rather
+  than a step.
   - Up to 12 scenes, the bar also names every scene, so each is one tap away.
   - A longer tour shows previous and next buttons instead. A row of 143 names would have to
     be scrolled to find where you are, and each name is a blurred glass button that a
@@ -301,13 +348,17 @@ whichever way the project was opened.
   "logo":  { "img": "data:image/png;base64,...", "pos": "tr", "size": 14, "op": 1, "ar": 4 },
   "eurl": "https://...",
   "auto": false,
+  "autoSpd": 2,
   "walk": true,
+  "tr": "fade",
   "meta": false,
   "hd": true,
   "click": true,
+  "snap": true,
   "scenes": [{
     "id": "abc123",
     "name": "Entrance",
+    "note": "East iwan\nTimber decay in the roof",
     "img": "data:image/jpeg;base64,...",
     "th":  "data:image/jpeg;base64,...",
     "hd":  "data:image/jpeg;base64,...",
@@ -358,8 +409,19 @@ whichever way the project was opened.
   4096 px. Root `hd: true` keeps high resolution on for images added later. A build that
   predates them ignores both and keeps `img`. In a folder tour's `data.js`, `img` and `hd`
   are relative paths, and the viewer picks one per device.
+- `walk: false` means no transition between scenes (None). `tr`, optional, is `"fade"` for
+  the Fade transition, and is written with `walk: true`, so a build that predates it walks.
+  On import, `walk: false` gives None whatever `tr` says, `tr: "fade"` gives Fade, and
+  anything else gives Walk.
+- `autoSpd`, optional, multiplies the auto-rotate speed: `0.5` slow, `2` fast. It is left
+  out at normal speed, and any other value is dropped on import.
 - `click`, optional, turns on click anywhere. It is left out while off, and only `true`
   is accepted on import.
+- `snap`, optional, puts Save view as image in an exported tour. Like `click`, it is left
+  out while off and only `true` is accepted on import.
+- Scene `note`, optional, is the scene's notes for visitors: plain text with `\n` line
+  breaks. Import trims it, turns `\r\n` into `\n` and keeps at most 2000 characters; an
+  empty note is left out. An exported tour always carries it.
 - `taken` is the camera's local capture time, with no time zone, and `gps` the position in
   decimal degrees. Both are optional. `meta` decides whether the tour shows them; an
   exported tour carries them only when it is `true`.
@@ -430,7 +492,9 @@ Colour pairs are checked numerically: text at 4.5:1 or better (WCAG 1.4.3), cont
 borders and focus rings at 3:1 or better (WCAG 1.4.11). Touch targets are 44px on
 coarse pointers (WCAG 2.5.5). The panorama is fully keyboard operable, every scene of a tour
 can be reached from the keyboard through the scene bar and the scene grid, status messages
-are announced through `aria-live`, and `prefers-reduced-motion` is respected.
+are announced through `aria-live`, and `prefers-reduced-motion` is respected: in the
+interface, and in the tour, where it turns the walk into a short cross-fade, keeps
+auto-rotate off and makes hotspots grow at once (see Viewing).
 
 ## Limitations
 

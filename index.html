@@ -23,7 +23,7 @@
 <meta property="og:image:alt" content="محرر Tajwal 360 وفيه بانوراما مفتوحة وقائمة المشاهد">
 <title data-i18n="doc.title">Tajwal 360 — استوديو الجولات الافتراضية</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='4' y1='4' x2='28' y2='28' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%23818cf8'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='12.4' fill='none' stroke='url(%23g)' stroke-width='2.6'/%3E%3Cellipse cx='16' cy='16' rx='12.4' ry='4.9' fill='none' stroke='url(%23g)' stroke-width='1.8' opacity='.45'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='url(%23g)'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=5.1">
+<link rel="stylesheet" href="style.css?v=5.3">
 <script src="boot.js?v=4.5"></script>
 </head>
 <body>
@@ -128,7 +128,7 @@
       </header>
       <ol id="iql"></ol>
     </section>
-    <input id="sfilt" type="search" hidden dir="auto" autocomplete="off" data-i18n-placeholder="nav.filterPh" placeholder="ابحث باسم المشهد" data-i18n-aria="nav.filterAria" aria-label="تصفية المشاهد بالاسم">
+    <input id="sfilt" type="search" hidden dir="auto" autocomplete="off" data-i18n-placeholder="nav.filterPh" placeholder="ابحث بالاسم أو الملاحظات" data-i18n-aria="nav.filterAria" aria-label="تصفية المشاهد بالاسم أو الملاحظات">
     <div id="scenes"></div>
     <p class="hint" id="snone" hidden data-i18n="nav.none">لا يوجد مشهد يطابق البحث.</p>
     <p class="hint" id="shint" data-i18n="hint.reorder">اسحب المشهد لتغيير ترتيبه.</p>
@@ -138,6 +138,8 @@
     <summary data-i18n="sec.sceneSet">إعدادات المشهد</summary>
     <div class="bd">
       <label data-i18n="f.sceneName">اسم المشهد<input id="sname" dir="auto" data-i18n-aria="f.sceneName" aria-label="اسم المشهد"></label>
+      <label data-i18n="f.note">ملاحظات المشهد<textarea id="snote" dir="auto" rows="3" maxlength="2000" aria-describedby="snoteh" data-i18n-placeholder="f.notePh" placeholder="مثال: الإيوان الشرقي، تلف في أخشاب السقف"></textarea></label>
+      <p class="hint" id="snoteh" data-i18n="hint.note">يقرؤها الزوار في الجولة من زر «ملاحظات». نص عادي، حتى &#x2066;2000&#x2069; حرف.</p>
       <p class="hint" id="scap" hidden></p>
       <p class="hint" id="shd" hidden data-i18n="f.hdScene">لهذا المشهد نسخة عالية الدقة تظهر على أجهزة الكمبيوتر.</p>
       <div class="row">
@@ -194,11 +196,15 @@
     <summary data-i18n="sec.view">خيارات العرض</summary>
     <div class="bd">
       <label class="opt"><input type="checkbox" id="auto"><span data-i18n="opt.autorotate">دوران تلقائي</span></label>
-      <label class="opt"><input type="checkbox" id="wk" checked><span data-i18n="opt.walk">انتقال سلس بين المشاهد</span></label>
+      <label id="aspw" hidden><span data-i18n="f.autoSpeed">السرعة</span><select id="asp"><option value="0.5" data-i18n="spd.slow">بطيئة</option><option value="1" data-i18n="spd.normal">عادية</option><option value="2" data-i18n="spd.fast">سريعة</option></select></label>
+      <p class="hint" id="autoh" hidden data-i18n="hint.autoReduced">معطّل لأن نظامك يطلب تقليل الحركة.</p>
+      <label><span data-i18n="opt.tr">الانتقال بين المشاهد</span><select id="trn"><option value="walk" data-i18n="tr.walk">مشي</option><option value="fade" data-i18n="tr.fade">تلاشٍ</option><option value="none" data-i18n="tr.none">بلا انتقال</option></select></label>
       <label class="opt"><input type="checkbox" id="ca"><span data-i18n="opt.click">النقر في أي مكان للانتقال</span></label>
       <p class="hint" data-i18n="hint.click">في الجولة، تنقل النقرة التي لا تصيب أي نقطة إلى نقطة الانتقال الأقرب إلى اتجاهها. تكبر تلك النقطة تحت المؤشر قبل النقر، فيرى الزائر إلى أين سيذهب.</p>
       <label class="opt"><input type="checkbox" id="metaon"><span data-i18n="opt.meta">إظهار تاريخ التصوير وموقعه</span></label>
       <p class="hint" data-i18n="hint.meta">يُقرأ التاريخ والموقع من بيانات الكاميرا داخل الصورة، ولا تتضمّنهما الجولة المصدَّرة إلا عند تفعيل هذا الخيار.</p>
+      <label class="opt"><input type="checkbox" id="snapon"><span data-i18n="opt.snap">السماح للزوار بحفظ المنظر صورة</span></label>
+      <p class="hint" data-i18n="hint.snap">زر «حفظ المنظر صورة» متاح دائماً في المحرر والمعاينة، ولا يظهر في الجولة المصدَّرة إلا عند تفعيل هذا الخيار. تُحفظ الصورة بصيغة JPEG، وضلعها الأطول &#x2066;2400&#x2069; بكسل.</p>
       <label class="opt"><input type="checkbox" id="hdon"><span data-i18n="opt.hd">الاحتفاظ بنسخة عالية الدقة (&#x2066;8192&#x2069; بكسل)</span></label>
       <p class="hint" data-i18n="hint.hd">يسري على الصور التي تُضاف بعد تفعيله. تُحفظ لكل بانوراما أعرض من &#x2066;4096&#x2069; بكسل نسختان: حتى &#x2066;8192&#x2069; لأجهزة الكمبيوتر، و&#x2066;4096&#x2069; للهواتف والأجهزة اللوحية. يحمل التصدير كمجلد النسختين، أما ملف HTML فيحمل نسخة &#x2066;4096&#x2069; وحدها.</p>
     </div>
@@ -298,6 +304,12 @@
     <button id="back" hidden><svg class="ic"><use href="#i-edit"/></svg><span data-i18n="act.backEdit">العودة إلى التحرير</span></button>
     <button id="mute" hidden data-i18n-aria="act.muteAria" aria-label="كتم الصوت"><svg class="ic"><use id="mutei" href="#i-volume"/></svg></button>
     <button id="pbtn" hidden><svg class="ic"><use href="#i-map"/></svg><span data-i18n="act.planBtn">المخطط</span></button>
+    <button id="nbtn" class="tic" hidden aria-expanded="false" aria-controls="note" data-i18n-aria="act.noteOpen" aria-label="ملاحظات" data-i18n-title="act.noteOpen" title="ملاحظات"><svg class="ic"><use href="#i-info"/></svg></button>
+    <button id="snap" class="tic" hidden aria-expanded="false" aria-controls="snapm" data-i18n-aria="act.snap" aria-label="حفظ المنظر صورة" data-i18n-title="act.snap" title="حفظ المنظر صورة"><svg class="ic"><use href="#i-camera"/></svg></button>
+    <div id="snapm" hidden role="group" data-i18n-aria="act.snap" aria-label="حفظ المنظر صورة">
+      <label class="opt"><input type="checkbox" id="snaphs" checked><span data-i18n="snap.hs">مع النقاط التفاعلية</span></label>
+      <button id="snapgo"><svg class="ic"><use href="#i-download"/></svg><span data-i18n="snap.save">حفظ الصورة</span></button>
+    </div>
   </div>
 
   <div id="cmp" hidden data-i18n-title="cmp.title" title="اضغط للتوجّه نحو الشمال" role="button" tabindex="0" data-i18n-aria="cmp.aria" aria-label="البوصلة: اضغط للتوجّه نحو الشمال">
@@ -321,6 +333,16 @@
     </div>
   </div>
 
+  <section id="note" hidden tabindex="-1" role="dialog" aria-labelledby="notet">
+    <header>
+      <span id="noten" class="no"></span>
+      <h2 id="notet" dir="auto"></h2>
+      <button id="notex" data-i18n-aria="act.close" aria-label="إغلاق" data-i18n-title="act.close" title="إغلاق"><svg class="ic"><use href="#i-close"/></svg></button>
+    </header>
+    <p id="noted" hidden></p>
+    <div id="noteb"></div>
+  </section>
+
   <div id="guides" hidden></div>
   <div id="pop" hidden></div>
   <div id="drop" hidden><div><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg><span data-i18n="drop.here">أفلت الصور هنا لإضافتها مشاهد</span></div></div>
@@ -338,7 +360,7 @@
         <b id="sgt" data-i18n="nav.all">كل المشاهد</b>
         <span id="sgn" aria-live="polite"></span>
         <button id="sgx" data-i18n-aria="act.close" aria-label="إغلاق"><svg class="ic"><use href="#i-close"/></svg></button>
-        <input id="sgf" type="search" dir="auto" autocomplete="off" data-i18n-placeholder="nav.filterPh" placeholder="ابحث باسم المشهد" data-i18n-aria="nav.filterAria" aria-label="تصفية المشاهد بالاسم">
+        <input id="sgf" type="search" dir="auto" autocomplete="off" data-i18n-placeholder="nav.filterPh" placeholder="ابحث بالاسم أو الملاحظات" data-i18n-aria="nav.filterAria" aria-label="تصفية المشاهد بالاسم أو الملاحظات">
       </header>
       <div id="sgl" role="group" aria-labelledby="sgt"></div>
       <p id="sge" hidden data-i18n="nav.none">لا يوجد مشهد يطابق البحث.</p>
@@ -370,6 +392,6 @@
 </div>
 
 <script src="vendor/three.min.js?v=2.0"></script>
-<script src="app.js?v=5.1"></script>
+<script src="app.js?v=5.3"></script>
 </body>
 </html>
