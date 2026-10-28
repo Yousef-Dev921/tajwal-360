@@ -218,6 +218,8 @@ const I18N = {
       'يبقى ظاهراً في المحرر. في الجولة يظهر عند مرور المؤشر، وعلى شاشات اللمس تُظهره اللمسة الأولى وتفتح الثانية النقطة.',
     'f.floor': 'ممدّدة على الأرض',
     'msg.floorClamp': 'نُقلت النقطة إلى ما تحت الأفق، فالنقطة الممدّدة على الأرض لا تعلوه.',
+    'f.wall': 'ملصقة على الجدار',
+    'msg.wallClamp': 'نُقلت النقطة لتبقى ضمن نطاق الجدار.',
     'act.copy': 'نسخ',
     'act.copyTitle': 'انسخ النقطة لتلصقها في مشهد آخر (Ctrl+C)',
     'act.dup': 'تكرار',
@@ -537,6 +539,8 @@ const I18N = {
       'Always shown in the editor. In the tour it appears under the pointer; on touch screens the first tap shows it and the second opens the hotspot.',
     'f.floor': 'Lie flat on the floor',
     'msg.floorClamp': 'Moved below the horizon: a hotspot lying on the floor can’t sit above it.',
+    'f.wall': 'Flat on the wall',
+    'msg.wallClamp': 'Moved the hotspot to stay on the wall band.',
     'act.copy': 'Copy',
     'act.copyTitle': 'Copy the hotspot to paste into another scene (Ctrl+C)',
     'act.dup': 'Duplicate',
@@ -1598,27 +1602,40 @@ const HS_PX = 512 / 70,
 // depth, scaled with its distance, so its width matches the sprite's and lying down shortens
 // it as perspective does; it is drawn FLOOR_K times larger to make up for that. Close to the
 // horizon it would flatten to a line, so it is kept 5° below it.
+// A hotspot can also hang flat on a wall: a decal upright in the level-corrected frame, facing
+// the viewer across the room (its normal level, pointing at the centre). Seen from the centre
+// at the horizon it is exactly the sprite, so it is drawn at the sprite's size; above or below
+// it, it shortens by the cosine of the angle, as a poster on a wall does, and its sides lean
+// in perspective as the view turns. Past 60° from the horizon it would be a sliver seen from
+// below or above, so it is kept within WALL_SIN of it. The floor wins over the wall.
 const FLOOR_K = 1.33,
   FLOOR_SIN = Math.sin((5 * PI) / 180),
+  WALL_SIN = Math.sin((60 * PI) / 180),
   FLOOR_GEO = new THREE.PlaneGeometry(1, 1);
-const onFloor = h => !!h.fl && h.shape != 'none';
+const onFloor = h => !!h.fl && h.shape != 'none',
+  onWall = h => !!h.wl && h.shape != 'none' && !h.fl;
 // Keeps a floor hotspot 5° below the horizon of a scene levelled by lq, the current scene's
-// by default, moving it straight down to there if it is higher. Returns whether it had to
-// move; with dry set it only says so. The horizon is the corrected one, which the decal lies
-// against: on a photo tilted by more than 5°, the photo's own would let it rise above it.
-const floorClamp = (h, lq = scenes[current]?.lq, dry) => {
-  if (!onFloor(h)) return false;
+// by default, moving it straight down to there if it is higher, and a wall hotspot within 60°
+// of it, moving it straight up or down. Returns whether it had to move; with dry set it only
+// says so. The horizon is the corrected one, which the decal lies against: on a photo tilted
+// by more than 5°, the photo's own would let a floor decal rise above it.
+const layClamp = (h, lq = scenes[current]?.lq, dry) => {
+  const fl = onFloor(h);
+  if (!fl && !onWall(h)) return false;
   const q = new THREE.Quaternion().fromArray(lq || NO_TILT),
-    d = sphereToVec(h.u, h.v, 1).applyQuaternion(q);
-  if (d.y <= -FLOOR_SIN + 1e-9) return false;
+    d = sphereToVec(h.u, h.v, 1).applyQuaternion(q),
+    y = fl ? -FLOOR_SIN : Math.max(-WALL_SIN, Math.min(WALL_SIN, d.y));
+  if (fl ? d.y <= y + 1e-9 : Math.abs(d.y) <= WALL_SIN + 1e-9) return false;
   if (dry) return true;
-  const k = Math.sqrt(1 - FLOOR_SIN * FLOOR_SIN) / (Math.hypot(d.x, d.z) || 1);
-  if (!d.x && !d.z) d.x = 1; // straight up: any way down will do
-  d.set(d.x * k, -FLOOR_SIN, d.z * k).applyQuaternion(q.invert());
+  const k = Math.sqrt(1 - y * y) / (Math.hypot(d.x, d.z) || 1);
+  if (!d.x && !d.z) d.x = 1; // straight up or down: any way back will do
+  d.set(d.x * k, y, d.z * k).applyQuaternion(q.invert());
   h.u = (Math.atan2(d.z, d.x) / (2 * PI) + 1) % 1;
   h.v = Math.acos(Math.max(-1, Math.min(1, d.y))) / PI;
   return true;
 };
+// What to say when layClamp() moved h.
+const clampNote = h => t(onWall(h) ? 'msg.wallClamp' : 'msg.floorClamp');
 // A text-only hotspot is its own label, so it is always shown.
 const hoverLabel = h => !!h.hov && h.shape != 'none';
 const canvasTex = c => {
@@ -1696,16 +1713,19 @@ function hotspotLabel(h, sel) {
   });
   return c;
 }
-// The objects that show hotspot h: the icon sprite ic, or on the floor the decal dc with an
-// invisible sprite ic over it that catches the pointer (a decal near the horizon is too thin
-// to hit), and the label sprite lb. Sizes are in world units at scale 1; a is the label's
-// opacity and g the hotspot's growth on hover, eased in the render loop.
+// The objects that show hotspot h: the icon sprite ic, or on the floor or a wall the decal dc
+// with an invisible sprite ic over it that catches the pointer (a decal near the horizon is
+// too thin to hit), and the label sprite lb. Sizes are in world units at scale 1, the decal's
+// dk times the sprite's; a is the label's opacity and g the hotspot's growth on hover, eased
+// in the render loop. A wall decal shows the sprite's own drawing, turned as the sprite is.
 function makeHotspotSprite(h) {
   const sel = mode == 'edit' && selId == h.id,
     e = { h, a: 1, g: h === hovered || h === peek?.h ? 1.2 : 1 };
   if (h.shape != 'none') {
     const tex = canvasTex(hotspotIcon(h, sel, onFloor(h)));
-    if (onFloor(h)) {
+    if (onFloor(h) || onWall(h)) {
+      e.wall = onWall(h);
+      e.dk = e.wall ? 1 : FLOOR_K;
       tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
       e.dc = new THREE.Mesh(
         FLOOR_GEO,
@@ -1748,7 +1768,7 @@ function makeHotspotSprite(h) {
 function placeLabel(e, vs) {
   const h = e.h,
     side = h.shape == 'none' ? '' : h.lp || 'b',
-    hx = (HS_ICON / 2) * (e.dc ? FLOOR_K : 1),
+    hx = (HS_ICON / 2) * (e.dk || 1),
     off = HS_GAP - HS_M;
   if (side == 'b') e.lb.center.set(0.5, 1 + (hx * vs + off) / e.lH);
   else if (side == 't') e.lb.center.set(0.5, -(hx * vs + off) / e.lH);
@@ -1759,7 +1779,8 @@ function placeLabel(e, vs) {
 // Lays decal e flat on the floor, whose up is the given direction in the panorama's frame. Its
 // top edge faces away from the viewer, so an arrow at 0° points ahead along the floor and
 // rot turns it clockwise as seen from above. Returns the sine of the angle below the horizon,
-// by which it looks shortened.
+// by which it looks shortened. A wall decal stands upright instead, facing the viewer, and
+// looks shortened by the cosine of its angle from the horizon.
 const _fd = new THREE.Vector3(),
   _fr = new THREE.Vector3(),
   _fx = new THREE.Vector3(),
@@ -1768,6 +1789,14 @@ function layDecal(e, up) {
   const h = e.h;
   _fd.copy(e.dc.position).normalize();
   const s = -_fd.dot(up);
+  if (e.wall) {
+    _fr.copy(_fd).addScaledVector(up, s).negate(); // level, toward the viewer
+    if (_fr.lengthSq() < 1e-8) _fr.set(1, 0, 0).addScaledVector(up, -up.x);
+    _fr.normalize();
+    _fx.crossVectors(up, _fr);
+    e.dc.quaternion.setFromRotationMatrix(_fm.makeBasis(_fx, up, _fr));
+    return Math.sqrt(Math.max(0, 1 - s * s));
+  }
   _fr.copy(_fd).addScaledVector(up, s);
   if (_fr.lengthSq() < 1e-8) _fr.set(1, 0, 0).addScaledVector(up, -up.x); // straight down
   _fr.normalize();
@@ -2570,7 +2599,7 @@ function renderHotspotList() {
 // The look of the last link and the last info hotspot the author styled. A new hotspot of
 // the same kind starts from it, so a tour of many scenes needs its arrows styled only once.
 // Held for the session only.
-const LOOK = ['shape', 'icon', 'color', 'size', 'ts', 'box', 'fix', 'lp', 'hov', 'fl'],
+const LOOK = ['shape', 'icon', 'color', 'size', 'ts', 'box', 'fix', 'lp', 'hov', 'fl', 'wl'],
   hsLook = { link: null, info: null };
 const updateHotspot = o => {
   const h = selHotspot();
@@ -2633,6 +2662,7 @@ function renderHotspotProps() {
       .join('')}</select></label>
   <label class="btn" for="pif"><svg class="ic"><use href="#i-image"/></svg><span>${t('act.upIcon')}</span></label><input id="pif" type="file" accept="image/png,image/webp,image/svg+xml,image/gif,image/jpeg" hidden>
   <label class="opt" id="pflw"><input type="checkbox" id="pfl" ${h.fl ? 'checked' : ''}><span>${t('f.floor')}</span></label>
+  <label class="opt" id="pwlw"><input type="checkbox" id="pwl" ${onWall(h) ? 'checked' : ''}><span>${t('f.wall')}</span></label>
   ${rng('pr', 'f.rotation', -180, 180, 5, h.rot || 0, (h.rot || 0) + '°')}
   <label id="pcw">${t('f.color')}<input id="pc" type="color" value="${esc(h.color)}"></label>
   ${rng('pz', 'f.size', 0.5, 2.5, 0.1, h.size, '×' + h.size)}
@@ -2660,9 +2690,11 @@ function renderHotspotProps() {
       none = s == 'none';
     $('prw').hidden = !TURNS.includes(s);
     $('pcw').hidden = none || s == 'img';
-    $('pfw').hidden = $('pflw').hidden = $('plpw').hidden = $('phvw').hidden = none;
+    $('pfw').hidden = $('pflw').hidden = $('pwlw').hidden = $('plpw').hidden = none;
+    $('phvw').hidden = none;
     $('phvh').hidden = none || !h?.hov;
     $('pfl').checked = !!h?.fl;
+    $('pwl').checked = !!h && onWall(h);
   };
   fit();
   bind('pl', 'input', e => updateHotspot({ label: e.target.value }));
@@ -2688,23 +2720,29 @@ function renderHotspotProps() {
       h = selHotspot(),
       o = v.startsWith('img:') ? { shape: 'img', icon: v.slice(4) } : { shape: v, icon: undefined };
     // A floor spot is made to lie on the floor, so choosing one lays it down, unless that would
-    // move it; the checkbox stands it up again.
-    if (o.shape == 'none') o.fl = undefined;
+    // move it or it hangs on a wall; the checkbox stands it up again.
+    if (o.shape == 'none') o.fl = o.wl = undefined;
     else if (
       o.shape == 'spot' &&
       h.shape != 'spot' &&
-      !floorClamp({ ...h, ...o, fl: true }, undefined, 1)
+      !h.wl &&
+      !layClamp({ ...h, ...o, fl: true }, undefined, 1)
     )
       o.fl = true;
     updateHotspot(o);
     fit();
   });
-  bind('pfl', 'change', e => {
-    const o = { ...selHotspot(), fl: e.target.checked || undefined },
-      moved = floorClamp(o);
-    updateHotspot({ fl: o.fl, u: o.u, v: o.v });
-    if (moved) toast(t('msg.floorClamp'));
-  });
+  // On the floor and on a wall exclude each other: ticking one unticks the other.
+  const lay = (k, on) => {
+    const o = { ...selHotspot(), fl: undefined, wl: undefined };
+    o[k] = on || undefined;
+    const moved = layClamp(o);
+    updateHotspot({ fl: o.fl, wl: o.wl, u: o.u, v: o.v });
+    fit();
+    if (moved) toast(clampNote(o));
+  };
+  bind('pfl', 'change', e => lay('fl', e.target.checked));
+  bind('pwl', 'change', e => lay('wl', e.target.checked));
   bind('plp', 'change', e =>
     updateHotspot({ lp: e.target.value == 'b' ? undefined : e.target.value })
   );
@@ -2836,7 +2874,7 @@ function addHotspotCopy(h, from, p, icon) {
   const s = scenes[current];
   if (!s) return;
   const n = { ...JSON.parse(JSON.stringify(h)), id: uid(), ...p },
-    moved = floorClamp(n);
+    moved = layClamp(n);
   if (n.shape == 'img' && !projectIcon(n.icon)) {
     if (icon) (project.icons || (project.icons = [])).push({ ...icon });
     else n.shape = 'arrow';
@@ -2855,7 +2893,7 @@ function addHotspotCopy(h, from, p, icon) {
   buildHotspots();
   ui();
   save();
-  if (moved) toast(t('msg.floorClamp'));
+  if (moved) toast(clampNote(n));
 }
 const pasteHotspot = () => hsClip && addHotspotCopy(hsClip.h, hsClip.from, viewUV(), hsClip.icon);
 // The duplicate lands a little to one side, so it doesn't hide the original.
@@ -3730,7 +3768,9 @@ const cleanHotspot = h => {
   if (h.fix === true) out.fix = true;
   if (h.lp == 't' || h.lp == 'l' || h.lp == 'r') out.lp = h.lp;
   if (h.hov === true) out.hov = true;
-  if (h.fl === true && out.shape != 'none') out.fl = true; // kept off the horizon by cleanScene
+  // Kept off the horizon, or near it on a wall, by cleanScene; the floor wins over the wall.
+  if (h.fl === true && out.shape != 'none') out.fl = true;
+  else if (h.wl === true && out.shape != 'none') out.wl = true;
   // A custom icon is named by its id in the project's icon list; the import checks it exists.
   if (out.shape == 'img') {
     if (typeof h.icon == 'string' && h.icon) out.icon = h.icon;
@@ -3771,7 +3811,7 @@ const cleanScene = s => {
         .toArray()
         .map(v => Math.round(v * 1e6) / 1e6);
   }
-  out.hs.forEach(h => floorClamp(h, out.lq));
+  out.hs.forEach(h => layClamp(h, out.lq));
   if (s.pp && typeof s.pp == 'object')
     out.pp = { x: clamp01(num(s.pp.x, 0.5)), y: clamp01(num(s.pp.y, 0.5)) };
   if (typeof s.taken == 'string' && TAKEN.test(s.taken)) out.taken = s.taken;
@@ -4680,7 +4720,7 @@ glCanvas.addEventListener('pointermove', e => {
         camera
       );
       Object.assign(hsDrag.h, vecToUV(raycaster.ray.direction));
-      floorClamp(hsDrag.h);
+      layClamp(hsDrag.h);
       placeHotspot(hsDrag.e);
       glCanvas.style.cursor = 'grabbing';
     }
@@ -4745,9 +4785,11 @@ glCanvas.addEventListener('pointerup', e => {
   const h = hotspotAt(e);
   if (placing) {
     const p = vecToUV(raycaster.ray.direction);
-    let moved = false;
-    if (placing == 'move') moved = floorClamp(Object.assign(selHotspot(), p));
-    else {
+    let moved = null;
+    if (placing == 'move') {
+      const h = Object.assign(selHotspot(), p);
+      moved = layClamp(h) && h;
+    } else {
       const o = scenes.find(s => s.id != scenes[current].id),
         look = { ...hsLook[placing] };
       // The last look may name an icon of a project that is no longer open.
@@ -4765,7 +4807,7 @@ glCanvas.addEventListener('pointerup', e => {
         ...look,
         ...p,
       };
-      moved = floorClamp(n);
+      moved = layClamp(n) && n;
       scenes[current].hs.push(n);
       selId = n.id;
     }
@@ -4773,7 +4815,7 @@ glCanvas.addEventListener('pointerup', e => {
     buildHotspots();
     ui();
     save();
-    if (moved) toast(t('msg.floorClamp'));
+    if (moved) toast(clampNote(moved));
     return;
   }
   selId = h ? h.id : null;
@@ -4904,7 +4946,7 @@ renderer.setAnimationLoop(time => {
     let vs = 1;
     if (e.dc) {
       vs = layDecal(e, up);
-      const w = e.iw * k * FLOOR_K;
+      const w = e.iw * k * e.dk;
       e.dc.scale.set(w, w, 1);
       e.ic.scale.set(w, w * Math.max(vs, 0.35), 1);
     } else if (e.ic) e.ic.scale.set(e.iw * k, e.iw * k, 1);

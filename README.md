@@ -83,6 +83,13 @@ that isn't granted it says once per session that the browser may clear the work.
   5° below the horizon, where it would flatten to a line: placing, dragging or pasting it
   higher stops it there. A level correction made afterwards doesn't move it. Choosing the floor spot lays a hotspot down, unless it is above
   that limit. Text-only hotspots stand.
+- A hotspot can instead hang flat on a wall, for a sign or a defect marker on a wall: a decal
+  standing upright (after level correction) and facing the viewer across the room, so it
+  shortens when it is high or low and leans in perspective toward the edges of the view,
+  where a marker that always faces the camera would not. At the horizon it is the same size
+  as the standing marker. It stays within 60° of the horizon: placing, dragging or pasting
+  it further up or down stops it there. Floor and wall exclude each other; its label stands
+  beside it as a floor hotspot's does.
 - A label sits below, above, left or right of its icon. The sides are those of the photo,
   not of the reading direction, so a label set to clear a door frame stays clear of it in
   either language.
@@ -385,6 +392,9 @@ whichever way the project was opened.
       "color": "#4f46e5", "size": 1, "u": 0.84, "v": 0.6,
       "rot": 90, "ts": 1.2, "box": false, "fix": true,
       "lp": "t", "hov": true, "fl": true
+    }, {
+      "id": "x2", "type": "info", "label": "Crack", "text": "", "shape": "pin",
+      "color": "#f59e0b", "size": 1, "u": 0.3, "v": 0.45, "wl": true
     }]
   }]
 }
@@ -399,7 +409,7 @@ whichever way the project was opened.
 - A hotspot `label` may contain line breaks. `shape` is one of `arrow`, `spot`, `ring`,
   `dot`, `pin`, `star`, `info`, `none` (text only) or `img`, which names one of the root
   `icons` in an `icon` field; on import, a hotspot whose icon is missing becomes an arrow.
-  The last seven hotspot fields are optional
+  The last eight hotspot fields are optional
   and left out at their defaults: `rot` turns an arrow by -180 to 179 degrees, clockwise
   (on the floor, clockwise as seen from above); `ts` scales the label text, 0.6 to 2;
   `box: false` draws the label with an outline instead of a dark box; `fix: true` keeps the
@@ -407,9 +417,12 @@ whichever way the project was opened.
   right (`r`) of the icon instead of below it, on the photo's sides whatever the language;
   `hov: true` shows the label only on hover; `fl: true` lays the hotspot on the floor, and
   is dropped on import from a text-only hotspot. A floor hotspot sits at least 5° below the
-  horizon as levelled by the scene's `lq`; import moves a higher one straight down to that. A build that
+  horizon as levelled by the scene's `lq`; import moves a higher one straight down to that.
+  `wl: true` hangs the hotspot flat on a wall; it is dropped on import from a text-only
+  hotspot and from one that also has `fl`, which wins, and import moves a wall hotspot more
+  than 60° from the levelled horizon straight back to 60°. A build that
   predates these fields ignores them, shows a text-only hotspot as an arrow, and draws a
-  floor hotspot standing, with its label below.
+  floor or wall hotspot standing, with its label below.
 - `u0` and `p0` are the scene's starting yaw and pitch; `n` is its north offset. `f0`,
   optional, is its starting zoom as a vertical field of view from 40 to 95 degrees
   (75 when absent). `lq`, optional, is its level correction as a quaternion `[x, y, z, w]`.
