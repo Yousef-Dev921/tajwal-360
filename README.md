@@ -276,7 +276,7 @@ that isn't granted it says once per session that the browser may clear the work.
     folds it down to previous, the grid and next, and the tour remembers that for the rest of
     the visit, in that tab.
     The band is a solid tint, not glass: a blur under a scrolling row of pictures would be
-    redrawn on every frame. Only thumbnails within about a strip's width either side of the
+    redrawn on every frame. Only thumbnails within half a strip's width either side of the
     view hold an image, and those further away let theirs go, so a 143-scene tour keeps about
     30 decoded at a time rather than 143, which matters on an iPhone. A scene without a square
     thumbnail yet shows its 2:1 thumbnail, cropped.

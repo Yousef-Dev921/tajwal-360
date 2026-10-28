@@ -2841,7 +2841,7 @@ function sbFold() {
 }
 // The strip itself: one row of square thumbnails that scrolls sideways. It stays in the page
 // from one scene to the next and is rebuilt only when its scenes or thumbnails change. Only the
-// cells within about a strip's width either side of the view hold an image (sbIO); the others
+// cells within half a strip's width either side of the view hold an image (sbIO); the others
 // drop theirs, so a 143-scene tour keeps some 30 thumbnails decoded, not 143.
 const sbS = document.createElement('div');
 sbS.id = 'sbs';
@@ -2954,6 +2954,8 @@ function renderBar() {
     fb.title = l;
     fb.setAttribute('aria-label', l);
     fb.classList.toggle('up', kind == 'fold');
+    fb.setAttribute('aria-expanded', kind == 'strip');
+    if (kind == 'strip') fb.setAttribute('aria-controls', 'sbs');
   }
   if (kind == 'strip') renderStrip(L, k);
   if (was && !sb.contains(document.activeElement)) {
@@ -3062,17 +3064,25 @@ sbS.addEventListener('pointerover', e => {
 });
 sbS.addEventListener('pointerleave', () => sbTip(null));
 sbS.addEventListener('pointerdown', () => sbTip(null));
-sbS.addEventListener(
-  'focusin',
-  e => e.target.matches(':focus-visible') && sbTip(e.target, 0, true)
-);
+sbS.addEventListener('focusin', e => {
+  // Safari before 15.4 throws on :focus-visible; it gets no name for the keyboard.
+  try {
+    if (e.target.matches(':focus-visible')) sbTip(e.target, 0, true);
+  } catch (x) {}
+});
 sbS.addEventListener('focusout', () => sbTip(null));
 // A scroll moves the keyboard's name along with its cell, and puts a mouse's away.
 sbS.addEventListener('scroll', () => sbTip(sbTipKb, 0, true), { passive: true });
 // Bottom corners, the floor plan, the notes card and the toasts sit above the bar.
-new ResizeObserver(() =>
-  $('root').style.setProperty('--sb-h', $('sb').offsetHeight + 'px')
-).observe($('sb'));
+// A strip that changes width, as a phone turns, centres the current scene again.
+let sbW = 0;
+new ResizeObserver(() => {
+  const sb = $('sb');
+  $('root').style.setProperty('--sb-h', sb.offsetHeight + 'px');
+  const on = sb.dataset.k == 'strip' && sbS.querySelector('[aria-current]');
+  if (on && sbW && sbS.clientWidth != sbW && mode == 'view') sbCentre(on);
+  sbW = sbS.clientWidth;
+}).observe($('sb'));
 function renderHotspotList() {
   $('hlist').innerHTML = (scenes[current]?.hs || [])
     .map(
@@ -4349,6 +4359,8 @@ $('back').onclick = () => {
   mode = 'edit';
   buildHotspots();
   ui();
+  // The button pressed is gone with the tour; Preview, which brings it back, takes the focus.
+  $('prev').focus({ preventScroll: true });
 };
 const fetchText = async u => {
   const r = await fetch(u);
