@@ -51,6 +51,9 @@ const I18N = {
     'f.tourDesc': 'وصف الجولة',
     'f.descPh': 'يظهر في شاشة البداية',
     'f.sceneName': 'اسم المشهد',
+    'f.note': 'ملاحظات المشهد',
+    'f.notePh': 'مثال: الإيوان الشرقي، تلف في أخشاب السقف',
+    'hint.note': 'يقرؤها الزوار في الجولة من زر «ملاحظات». نص عادي، حتى \u20662000\u2069 حرف.',
     'f.size': 'الحجم',
     'f.tourUrl': 'رابط الجولة بعد نشرها',
     'f.embedPh': 'أدخل رابط الجولة ليظهر كود التضمين',
@@ -118,18 +121,36 @@ const I18N = {
     'sec.plan': 'مخطط الموقع',
     'sec.embed': 'كود التضمين',
     'opt.autorotate': 'دوران تلقائي',
-    'opt.walk': 'انتقال سلس بين المشاهد',
+    'f.autoSpeed': 'السرعة',
+    'spd.slow': 'بطيئة',
+    'spd.normal': 'عادية',
+    'spd.fast': 'سريعة',
+    'hint.autoReduced': 'معطّل لأن نظامك يطلب تقليل الحركة.',
+    'opt.tr': 'الانتقال بين المشاهد',
+    'tr.walk': 'مشي',
+    'tr.fade': 'تلاشٍ',
+    'tr.none': 'بلا انتقال',
     'opt.meta': 'إظهار تاريخ التصوير وموقعه',
     'opt.click': 'النقر في أي مكان للانتقال',
     'hint.click':
       'في الجولة، تنقل النقرة التي لا تصيب أي نقطة إلى نقطة الانتقال الأقرب إلى اتجاهها. تكبر تلك النقطة تحت المؤشر قبل النقر، فيرى الزائر إلى أين سيذهب.',
+    'opt.snap': 'السماح للزوار بحفظ المنظر صورة',
+    'hint.snap':
+      'زر «حفظ المنظر صورة» متاح دائماً في المحرر والمعاينة، ولا يظهر في الجولة المصدَّرة إلا عند تفعيل هذا الخيار. تُحفظ الصورة بصيغة JPEG، وضلعها الأطول \u20662400\u2069 بكسل.',
+    'act.noteOpen': 'ملاحظات',
+    'note.scene': 'المشهد \u2066{i}\u2069 من \u2066{n}\u2069',
+    'act.snap': 'حفظ المنظر صورة',
+    'snap.hs': 'مع النقاط التفاعلية',
+    'snap.save': 'حفظ الصورة',
+    'msg.snapSaved': 'حُفظت الصورة «\u2068{name}\u2069».',
+    'msg.snapFail': 'تعذّر حفظ الصورة.',
     'nav.bar': 'التنقّل بين المشاهد',
     'nav.all': 'كل المشاهد',
     'nav.gridAria': 'كل المشاهد. أنت في المشهد {i} من {n}',
     'nav.prev': 'المشهد السابق',
     'nav.next': 'المشهد التالي',
-    'nav.filterPh': 'ابحث باسم المشهد',
-    'nav.filterAria': 'تصفية المشاهد بالاسم',
+    'nav.filterPh': 'ابحث بالاسم أو الملاحظات',
+    'nav.filterAria': 'تصفية المشاهد بالاسم أو الملاحظات',
     'nav.none': 'لا يوجد مشهد يطابق البحث.',
     'nav.matches': '{n} من {t}',
     'f.targetFind': 'ابحث عن الوجهة',
@@ -345,6 +366,10 @@ const I18N = {
     'f.tourDesc': 'Tour description',
     'f.descPh': 'Shown on the start screen',
     'f.sceneName': 'Scene name',
+    'f.note': 'Scene notes',
+    'f.notePh': 'e.g. East iwan, timber decay in the roof',
+    'hint.note':
+      'Visitors read them in the tour from the Notes button. Plain text, up to 2000 characters.',
     'f.size': 'Size',
     'f.tourUrl': 'Tour URL after publishing',
     'f.embedPh': 'Enter the tour URL to get the embed code',
@@ -412,18 +437,36 @@ const I18N = {
     'sec.plan': 'Floor plan',
     'sec.embed': 'Embed code',
     'opt.autorotate': 'Auto-rotate',
-    'opt.walk': 'Smooth transitions between scenes',
+    'f.autoSpeed': 'Speed',
+    'spd.slow': 'Slow',
+    'spd.normal': 'Normal',
+    'spd.fast': 'Fast',
+    'hint.autoReduced': 'Off because your system asks for reduced motion.',
+    'opt.tr': 'Transition between scenes',
+    'tr.walk': 'Walk',
+    'tr.fade': 'Fade',
+    'tr.none': 'None',
     'opt.meta': 'Show capture date and location',
     'opt.click': 'Click anywhere to move',
     'hint.click':
       'In the tour, a click that misses every hotspot takes the link hotspot nearest its direction. That hotspot grows under the pointer first, so visitors see where they will go.',
+    'opt.snap': 'Let visitors save the view as an image',
+    'hint.snap':
+      'The Save view as image button is always there in the editor and Preview; an exported tour shows it only while this is on. Images are saved as JPEG, 2400 px on the long side.',
+    'act.noteOpen': 'Notes',
+    'note.scene': 'Scene {i} of {n}',
+    'act.snap': 'Save view as image',
+    'snap.hs': 'Include hotspots',
+    'snap.save': 'Save image',
+    'msg.snapSaved': 'Saved “\u2068{name}\u2069”.',
+    'msg.snapFail': 'The image could not be saved.',
     'nav.bar': 'Scene navigation',
     'nav.all': 'All scenes',
     'nav.gridAria': 'All scenes. You are on scene {i} of {n}',
     'nav.prev': 'Previous scene',
     'nav.next': 'Next scene',
-    'nav.filterPh': 'Search by scene name',
-    'nav.filterAria': 'Filter scenes by name',
+    'nav.filterPh': 'Search names and notes',
+    'nav.filterAria': 'Filter scenes by name or notes',
     'nav.none': 'No scene matches.',
     'nav.matches': '{n} of {t}',
     'f.targetFind': 'Find a destination',
@@ -1557,10 +1600,10 @@ function hotspotLabel(h, sel) {
 // The objects that show hotspot h: the icon sprite ic, or on the floor the decal dc with an
 // invisible sprite ic over it that catches the pointer (a decal near the horizon is too thin
 // to hit), and the label sprite lb. Sizes are in world units at scale 1; a is the label's
-// opacity.
+// opacity and g the hotspot's growth on hover, eased in the render loop.
 function makeHotspotSprite(h) {
   const sel = mode == 'edit' && selId == h.id,
-    e = { h, a: 1 };
+    e = { h, a: 1, g: h === hovered || h === peek?.h ? 1.2 : 1 };
   if (h.shape != 'none') {
     const tex = canvasTex(hotspotIcon(h, sel, onFloor(h)));
     if (onFloor(h)) {
@@ -1674,7 +1717,10 @@ function buildHotspots() {
   preload();
 }
 // ───────────── scene loading ─────────────
-async function showScene(i) {
+// o.fade cross-fades into the scene once its panorama is ready, over o.fade ms. o.via is the
+// link hotspot taken from scene o.from: the camera then stays as it is and the scene turns to
+// arrivalHeading(), as a walk would, instead of opening at its start view.
+async function showScene(i, o = {}) {
   const s = scenes[i];
   if (!s) return;
   current = i;
@@ -1695,21 +1741,38 @@ async function showScene(i) {
     }
     busy(-1);
   }
-  if (current != i) return;
+  // A walk begun meanwhile wins: it owns fadeMesh until it lands.
+  if (current != i || walking) return;
+  const ms = o.fade && !renderer.xr.isPresenting && sphereMat.map ? o.fade : 0,
+    f = camera.fov;
+  stopFade();
+  if (ms) {
+    // The panorama on screen goes on fadeMesh where it is now, and stays there as the view
+    // below it moves to the new scene. Set before useTexture(), which never releases it.
+    fadeMesh.material.map = sphereMat.map;
+    fadeMesh.material.needsUpdate = true;
+    fadeMesh.quaternion.copy(level.quaternion);
+    fadeQ.copy(camera.quaternion).invert().multiply(world.quaternion);
+  }
   useTexture(s.id);
   sphereMat.map = textures[s.id];
   sphereMat.needsUpdate = true;
-  worldTurn = s.u0 || 0;
+  if (o.via) {
+    worldTurn = arrivalHeading(o.from, s, o.via, worldTurn - yaw / (2 * PI)) + yaw / (2 * PI);
+  } else {
+    worldTurn = s.u0 || 0;
+    yaw = 0;
+    pitch = s.p0 || 0;
+  }
   world.rotation.y = 2 * PI * worldTurn + PI / 2;
   level.quaternion.fromArray(s.lq || NO_TILT);
-  yaw = 0;
-  pitch = s.p0 || 0;
   fov = s.f0 || FOV0;
   camera.fov = fov;
   camera.updateProjectionMatrix();
   if (gyro) calibrateGyro();
   buildHotspots();
   ui();
+  if (ms) crossFade(ms, f);
 }
 // ───────────── capture date and position ─────────────
 // Panoramas are re-encoded on the way in, which drops their Exif block, so the capture
@@ -2291,15 +2354,28 @@ const fold = s =>
     .replace(/\u0629/g, '\u0647')
     .replace(/[\u0660-\u0669\u06f0-\u06f9]/g, d => d.charCodeAt(0) % 16)
     .toLowerCase();
+// A scene's notes, folded once for each version of them: a search runs on every keystroke,
+// and 143 notes of up to 2000 characters are too many to fold again each time.
+const foldedNotes = new WeakMap();
+function foldNote(s) {
+  let c = foldedNotes.get(s);
+  if (!c || c[0] !== s.note) foldedNotes.set(s, (c = [s.note, fold(s.note)]));
+  return c[1];
+}
 // A test for search q: every word of it must appear in the scene's name. A number on its own
-// also finds the scene at that place in the tour, as the counter shows it.
-function sceneMatcher(q) {
+// also finds the scene at that place in the tour, as the counter shows it. With notes set, the
+// words may also be found in the name and the notes together. The test returns 2 for a match by
+// name or number, 1 for one that needs the notes and 0 for none, so a list can put names first.
+function sceneMatcher(q, notes) {
   const f = fold(q).trim(),
     w = f.split(/\s+/).filter(Boolean),
     n = /^\d+$/.test(f) ? +f : 0;
   return (s, i) => {
     const nm = fold(s.name);
-    return w.every(x => nm.includes(x)) || i + 1 == n;
+    if (w.every(x => nm.includes(x)) || i + 1 == n) return 2;
+    if (!notes || !s.note) return 0;
+    const all = nm + '\n' + foldNote(s);
+    return w.every(x => all.includes(x)) ? 1 : 0;
   };
 }
 // The editor's list is rebuilt only when its scenes or thumbnails change; a new name is
@@ -2332,7 +2408,7 @@ function renderScenes() {
     many = scenes.length > MANY;
   fq.hidden = !many;
   if (!many) fq.value = '';
-  const m = sceneMatcher(fq.value);
+  const m = sceneMatcher(fq.value, true);
   let hits = 0;
   [...L.children].forEach((b, i) => {
     b.classList.toggle('on', i == current);
@@ -2720,6 +2796,56 @@ function syncMeta() {
         .filter(Boolean)
         .join(' · ');
 }
+// ───────────── scene notes ─────────────
+// A scene's notes, for visitors, in a card at the inline end of the stage (a sheet on a phone).
+// The "i" button opens it, and it stays open from scene to scene, as someone walking a survey
+// reads it room by room. A scene without notes has no button and hides the card, which comes
+// back at the next scene that has some. The editor has the notes in its panel instead.
+let noteOpen = false,
+  noteShown = '';
+function syncNote() {
+  const s = scenes[current],
+    tx = s?.note || '',
+    on = mode == 'view' && !!tx,
+    show = on && noteOpen,
+    card = $('note');
+  $('nbtn').hidden = !on;
+  $('nbtn').setAttribute('aria-expanded', show);
+  if (!show && !card.hidden && card.contains(document.activeElement))
+    glCanvas.focus({ preventScroll: true });
+  card.hidden = !show;
+  if (!show) return;
+  const taken = project.meta && s.taken,
+    k = [LANG, current, scenes.length, s.name, taken, tx].join('\n');
+  if (k == noteShown) return;
+  noteShown = k;
+  $('noten').textContent = t('note.scene', { i: current + 1, n: scenes.length });
+  $('notet').textContent = s.name;
+  $('noted').hidden = !taken;
+  if (taken) $('noted').textContent = t('f.captured') + ' ' + fmtTaken(taken);
+  // A line of its own takes its own direction, so an Arabic line reads right to left in an
+  // English tour, and a Latin reference keeps its order inside Arabic text.
+  $('noteb').innerHTML = tx
+    .split('\n')
+    .map(l => (l.trim() ? `<p dir="auto">${esc(l)}</p>` : '<p class="gap"></p>'))
+    .join('');
+  $('noteb').scrollTop = 0;
+}
+function setNote(on) {
+  const had = $('note').contains(document.activeElement);
+  noteOpen = on;
+  syncNote();
+  if (on) $('note').focus({ preventScroll: true });
+  else if (had || document.activeElement == document.body) $('nbtn').focus({ preventScroll: true });
+}
+$('nbtn').onclick = () => setNote(!noteOpen);
+$('notex').onclick = () => setNote(false);
+// The card starts below the title row, which wraps and grows with the capture date or the
+// image options, so the row's bottom is kept in a variable for the stylesheet.
+new ResizeObserver(() => {
+  const r = $('top');
+  $('stage').style.setProperty('--top-b', r.offsetTop + r.offsetHeight + 'px');
+}).observe($('top'));
 function ui() {
   $('root').classList.toggle('view', mode == 'view');
   $('empty').hidden = scenes.length > 0;
@@ -2728,10 +2854,14 @@ function ui() {
   $('back').hidden = !(mode == 'view' && !EMBED);
   if (scenes[current] && document.activeElement != $('sname'))
     $('sname').value = scenes[current].name;
+  if (scenes[current] && document.activeElement != $('snote'))
+    $('snote').value = scenes[current].note || '';
   renderScenes();
   renderHotspotList();
   renderHotspotProps();
   syncMeta();
+  syncNote();
+  syncSnap();
   syncLevel();
   syncExtras();
   setTimeout(resize, 0);
@@ -2751,8 +2881,8 @@ $('sb').onclick = ev => {
   if (a == 'grid') openGrid(b);
   else if (a) {
     const k = current + (a == 'next' ? 1 : -1);
-    if (scenes[k]) showScene(k);
-  } else showScene(+b.dataset.i);
+    if (scenes[k]) jumpTo(k);
+  } else jumpTo(+b.dataset.i);
 };
 $('hlist').onclick = e => {
   const b = e.target.closest('button');
@@ -2814,7 +2944,50 @@ $('ptitle').oninput = e => {
 $('auto').onchange = e => {
   project.auto = e.target.checked;
   save();
+  syncAuto();
 };
+// autoSpd multiplies the speed, 0.5 or 2; left out at 1.
+$('asp').onchange = e => {
+  const v = +e.target.value;
+  if (v == 1) delete project.autoSpd;
+  else project.autoSpd = v;
+  save();
+};
+// ── auto-rotate ──
+// It waits AUTO_IDLE ms after the visitor's last input, then eases up to speed over AUTO_RAMP
+// ms. A mouse moving over the panorama counts as input, so a hotspot being aimed at does not
+// slide away. Reduced motion keeps it off on this device, whatever the project says.
+const AUTO_SPEED = 0.08, // radians a second
+  AUTO_IDLE = 4000,
+  AUTO_RAMP = 1000;
+let autoAt = 0;
+const autoStop = () => (autoAt = performance.now());
+['pointerdown', 'keydown', 'wheel'].forEach(k =>
+  addEventListener(k, autoStop, { capture: true, passive: true })
+);
+glCanvas.addEventListener('pointermove', autoStop, { passive: true });
+// Held while anything is open over the panorama (the info popup, the scene grid, the start
+// screen, the enlarged plan) and while a walk or the gyroscope moves the camera.
+const autoHeld = () =>
+  !project.auto ||
+  mode != 'view' ||
+  reduceMotion.matches ||
+  !!drag ||
+  gyro ||
+  walking ||
+  planBig ||
+  !$('pop').hidden ||
+  !$('sgm').hidden ||
+  !$('start').hidden;
+function syncAuto() {
+  $('auto').checked = !!project.auto;
+  $('asp').value = String(project.autoSpd || 1);
+  $('aspw').hidden = !project.auto;
+  $('autoh').hidden = !(project.auto && reduceMotion.matches);
+}
+// The system setting is followed live: the render loop and link activation read it each
+// time, and the hint says when it is what keeps auto-rotate off.
+reduceMotion.addEventListener?.('change', syncAuto);
 $('hdon').onchange = e => {
   if (e.target.checked) project.hd = true;
   else delete project.hd;
@@ -2835,6 +3008,21 @@ $('metaon').onchange = e => {
 $('sname').oninput = e => {
   scenes[current].name = e.target.value;
   renderScenes();
+  save();
+};
+// Kept trimmed and left out when empty. The field itself keeps what is typed, trailing line
+// break included, until it loses focus.
+$('snote').oninput = e => {
+  const s = scenes[current],
+    v = cleanNote(e.target.value);
+  if (v) s.note = v;
+  else delete s.note;
+  if ($('sfilt').value) renderScenes();
+  save();
+};
+$('snapon').onchange = e => {
+  if (e.target.checked) project.snap = true;
+  else delete project.snap;
   save();
 };
 // The start view is the current one, zoom included. It is stored as the turn and pitch that
@@ -3354,6 +3542,10 @@ const SHAPES = ['arrow', 'spot', 'ring', 'dot', 'pin', 'star', 'info', 'none', '
 const num = (v, fallback) => (Number.isFinite(+v) && v !== null && v !== '' ? +v : fallback);
 const clamp01 = v => Math.min(1, Math.max(0, v));
 const isDataImage = v => typeof v == 'string' && v.startsWith('data:image/');
+// Scene notes are plain text with their line breaks, NOTE_MAX characters at most.
+const NOTE_MAX = 2000;
+const cleanNote = v =>
+  typeof v == 'string' ? v.replace(/\r\n?/g, '\n').trim().slice(0, NOTE_MAX).trim() : '';
 const cleanHotspot = h => {
   const out = {
     id: String(h.id || uid()),
@@ -3395,6 +3587,8 @@ const cleanScene = s => {
   };
   if (isDataImage(s.th)) out.th = s.th;
   if (isDataImage(s.hd)) out.hd = s.hd;
+  const nt = cleanNote(s.note);
+  if (nt) out.note = nt;
   // A clip, as the editor takes it: audio, 8 MB at most, with a delay of up to 30 s.
   const a = s.snd;
   if (a && typeof a.src == 'string' && /^data:audio\//.test(a.src) && a.src.length < 1.1e7) {
@@ -3458,9 +3652,12 @@ $('pfile').onchange = async e => {
       desc: String(raw.desc ?? ''),
       auto: !!raw.auto,
       walk: raw.walk !== false,
+      ...(raw.walk !== false && raw.tr === 'fade' && { tr: 'fade' }),
+      ...((raw.autoSpd === 0.5 || raw.autoSpd === 2) && { autoSpd: raw.autoSpd }),
       meta: !!raw.meta,
       ...(raw.hd === true && { hd: true }),
       ...(raw.click === true && { click: true }),
+      ...(raw.snap === true && { snap: true }),
       eurl: typeof raw.eurl == 'string' ? raw.eurl : '',
       scenes: (Array.isArray(raw.scenes) ? raw.scenes : [])
         .filter(s => s && isDataImage(s.img))
@@ -3564,6 +3761,7 @@ function setProject(id, d) {
   projectId = id;
   project = d;
   scenes = project.scenes;
+  stopFade();
   sphereMat.map = fadeMesh.material.map = null;
   for (const k in textures) dropTexture(k);
   for (const k in texLoads) delete texLoads[k];
@@ -3580,8 +3778,8 @@ function setProject(id, d) {
   storedSnd = new Map(scenes.filter(s => s.snd).map(s => [s.id, s.snd.blob]));
   editCount = 0;
   $('ptitle').value = project.title || '';
-  $('auto').checked = !!project.auto;
-  $('wk').checked = project.walk !== false;
+  syncAuto();
+  $('trn').value = transition();
   $('hdon').checked = !!project.hd;
   $('ca').checked = !!project.click;
   toast('');
@@ -3780,16 +3978,23 @@ function closeGrid() {
 }
 function pickGrid(i) {
   closeGrid();
-  if (i != current && !walking) showScene(i);
+  if (i != current && !walking) jumpTo(i);
 }
 function filterGrid() {
   const q = $('sgf').value,
-    m = sceneMatcher(q);
+    m = sceneMatcher(q, true),
+    L = $('sgl'),
+    cells = [...L.children].sort((a, b) => a.dataset.i - b.dataset.i),
+    rank = cells.map(b => m(scenes[+b.dataset.i], +b.dataset.i));
   let hits = 0;
-  [...$('sgl').children].forEach((b, i) => {
-    b.hidden = !m(scenes[i], i);
+  cells.forEach((b, k) => {
+    b.hidden = !rank[k];
     hits += !b.hidden;
   });
+  // Matches by name come first and matches in the notes after them, each in tour order. The
+  // cells move in the DOM rather than by CSS order, because the arrow keys follow the DOM.
+  const order = cells.filter((b, k) => rank[k] == 2).concat(cells.filter((b, k) => rank[k] != 2));
+  if (order.some((b, k) => L.children[k] !== b)) L.append(...order);
   $('sge').hidden = hits > 0;
   $('sgn').textContent = q.trim()
     ? t('nav.matches', { n: hits, t: scenes.length })
@@ -3921,6 +4126,57 @@ const animate = (ms, f) =>
       };
     requestAnimationFrame(step);
   });
+// ── cross-fade ──
+// A jump, and a link taken without the walk, swap the scene at once and lay the last panorama
+// over it, turned so that it shows the frame that was on screen, then fade it out. The new
+// scene's hotspots fade in meanwhile (hsFade, applied in the render loop). The zoom eases to
+// the new scene's start zoom, unless reduced motion is asked for or the visitor zooms.
+const easeCubic = k => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2),
+  fadeQ = new THREE.Quaternion(),
+  camQ = new THREE.Quaternion(),
+  camE = new THREE.Euler(0, 0, 0, 'YXZ');
+let fading = 0, // the fade in progress, or 0
+  fadeSeq = 0, // numbers fades, so a fade cut short never touches the next
+  hsFade = 1;
+// The project's transition between scenes: 'walk', 'fade' or 'none'. A headset never walks
+// or fades, since the motion would fill the visitor's whole field of view.
+const transition = () => (project.walk === false ? 'none' : project.tr == 'fade' ? 'fade' : 'walk');
+// A link's cross-fade lasts 500 ms and a jump's 350, less under reduced motion.
+const fadeMs = jump => (reduceMotion.matches ? (jump ? 150 : 250) : jump ? 350 : 500);
+// A jump, from the scene bar, the grid or the plan, cross-fades in the tour unless the project
+// has no transitions. The editor's scene list stays instant, for speed while authoring.
+const jumpTo = i =>
+  showScene(i, { fade: mode == 'view' && transition() != 'none' && fadeMs(true) });
+function stopFade() {
+  if (!fading) return;
+  fading = 0;
+  hsFade = 1;
+  setFov(fov); // a zoom cut short ends where it was heading
+  fadeMesh.visible = false;
+  fadeMesh.material.map = null;
+  fadeMesh.quaternion.identity();
+  fadeGroup.quaternion.identity();
+}
+function crossFade(ms, f0) {
+  const id = (fading = ++fadeSeq),
+    f1 = fov;
+  // The camera the next frame will draw with: gyro sets the pitch itself.
+  camE.set(gyro && gyroReady ? camera.rotation.x : pitch, yaw, 0);
+  fadeGroup.quaternion.multiplyQuaternions(camQ.setFromEuler(camE), fadeQ);
+  fadeMesh.material.opacity = 1;
+  fadeMesh.visible = true;
+  hsFade = 0;
+  const zoom = !reduceMotion.matches && Math.abs(f1 - f0) > 0.1;
+  if (zoom) setFov(f0);
+  return animate(ms, k => {
+    if (fading != id) return;
+    const e = easeCubic(k);
+    fadeMesh.material.opacity = 1 - e;
+    hsFade = e;
+    if (zoom && fov == f1) setFov(f0 + (f1 - f0) * e);
+    if (k == 1) stopFade();
+  });
+}
 async function ensureTexture(s, urgent) {
   try {
     await loadTexture(s, urgent);
@@ -3948,6 +4204,7 @@ async function walkTo(i, h) {
     from = scenes[current];
   walking = true;
   walkTarget = s.id;
+  stopFade();
   $('pop').hidden = true;
   try {
     if (!(await ensureTexture(s, true))) {
@@ -4008,8 +4265,13 @@ async function walkTo(i, h) {
     walkTarget = null;
   }
 }
-$('wk').onchange = e => {
-  project.walk = e.target.checked;
+// walk stays a boolean, false for no transition, so a build that predates tr still reads it;
+// tr: 'fade' is left out unless chosen.
+$('trn').onchange = e => {
+  const v = e.target.value;
+  project.walk = v != 'none';
+  if (v == 'fade') project.tr = 'fade';
+  else delete project.tr;
   save();
 };
 // ───────────── gyroscope ─────────────
@@ -4174,8 +4436,14 @@ function clickTarget(e, aim = true) {
 function activate(h) {
   if (inert(h)) return;
   if (h.type == 'link') {
-    const k = scenes.findIndex(s => s.id == h.to);
-    if (k >= 0) project.walk !== false && !renderer.xr.isPresenting ? walkTo(k, h) : showScene(k);
+    const k = scenes.findIndex(s => s.id == h.to),
+      tr = renderer.xr.isPresenting ? 'none' : transition();
+    // Reduced motion and the fade both cross-fade without turning, keeping the walk's heading.
+    if (k < 0) return;
+    if (tr == 'none') showScene(k);
+    else if (tr == 'walk' && !reduceMotion.matches) walkTo(k, h);
+    else if (!walking && k != current)
+      showScene(k, { fade: fadeMs(false), via: h, from: scenes[current] });
   } else if (renderer.xr.isPresenting) showVrPanel(h);
   else {
     const p = $('pop');
@@ -4195,8 +4463,18 @@ function closePop() {
   p.hidden = true;
   if (hadFocus) glCanvas.focus({ preventScroll: true });
 }
+// Escape closes the topmost of the hotspot popup, the image options and the notes card.
 addEventListener('keydown', e => {
-  if (e.key == 'Escape') closePop();
+  if (e.key != 'Escape') return;
+  // The library and the enlarged plan cover the stage and take Escape for themselves.
+  if (!$('libm').hidden || planBig) return;
+  if (!$('pop').hidden) closePop();
+  else if (!$('snapm').hidden)
+    setSnapMenu(
+      false,
+      $('snapm').contains(document.activeElement) || document.activeElement == $('snap')
+    );
+  else if (!$('note').hidden) setNote(false);
 });
 glCanvas.addEventListener('pointerdown', e => {
   if (walking) return;
@@ -4399,7 +4677,13 @@ renderer.setAnimationLoop(time => {
   turnQuat.setFromAxisAngle(UP, world.rotation.y);
   nadirGroup.quaternion.copy(turnQuat).multiply(level.quaternion).multiply(turnQuat.invert());
   if (!xr) {
-    if (project.auto && mode == 'view' && !drag && !gyro) yaw -= dt * 0.08;
+    // Auto-rotate waits AUTO_IDLE ms after the last input or anything that stops it, then
+    // eases up to speed over AUTO_RAMP ms.
+    if (autoHeld()) autoAt = time;
+    else {
+      const r = Math.min(1, Math.max(0, (time - autoAt - AUTO_IDLE) / AUTO_RAMP));
+      yaw -= dt * AUTO_SPEED * (project.autoSpd || 1) * ease(r);
+    }
     if (gyro && gyroReady) {
       const f = gyroDirection();
       yaw = gyroYawOffset + Math.atan2(-f.x, -f.z);
@@ -4440,17 +4724,17 @@ renderer.setAnimationLoop(time => {
   if (peek && time > peek.until) peek = null;
   // The floor's up, in the panorama's frame: the level correction tilts the photo to it.
   const up = floorUp.copy(UP).applyQuaternion(floorQ.copy(level.quaternion).invert()),
-    fade = reduceMotion.matches ? 1 : Math.min(1, dt * 12);
+    fade = reduceMotion.matches ? 1 : Math.min(1, dt * 12),
+    grow = 1 - Math.exp(-dt * 14);
   hsParts.forEach(e => {
     const h = e.h,
       gazed = gazeTarget?.userData.h === h,
       on = gazed || h === hovered || h === peek?.h,
-      k =
-        fit *
-        (h.size || 1) *
-        (h.fix ? keep : 1) *
-        (on ? 1.2 : 1) *
-        (gazed ? 1 + (gazeTime / need) * 0.3 : 1);
+      to = on ? 1.2 : 1;
+    // Grows toward its target with a 70 ms time constant, alike at any frame rate.
+    e.g = reduceMotion.matches ? to : e.g + (to - e.g) * grow;
+    const k =
+      fit * (h.size || 1) * (h.fix ? keep : 1) * e.g * (gazed ? 1 + (gazeTime / need) * 0.3 : 1);
     let vs = 1;
     if (e.dc) {
       vs = layDecal(e, up);
@@ -4458,13 +4742,15 @@ renderer.setAnimationLoop(time => {
       e.dc.scale.set(w, w, 1);
       e.ic.scale.set(w, w * Math.max(vs, 0.35), 1);
     } else if (e.ic) e.ic.scale.set(e.iw * k, e.iw * k, 1);
+    const im = e.dc || e.ic;
+    if (im) im.material.opacity = hsFade;
     if (e.lb) {
       // Always shown in the editor, where the author needs to see what they are placing.
       const show = mode == 'edit' || on || !hoverLabel(h) ? 1 : 0;
       e.a += (show - e.a) * fade;
       if (Math.abs(show - e.a) < 0.01) e.a = show;
-      e.lb.material.opacity = e.a;
-      e.lb.visible = e.a > 0;
+      e.lb.material.opacity = e.a * hsFade;
+      e.lb.visible = e.a * hsFade > 0;
       e.lb.scale.set((e.lW / HS_PX) * k, (e.lH / HS_PX) * k, 1);
       placeLabel(e, vs);
     }
@@ -5198,7 +5484,7 @@ $('pdots').onclick = e => {
   if (!b || planMoved || placingPlan) return;
   e.stopPropagation();
   setPlanBig(false);
-  showScene(+b.dataset.i);
+  if (!walking) jumpTo(+b.dataset.i);
 };
 // Placing a scene works on the enlarged plan, where a marker can be put down precisely.
 // On the small plan a click enlarges it.
@@ -5419,37 +5705,49 @@ $('ecopy').onclick = async () => {
 // panorama squeezed flat.
 const COVER_W = 1280,
   COVER_H = 720;
-async function captureCover() {
-  if (!scenes[current]) return;
-  const pid = projectId,
-    rt = new THREE.WebGLRenderTarget(COVER_W, COVER_H),
+// Renders the current view again, into an off-screen target of w × h, and returns it on a 2D
+// canvas. The camera keeps its field of view, so at the stage's aspect the frame is the one on
+// screen. hs false leaves the hotspots out; true draws them as the last frame laid them out,
+// labels shown on hover hidden unless they are showing. The pixels are read straight into the
+// canvas's own buffer and flipped there, so a 2400 px picture holds two copies, not three.
+function renderView(w, h, hs) {
+  const rt = new THREE.WebGLRenderTarget(w, h),
     cam = camera.clone(),
-    shown = hotspotGroup.visible;
+    shown = hotspotGroup.visible,
+    c = document.createElement('canvas'),
+    ctx = c.getContext('2d'),
+    im = ctx.createImageData(w, h),
+    px = new Uint8Array(im.data.buffer);
   rt.texture.encoding = THREE.sRGBEncoding;
-  cam.aspect = COVER_W / COVER_H;
+  cam.aspect = w / h;
   cam.updateProjectionMatrix();
-  const px = new Uint8Array(COVER_W * COVER_H * 4);
-  hotspotGroup.visible = false;
+  hotspotGroup.visible = shown && hs;
   try {
     renderer.setRenderTarget(rt);
     renderer.render(scene3d, cam);
-    renderer.readRenderTargetPixels(rt, 0, 0, COVER_W, COVER_H, px);
+    renderer.readRenderTargetPixels(rt, 0, 0, w, h, px);
   } finally {
     renderer.setRenderTarget(null);
     hotspotGroup.visible = shown;
     rt.dispose();
   }
   // WebGL reads rows from the bottom up.
-  const c = document.createElement('canvas'),
-    ctx = c.getContext('2d'),
-    im = ctx.createImageData(COVER_W, COVER_H),
-    row = COVER_W * 4;
-  c.width = COVER_W;
-  c.height = COVER_H;
-  for (let y = 0; y < COVER_H; y++)
-    im.data.set(px.subarray((COVER_H - 1 - y) * row, (COVER_H - y) * row), y * row);
+  const row = w * 4,
+    tmp = new Uint8Array(row);
+  for (let y = 0, z = h - 1; y < z; y++, z--) {
+    tmp.set(px.subarray(y * row, (y + 1) * row));
+    px.copyWithin(y * row, z * row, (z + 1) * row);
+    px.set(tmp, z * row);
+  }
+  c.width = w;
+  c.height = h;
   ctx.putImageData(im, 0, 0);
-  const blob = await canvasBlob(c, 'image/jpeg', 0.85);
+  return c;
+}
+async function captureCover() {
+  if (!scenes[current]) return;
+  const pid = projectId,
+    blob = await canvasBlob(renderView(COVER_W, COVER_H, false), 'image/jpeg', 0.85);
   if (!blob) throw new Error('encode');
   // Another project may have been opened while the picture was encoding.
   if (pid != projectId) return false;
@@ -5460,6 +5758,111 @@ async function captureCover() {
   syncCover();
   return true;
 }
+// ───────────── save the view as an image ─────────────
+// A still of what is on screen, for a survey report: the stage's frame, SNAP_PX on its long
+// side, as a JPEG named after the tour, the scene and the day. 2400 px is sharper than most
+// screens and keeps the transient buffers near 40 MB, which an iPhone can spare. The editor
+// and Preview always offer it; an exported tour only when the author turned on root snap.
+const SNAP_PX = 2400;
+let snapping = false;
+// Part of a file name: no characters that Windows or macOS refuse, no control or bidi
+// formatting characters (which can disguise an extension), no dots or spaces at the ends.
+const namePart = (v, max) =>
+  String(v ?? '')
+    .replace(/[\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, ' ')
+    .replace(/[\\/:*?"<>|]+/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max)
+    .replace(/^[.\s]+|[.\s]+$/g, '');
+function snapName(s, i) {
+  const d = new Date(),
+    p = n => String(n).padStart(2, '0');
+  return (
+    [namePart(project.title, 80) || 'tour', namePart(s.name, 80) || String(i + 1)].join(' - ') +
+    ` - ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}.jpg`
+  );
+}
+// Rebuilds the hotspots, for a change of selection, and gives the new objects the layout the
+// render loop gave the old ones last frame (size, turn, label side and fade), so the scene can
+// be rendered at once rather than a frame later. A text-only label drawn for the selection has
+// another size, so its scale follows its width.
+function rebuildLaidOut() {
+  const old = hsParts;
+  buildHotspots();
+  hsParts.forEach((e, k) => {
+    const o = old[k];
+    if (!o || o.h !== e.h) return;
+    e.a = o.a;
+    for (const p of ['ic', 'dc', 'lb']) {
+      const a = e[p],
+        b = o[p];
+      if (!a || !b) continue;
+      a.scale.copy(b.scale);
+      a.quaternion.copy(b.quaternion);
+      a.visible = b.visible;
+      a.material.opacity = b.material.opacity;
+      if (a.center) a.center.copy(b.center);
+    }
+    if (e.lb && o.lb) e.lb.scale.multiplyScalar(e.lW / o.lW);
+  });
+}
+async function saveView() {
+  const i = current,
+    s = scenes[i];
+  if (!s || snapping || walking || !textures[s.id]) return;
+  snapping = true;
+  const hs = $('snaphs').checked,
+    // The dashed ring round a selected hotspot is the editor's, not part of the place, so the
+    // hotspots are drawn without it for the picture and with it again straight after.
+    sel = hs && mode == 'edit' && selId;
+  try {
+    const cw = glCanvas.clientWidth || 1,
+      ch = glCanvas.clientHeight || 1,
+      k = Math.min(SNAP_PX, renderer.capabilities.maxTextureSize) / Math.max(cw, ch);
+    let c;
+    if (sel) {
+      selId = null;
+      rebuildLaidOut();
+    }
+    try {
+      c = renderView(Math.round(cw * k), Math.round(ch * k), hs);
+    } finally {
+      if (sel) {
+        selId = sel;
+        rebuildLaidOut();
+      }
+    }
+    const blob = await canvasBlob(c, 'image/jpeg', 0.9);
+    c.width = c.height = 0;
+    if (!blob) throw new Error('encode');
+    const name = snapName(s, i);
+    saveFile(name, blob, 'image/jpeg');
+    toast(t('msg.snapSaved', { name }));
+  } catch (x) {
+    toast(t('msg.snapFail'));
+  } finally {
+    snapping = false;
+  }
+}
+// The options sit in a row of their own under the stage's buttons, and stay open after a
+// save, so a round of stills is turn, save, turn, save.
+function setSnapMenu(on, back) {
+  $('snapm').hidden = !on;
+  $('snap').setAttribute('aria-expanded', on);
+  if (on) $('snapgo').focus({ preventScroll: true });
+  else if (back) $('snap').focus({ preventScroll: true });
+}
+function syncSnap() {
+  const on = !!scenes[current] && (!EMBED || project.snap === true);
+  $('snap').hidden = !on;
+  if (!on && !$('snapm').hidden) setSnapMenu(false);
+  if (!EMBED) $('snapon').checked = !!project.snap;
+}
+$('snaphs').checked = lsGet('vrt.snapHs') != '0';
+$('snaphs').onchange = e => lsSet('vrt.snapHs', e.target.checked ? '1' : '0');
+$('snap').onclick = () => setSnapMenu($('snapm').hidden);
+$('snapgo').onclick = saveView;
 function syncCover() {
   if (EMBED) return;
   const c = project.cover,
@@ -5943,8 +6346,8 @@ if (!EMBED) {
   }
   $('ptitle').value = project.title;
   $('pdesc').value = project.desc || '';
-  $('auto').checked = !!project.auto;
-  $('wk').checked = project.walk !== false;
+  syncAuto();
+  $('trn').value = transition();
   $('hdon').checked = !!project.hd;
   $('ca').checked = !!project.click;
   resetHist();
