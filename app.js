@@ -877,6 +877,15 @@ const objURL = b => URL.createObjectURL(b);
 const freeURL = u => {
   if (typeof u == 'string' && u.startsWith('blob:')) URL.revokeObjectURL(u);
 };
+// URLs of scene images released by a replace or a thumbnail made again. Undo may bring back a
+// scene that still names one, and only then is a new URL made for its Blob.
+const releasedURLs = new Set(),
+  release = u => {
+    if (typeof u != 'string' || !u.startsWith('blob:')) return;
+    freeURL(u);
+    releasedURLs.add(u);
+  },
+  liveURL = (u, b) => (b && (!u || releasedURLs.has(u)) ? objURL(b) : u);
 
 let library = [],
   projectId = null,
@@ -1105,14 +1114,15 @@ async function flush() {
   clearTimeout(saveTimer);
   if (EMBED || !projectId) return;
   const id = projectId,
-    Q = project;
+    Q = project,
+    gone = hdGone;
   try {
     for (const sid of [...dirtyScenes]) {
       const s = Q.scenes.find(x => x.id == sid);
       if (s && s.blob) await dbOp('put', 'b:' + id + ':' + sid, s.blob);
       if (s && s.hdBlob) await dbOp('put', 'h:' + id + ':' + sid, s.hdBlob);
-      else if (s && hdGone.has(sid)) await dbOp('del', 'h:' + id + ':' + sid).catch(() => {});
-      hdGone.delete(sid);
+      else if (s && gone.has(sid)) await dbOp('del', 'h:' + id + ':' + sid).catch(() => {});
+      gone.delete(sid);
       dirtyScenes.delete(sid);
     }
     // Taken now rather than cleared after the write: opening another project during the
@@ -1285,6 +1295,7 @@ async function loadProject(id) {
       if (b instanceof Blob) {
         s.sqBlob = b;
         s.sq = objURL(b);
+        sqMade.set(b, { img: s.blob, key: sqKey(s) }); // as it was saved
       } else delete s.sq; // made again while the editor is idle
     }
     if (!Array.isArray(s.hs)) s.hs = [];
@@ -2232,7 +2243,7 @@ async function iqDraw(r, cap, im) {
   // Without it, the idle fill tries again later.
   let sq = null;
   try {
-    sq = await renderSq(s, p.small);
+    if (p.small) sq = await renderSq(s, p.small);
   } catch (e) {}
   if (sq) Object.assign(s, { sq: objURL(sq), sqBlob: sq });
   return [s, null];
@@ -2303,10 +2314,11 @@ async function encodePano(im, mode) {
   im.close(); // closed again by the caller, which does nothing
   const blob = await canvasBlob(canvas, 'image/jpeg', 0.86),
     th = sceneThumb(canvas),
-    small = await panoSmall(canvas); // for the square thumbnail, which the caller renders
+    // For the square thumbnail, which the caller renders; without it the idle fill makes one.
+    small = await panoSmall(canvas).catch(() => null);
   canvas.width = canvas.height = 0; // and the 32 MB copy, before the next file
   if (!blob) {
-    small.close();
+    small?.close();
     throw new Error('encode');
   }
   return { blob, hdBlob, th, flat, small };
@@ -3027,18 +3039,36 @@ function syncImage() {
 // A scene's image changed (replaced, or a replace undone): its texture is made again. The old
 // one stays on screen until the new one is ready, so the view neither flashes nor moves, and is
 // released then. A scene that isn't on show only drops its texture.
+// A second change while the first is loading (a replace undone at once) takes over: the texture
+// on show is still the one from before both, and only the latest call swaps it.
+const swaps = {}; // scene id → { old, n } while a swap is under way
 async function swapPano(id) {
-  const old = textures[id],
-    free = () => old && old !== sphereMat.map && old !== fadeMesh.material.map && old.dispose();
+  const w = swaps[id] || (swaps[id] = { old: textures[id], n: 0 }),
+    n = ++w.n,
+    old = w.old,
+    // Released once nothing draws it: a fade may still be showing it.
+    free = () => {
+      if (!old) return;
+      if (old === sphereMat.map || old === fadeMesh.material.map) setTimeout(free, 1000);
+      else old.dispose();
+    };
+  // A texture of the image in between, loaded but never shown, goes now.
+  if (textures[id] && textures[id] !== old && textures[id] !== sphereMat.map)
+    textures[id].dispose();
   delete textures[id];
   delete texLoads[id]; // a decode of the old image still running is now stale
   urgentIds.delete(id);
   texOrder = texOrder.filter(x => x != id);
   await null; // undo sets the current scene after asking for this
-  const i = scenes.findIndex(x => x.id == id);
-  if (i < 0 || i != current) return free();
+  if (n != w.n) return;
+  const i = scenes.findIndex(x => x.id == id),
+    done = () => {
+      delete swaps[id];
+      free();
+    };
+  if (i < 0 || i != current) return done();
   if (!old || sphereMat.map !== old) {
-    free();
+    done();
     return showScene(i);
   }
   let tex = null;
@@ -3047,12 +3077,13 @@ async function swapPano(id) {
     tex = await loadTexture(scenes[i], true);
   } catch (e) {}
   busy(-1);
+  if (n != w.n) return; // a newer change is loading its own
   if (sphereMat.map === old) {
     sphereMat.map = tex;
     sphereMat.needsUpdate = true;
     if (!tex) toast(t('msg.sceneFail'));
   }
-  free();
+  done();
 }
 // Replaces scene sid's image with file f, keeping its id, name, hotspots, start view, north,
 // level, plan position, clip and notes. The new copies are made as an import makes them; the
@@ -3101,7 +3132,7 @@ async function replaceImage(sid, f, mode, known) {
   const i = scenes.findIndex(x => x.id == sid);
   // Another project was opened, or the scene deleted, while the file was read.
   if (pid != projectId || i < 0) {
-    p?.small.close();
+    p?.small?.close();
     return syncImage();
   }
   if (ask) {
@@ -3119,15 +3150,16 @@ async function replaceImage(sid, f, mode, known) {
   if (p.hdBlob) Object.assign(n, { hd: objURL(p.hdBlob), hdBlob: p.hdBlob });
   Object.assign(n, cap);
   scenes[i] = n;
-  freeURL(o.img);
-  freeURL(o.hd);
-  freeURL(o.sq);
+  release(o.img);
+  release(o.hd);
+  release(o.sq);
   if (o.hdBlob && !p.hdBlob) hdGone.add(sid);
   dirtyScenes.add(sid);
   save();
   swapPano(sid);
   // The thumbnail keeps its view: the start view, or the one the author pinned.
-  sqFrom(sid, p.small).catch(() => sqFill());
+  if (p.small) sqFrom(sid, p.small).catch(() => sqFill());
+  else sqFill();
   // The start view and north were kept; the guides help check that the new photo still
   // stands level where the old one did.
   if (i == current) showGuides();
@@ -4125,6 +4157,7 @@ $('pfile').onchange = async e => {
       if (s.sq) {
         s.sqBlob = dataToBlob(s.sq);
         s.sq = objURL(s.sqBlob);
+        sqMade.set(s.sqBlob, { img: s.blob, key: sqKey(s) });
       }
     }
     if (d.audio) {
@@ -5371,9 +5404,9 @@ function restoreSnapshot(i) {
   scenes.forEach(s => {
     if (!s.th && oth[s.id]) s.th = oth[s.id];
   });
-  // A replaced image, undone or redone: the scene gets its other blobs back. The URLs a
-  // snapshot recorded may have been released since, so a blob that isn't the one on show gets
-  // a new URL, and the one that was on show lets its own go.
+  // A replaced image, undone or redone: the scene gets its other blobs back. A URL the snapshot
+  // recorded that has been released since is made again, and the image that was on show lets
+  // its own go.
   scenes.forEach(s => {
     const o = live.get(s.id);
     restoreSq(s, o);
@@ -5382,11 +5415,11 @@ function restoreSnapshot(i) {
       if (s.hdBlob) s.hd = o.hd;
       return;
     }
-    if (s.blob) s.img = objURL(s.blob);
-    if (s.hdBlob) s.hd = objURL(s.hdBlob);
+    s.img = liveURL(s.img, s.blob);
+    if (s.hdBlob) s.hd = liveURL(s.hd, s.hdBlob);
     if (!o) return; // a deleted scene brought back
-    freeURL(o.img);
-    freeURL(o.hd);
+    release(o.img);
+    release(o.hd);
     if (o.hdBlob && !s.hdBlob) hdGone.add(s.id);
     dirtyScenes.add(s.id);
     swapPano(s.id);
@@ -5420,15 +5453,15 @@ function restoreSq(s, o) {
   if (s.sqBlob) {
     if (o?.sqBlob === s.sqBlob) s.sq = o.sq;
     else {
-      s.sq = objURL(s.sqBlob);
-      freeURL(o?.sq);
+      s.sq = liveURL(s.sq, s.sqBlob);
+      release(o?.sq);
     }
   } else if (o?.sqBlob && sqFits(o.sqBlob, s) && o.blob === s.blob) {
     s.sq = o.sq;
     s.sqBlob = o.sqBlob;
   } else {
     delete s.sq;
-    freeURL(o?.sq);
+    release(o?.sq);
   }
   if (!s.sqBlob) sqFill();
   else if (!sqFits(s.sqBlob, s)) sqSoon(s.id);
@@ -6259,8 +6292,9 @@ sqLevel.add(new THREE.Mesh(sphereGeo, sqMat));
 // vertical field of view.
 const sqView = s => s.sqv || { y: s.u0 || 0, p: s.p0 || 0, f: SQ_FOV },
   sqKey = s => JSON.stringify([sqView(s), s.lq || null]),
-  // What each thumbnail made in this session was made from, so one brought back by undo can be
-  // told from one that no longer fits its scene. Thumbnails read from storage aren't listed.
+  // What each thumbnail was made from, so one brought back by undo can be told from one that no
+  // longer fits its scene. One read from storage or a file counts as made for the scene it came
+  // with.
   sqMade = new WeakMap(),
   sqFits = (b, s) => {
     const m = sqMade.get(b);
@@ -6323,7 +6357,7 @@ async function sqFrom(id, pano) {
   x.sq = objURL(b);
   x.sqBlob = b;
   sqShown();
-  freeURL(old);
+  release(old);
   return true;
 }
 // Renders scene id's thumbnail again from its stored copy. Decodes take their turn with the
