@@ -84,6 +84,8 @@ that isn't granted it says once per session that the browser may clear the work.
 - Tours of more than 12 scenes get a search field over the scene list and over a link's
   list of destinations. Search ignores case, accents and Arabic diacritics, treats the alef
   forms (أ إ آ ا) as one, and finds a scene by its number in the tour as well as by name.
+  The scene list and the tour's scene grid also search the scene notes; the grid lists
+  scenes found by name first and those found only in their notes after them.
   Scenes can still be dragged to a new place while the list is filtered; on Enter, the
   destination search takes its first match.
 - A company logo in any corner of the tour, over every scene, with adjustable size and
@@ -103,6 +105,9 @@ that isn't granted it says once per session that the browser may clear the work.
   map link, only when "Show capture date and location" is on, and an exported tour leaves
   them out entirely while it is off. Altitude is not read: camera GPS heights are too rough
   to put next to survey levels.
+- Scene notes: plain text of up to 2000 characters per scene, line breaks kept, such as
+  "East iwan, timber decay in the roof, visit of August 2024". Visitors read them in the
+  tour (see Viewing).
 - Per-scene start view and north direction. The start view keeps the zoom too, and it
   comes back exactly as it was set, level correction or not.
 - Level correction for a photo shot off level. Each press of the rotate buttons turns the
@@ -158,6 +163,24 @@ that isn't granted it says once per session that the browser may clear the work.
 - A hotspot under the pointer, aimed at by click anywhere, or showing its label after a tap
   grows smoothly to 1.2 times its size, at the same pace at any frame rate.
 - A start screen built from the first scene.
+- A scene with notes gets an "i" button in the title row. It opens a card at the end of the
+  reading direction, 320 px wide, with the scene's number and name, its capture date when the
+  tour shows it, and the notes. Each line of the notes takes its own direction, so an Arabic
+  line reads right to left in an English tour. The card stays open from scene to scene, for
+  someone reading a survey room by room: a scene without notes hides it until the next one
+  that has some. Escape or its close button closes it and puts focus back on the button.
+  Below 760 px it is a sheet over at most the lower half of the stage, kept above the scene
+  bar so the bar stays usable. It is in the editor's Preview and in exported tours; the editor
+  itself has the notes in the panel.
+- Save view as image, a camera button in the title row, renders the current view again at
+  2400 px on its long side, in the stage's own proportions, so the picture is framed exactly as
+  the screen. It is saved as a JPEG named "tour - scene - yyyy-mm-dd.jpg", with characters
+  that file systems refuse replaced. "Include hotspots", on by default and remembered by the
+  browser, keeps the hotspots, floor decals and the labels on show; a label shown only on
+  hover is left out unless it is showing. In the editor the selection ring is left out. The
+  editor and Preview always have the button; an exported tour has it only when "Let visitors
+  save the view as an image" is on under Viewing options. The logo and the other screen
+  overlays are not part of the picture.
 - A scene bar with a counter (48/143) and a grid of every scene, with thumbnails and the
   same search as the editor. The grid is a dialog: arrow keys move through it, Enter opens
   a scene, Escape closes it, and focus goes back to the button that opened it. A scene
@@ -310,9 +333,11 @@ whichever way the project was opened.
   "meta": false,
   "hd": true,
   "click": true,
+  "snap": true,
   "scenes": [{
     "id": "abc123",
     "name": "Entrance",
+    "note": "East iwan\nTimber decay in the roof",
     "img": "data:image/jpeg;base64,...",
     "th":  "data:image/jpeg;base64,...",
     "hd":  "data:image/jpeg;base64,...",
@@ -369,6 +394,11 @@ whichever way the project was opened.
   out at normal speed, and any other value is dropped on import.
 - `click`, optional, turns on click anywhere. It is left out while off, and only `true`
   is accepted on import.
+- `snap`, optional, puts Save view as image in an exported tour. Like `click`, it is left
+  out while off and only `true` is accepted on import.
+- Scene `note`, optional, is the scene's notes for visitors: plain text with `\n` line
+  breaks. Import trims it, turns `\r\n` into `\n` and keeps at most 2000 characters; an
+  empty note is left out. An exported tour always carries it.
 - `taken` is the camera's local capture time, with no time zone, and `gps` the position in
   decimal degrees. Both are optional. `meta` decides whether the tour shows them; an
   exported tour carries them only when it is `true`.
