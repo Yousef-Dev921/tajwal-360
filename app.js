@@ -182,6 +182,63 @@ const I18N = {
     'nav.filterAria': 'تصفية المشاهد بالاسم أو الملاحظات',
     'nav.none': 'لا يوجد مشهد يطابق البحث.',
     'nav.matches': '{n} من {t}',
+    'smg.open': 'إدارة المشاهد',
+    'smg.openTitle': 'رتّب المشاهد وحدّدها واحذفها على شاشة كاملة (Ctrl+Shift+M)',
+    'smg.selected': {
+      zero: 'لا مشهد محدّد',
+      one: 'مشهد واحد محدّد',
+      two: 'مشهدان محدّدان',
+      few: '⁦{n}⁩ مشاهد محدّدة',
+      many: '⁦{n}⁩ مشهداً محدّداً',
+      other: '⁦{n}⁩ مشهد محدّد',
+    },
+    'smg.sort': 'ترتيب العرض',
+    'smg.sortTour': 'ترتيب الجولة',
+    'smg.nameAsc': 'الاسم: من أ إلى ي',
+    'smg.nameDesc': 'الاسم: من ي إلى أ',
+    'smg.dateAsc': 'تاريخ الالتقاط: الأقدم أولاً',
+    'smg.dateDesc': 'تاريخ الالتقاط: الأحدث أولاً',
+    'smg.applyOrder': 'اعتمد هذا الترتيب للجولة',
+    'smg.ordered': 'صار ترتيب الجولة كما في العرض.',
+    'smg.density': 'حجم البطاقات',
+    'smg.large': 'كبيرة',
+    'smg.small': 'صغيرة',
+    'smg.list': 'قائمة',
+    'smg.selectAll': 'تحديد الكل',
+    'smg.clear': 'إلغاء التحديد',
+    'smg.bulk': 'إجراءات المشاهد المحدّدة',
+    'smg.del': {
+      one: 'حذف مشهد واحد',
+      two: 'حذف مشهدين',
+      few: 'حذف ⁦{n}⁩ مشاهد',
+      many: 'حذف ⁦{n}⁩ مشهداً',
+      other: 'حذف ⁦{n}⁩ مشهد',
+    },
+    'smg.delAsk': {
+      one: 'اضغط مجدداً لحذف المشهد',
+      two: 'اضغط مجدداً لحذف المشهدين',
+      few: 'اضغط مجدداً لحذف ⁦{n}⁩ مشاهد',
+      many: 'اضغط مجدداً لحذف ⁦{n}⁩ مشهداً',
+      other: 'اضغط مجدداً لحذف ⁦{n}⁩ مشهد',
+    },
+    'smg.delDone': {
+      one: 'حُذف مشهد واحد.',
+      two: 'حُذف مشهدان.',
+      few: 'حُذفت ⁦{n}⁩ مشاهد.',
+      many: 'حُذف ⁦{n}⁩ مشهداً.',
+      other: 'حُذف ⁦{n}⁩ مشهد.',
+    },
+    'smg.delLinks': 'وأُزيلت الروابط التي كانت تؤدّي إلى ما حُذف: ⁦{n}⁩.',
+    'smg.toStart': 'إلى البداية',
+    'smg.toEnd': 'إلى النهاية',
+    'smg.hide': 'إخفاء من شريط المشاهد',
+    'smg.show': 'إظهار في شريط المشاهد',
+    'smg.hidden': 'مخفي',
+    'smg.start': 'البداية',
+    'smg.links': 'روابط خارجة: ⁦{o}⁩، وداخلة: ⁦{i}⁩',
+    'smg.rename': 'إعادة تسمية المشهد',
+    'smg.keys': 'المسافة تحدّد المشهد، وEnter يفتحه، وF2 يعيد تسميته، وDelete يحذف المحدّد.',
+    'smg.touch': 'المس البطاقة مطوّلاً لتحديدها، أو المسها لحظة ثم اسحبها لنقلها.',
     'f.targetFind': 'ابحث عن الوجهة',
     'hint.meta':
       'يُقرأ التاريخ والموقع من بيانات الكاميرا داخل الصورة، ولا تتضمّنهما الجولة المصدَّرة إلا عند تفعيل هذا الخيار.',
@@ -547,6 +604,45 @@ const I18N = {
     'nav.filterAria': 'Filter scenes by name or notes',
     'nav.none': 'No scene matches.',
     'nav.matches': '{n} of {t}',
+    'smg.open': 'Manage scenes',
+    'smg.openTitle': 'Order, select and delete scenes on a full screen (Ctrl+Shift+M)',
+    'smg.selected': { zero: 'None selected', one: '1 selected', other: '{n} selected' },
+    'smg.sort': 'Sort',
+    'smg.sortTour': 'Tour order',
+    'smg.nameAsc': 'Name: A to Z',
+    'smg.nameDesc': 'Name: Z to A',
+    'smg.dateAsc': 'Capture date: oldest first',
+    'smg.dateDesc': 'Capture date: newest first',
+    'smg.applyOrder': 'Use this order for the tour',
+    'smg.ordered': 'The tour now follows this order.',
+    'smg.density': 'Card size',
+    'smg.large': 'Large',
+    'smg.small': 'Small',
+    'smg.list': 'List',
+    'smg.selectAll': 'Select all',
+    'smg.clear': 'Clear selection',
+    'smg.bulk': 'Actions for the selected scenes',
+    'smg.del': { one: 'Delete 1 scene', other: 'Delete {n} scenes' },
+    'smg.delAsk': {
+      one: 'Click again to delete 1 scene',
+      other: 'Click again to delete {n} scenes',
+    },
+    'smg.delDone': { one: 'Deleted 1 scene.', other: 'Deleted {n} scenes.' },
+    'smg.delLinks': {
+      one: '1 link that led there was removed too.',
+      other: '{n} links that led there were removed too.',
+    },
+    'smg.toStart': 'Move to start',
+    'smg.toEnd': 'Move to end',
+    'smg.hide': 'Hide from scene bar',
+    'smg.show': 'Show in scene bar',
+    'smg.hidden': 'Hidden',
+    'smg.start': 'Start',
+    'smg.links': 'Links out: {o}, links in: {i}',
+    'smg.rename': 'Rename scene',
+    'smg.keys':
+      'Space selects a scene, Enter opens it, F2 renames it and Delete deletes the selection.',
+    'smg.touch': 'Hold a card to select it, or hold it a moment and drag it to move it.',
     'f.targetFind': 'Find a destination',
     'hint.meta':
       'Both are read from the camera data in each photo. An exported tour includes them only while this is on.',
@@ -2688,6 +2784,16 @@ const selHotspot = () => scenes[current]?.hs.find(h => h.id == selId);
 // phone's GPU redraws every frame. The editor's scene list and its destination list get a
 // search field from the same size.
 const MANY = 12;
+// The scenes the tour's bar, its grid and previous and next go through: all of them in tour
+// order, less those the author hid from the bar (scene hide). A hidden scene is still reached by
+// its hotspots and the plan, as a corridor or a detail of another room often is.
+const navScenes = () => scenes.filter(s => !s.hide);
+// The tour index of the nearest scene in the bar after (dir 1) or before (dir -1) the current
+// one, hidden or not, or -1.
+function navStep(dir) {
+  for (let k = current + dir; k >= 0 && k < scenes.length; k += dir) if (!scenes[k].hide) return k;
+  return -1;
+}
 // Folds text for searching. Case, accents and Arabic diacritics (tashkeel, tatweel) are
 // dropped; alef with hamza or madda becomes a plain alef, alef maqsura yaa and taa marbuta
 // haa; Arabic-Indic digits become Latin. So "ايوان" finds "إيوان" and "12" finds "١٢". NFKD
@@ -2763,6 +2869,9 @@ function renderScenes() {
     b.classList.toggle('on', i == current);
     b.hidden = !m(scenes[i], i);
     hits += !b.hidden;
+    // A scene hidden from the tour's bar says so on its thumbnail.
+    if (scenes[i].hide) b.dataset.hid = t('smg.hidden');
+    else delete b.dataset.hid;
   });
   $('snone').hidden = hits > 0 || !scenes.length;
   renderBar();
@@ -2770,31 +2879,37 @@ function renderScenes() {
   $('title').hidden = !scenes[current];
   const sh = $('shint');
   if (sh) sh.hidden = scenes.length < 2;
+  if (!EMBED) {
+    $('smo').hidden = !scenes.length;
+    if (!$('smg').hidden) smDraw();
+  }
 }
 // The tour's scene bar. It is rebuilt on every scene change, so the button that had focus
 // gets it back, and a keyboard user can press Next again and again.
 function renderBar() {
   const sb = $('sb'),
-    n = scenes.length,
-    i = current,
+    nav = navScenes(),
+    n = nav.length,
+    i = nav.indexOf(scenes[current]),
     f = sb.contains(document.activeElement) && document.activeElement,
     was = f && (f.dataset.a || f.dataset.i);
-  if (n < 2) {
+  // A hidden scene, reached by a hotspot, still gets the way back into the bar's scenes.
+  if (n < 2 && !(n && i < 0 && scenes[current])) {
     sb.innerHTML = '';
     return;
   }
   const step = (k, dis) =>
       `<button data-a="${k}" class="sbn" title="${esc(t('nav.' + k))}" aria-label="${esc(t('nav.' + k))}"${dis ? ' disabled' : ''}><svg class="ic flip"><use href="#i-${k}"/></svg></button>`,
-    grid = `<button data-a="grid" class="sbg" aria-haspopup="dialog" title="${esc(t('nav.all'))}" aria-label="${esc(t('nav.gridAria', { i: i + 1, n }))}"><svg class="ic"><use href="#i-grid"/></svg><span dir="ltr">${i + 1}/${n}</span></button>`;
+    grid = `<button data-a="grid" class="sbg" aria-haspopup="dialog" title="${esc(t('nav.all'))}" aria-label="${esc(i < 0 ? t('nav.all') : t('nav.gridAria', { i: i + 1, n }))}"><svg class="ic"><use href="#i-grid"/></svg><span dir="ltr">${i < 0 ? '–' : i + 1}/${n}</span></button>`;
   sb.innerHTML =
     n > MANY
-      ? step('prev', i <= 0) + grid + step('next', i >= n - 1)
+      ? step('prev', navStep(-1) < 0) + grid + step('next', navStep(1) < 0)
       : grid +
-        scenes
-          .map(
-            (s, k) =>
-              `<button data-i="${k}" class="${k == i ? 'on' : ''}" dir="auto">${esc(s.name)}</button>`
-          )
+        nav
+          .map(s => {
+            const k = scenes.indexOf(s);
+            return `<button data-i="${k}" class="${k == current ? 'on' : ''}" dir="auto">${esc(s.name)}</button>`;
+          })
           .join('');
   if (was) {
     const b = sb.querySelector(`[data-a="${was}"], [data-i="${was}"]`);
@@ -3628,10 +3743,14 @@ function syncNote() {
   card.hidden = !show;
   if (!show) return;
   const taken = project.meta && s.taken,
-    k = [LANG, current, scenes.length, s.name, taken, tx].join('\n');
+    k = [LANG, current, scenes.length, navScenes().length, s.name, taken, tx].join('\n');
   if (k == noteShown) return;
   noteShown = k;
-  $('noten').textContent = t('note.scene', { i: current + 1, n: scenes.length });
+  // Counted as the bar counts; a scene hidden from the bar has no place in that count.
+  const nav = navScenes(),
+    at = nav.indexOf(s);
+  $('noten').hidden = at < 0;
+  $('noten').textContent = t('note.scene', { i: at + 1, n: nav.length });
   $('notet').textContent = s.name;
   $('noted').hidden = !taken;
   if (taken) $('noted').textContent = t('f.captured') + ' ' + fmtTaken(taken);
@@ -3693,8 +3812,8 @@ $('sb').onclick = ev => {
   const a = b.dataset.a;
   if (a == 'grid') openGrid(b);
   else if (a) {
-    const k = current + (a == 'next' ? 1 : -1);
-    if (scenes[k]) jumpTo(k);
+    const k = navStep(a == 'next' ? 1 : -1);
+    if (k >= 0) jumpTo(k);
   } else jumpTo(+b.dataset.i);
 };
 $('hlist').onclick = e => {
@@ -4025,21 +4144,79 @@ function relink() {
 // it differs from what storage holds). Marked whatever storedSceneIds says, since an autosave
 // may be between reading the scene list and deleting the files.
 function undeleteScene(pid, at, s) {
-  if (pid != projectId || scenes.some(x => x.id == s.id)) return;
-  // A replace or a new thumbnail may have released URLs it shares with a copy undo brought back.
-  s.img = liveURL(s.img, s.blob);
-  if (s.hdBlob) s.hd = liveURL(s.hd, s.hdBlob);
-  if (s.sqBlob) s.sq = liveURL(s.sq, s.sqBlob);
-  const k = ghostPlace(idsOf(scenes), sceneWas, s.id),
-    i = k < 0 ? Math.min(at, scenes.length) : k,
+  undeleteScenes(pid, [[at, s]]);
+}
+// The same for scenes deleted together, as [place in the tour, scene] in tour order. One comes
+// back on show; several come back around the scene on show, and links between them come back too.
+function undeleteScenes(pid, gone) {
+  if (pid != projectId) return;
+  gone = gone.filter(([, s]) => !scenes.some(x => x.id == s.id));
+  if (!gone.length) return;
+  const was = scenes[current]?.id,
     dead = h => h.type == 'link' && !scenes.some(x => x.id == h.to);
-  scenes.splice(i, 0, s);
-  // Its own links to scenes deleted since it went wait for those.
-  if (s.hs.some(dead)) heldLinks.push(...takeHs(s, dead).map(h => [s.id, h]));
+  snapshotNow();
+  for (const [at, s] of gone) {
+    // A replace or a new thumbnail may have released URLs it shares with a copy undo brought back.
+    s.img = liveURL(s.img, s.blob);
+    if (s.hdBlob) s.hd = liveURL(s.hd, s.hdBlob);
+    if (s.sqBlob) s.sq = liveURL(s.sq, s.sqBlob);
+    const k = ghostPlace(idsOf(scenes), sceneWas, s.id);
+    scenes.splice(k < 0 ? Math.min(at, scenes.length) : k, 0, s);
+    if (s.blob) dirtyScenes.add(s.id);
+  }
+  // Their own links to scenes deleted since they went wait for those.
+  for (const [, s] of gone)
+    if (s.hs.some(dead)) heldLinks.push(...takeHs(s, dead).map(h => [s.id, h]));
   relink();
-  if (s.blob) dirtyScenes.add(s.id);
   save();
-  showScene(i);
+  snapshotNow();
+  const k = scenes.findIndex(x => x.id == was);
+  if (gone.length > 1 && k >= 0) {
+    current = k;
+    buildHotspots();
+    ui();
+  } else showScene(scenes.indexOf(gone[0][1]));
+}
+// Deletes the scenes with the given ids as one step, taking the links into them along, and
+// offers to undo it all from the message.
+function deleteScenes(ids) {
+  const del = new Set(ids),
+    pid = projectId,
+    gone = scenes.map((s, i) => [i, s]).filter(([, s]) => del.has(s.id)),
+    into = h => h.type == 'link' && del.has(h.to),
+    was = scenes[current]?.id,
+    before = gone.filter(([i]) => i < current).length;
+  if (!gone.length) return;
+  snapshotNow();
+  sceneWas = ghostMerge(idsOf(scenes), sceneWas);
+  gone.forEach(([, s]) => dropTexture(s.id));
+  for (let k = scenes.length - 1; k >= 0; k--) if (del.has(scenes[k].id)) scenes.splice(k, 1);
+  let links = 0;
+  scenes.forEach(s => {
+    if (!s.hs.some(into)) return;
+    const h = takeHs(s, into);
+    links += h.length;
+    heldLinks.push(...h.map(x => [s.id, x]));
+  });
+  save();
+  snapshotNow();
+  toast(
+    t('smg.delDone', { n: gone.length }) + (links ? ' ' + t('smg.delLinks', { n: links }) : ''),
+    { action: { label: t('act.undo'), fn: () => undeleteScenes(pid, gone) } }
+  );
+  const k = scenes.findIndex(s => s.id == was);
+  if (k >= 0) {
+    current = k;
+    buildHotspots();
+    ui();
+  } else if (scenes.length) showScene(Math.min(current - before, scenes.length - 1));
+  else {
+    current = -1;
+    sphereMat.map = null;
+    sphereMat.needsUpdate = true;
+    buildHotspots();
+    ui();
+  }
 }
 $('addl').onclick = () => {
   if (scenes.length < 2) toast(t('msg.needTwoScenes'));
@@ -4417,6 +4594,30 @@ function moveScene(a, b) {
   save();
   ui();
 }
+// Puts the tour in the order of ids as one step of undo; scenes not in ids follow, in their order.
+// Returns whether anything moved.
+function setOrder(ids) {
+  const by = new Map(scenes.map(s => [s.id, s])),
+    list = ids.map(id => by.get(id)).filter(Boolean),
+    seen = new Set(list);
+  list.push(...scenes.filter(s => !seen.has(s)));
+  if (list.every((s, k) => s === scenes[k])) return false;
+  const was = scenes[current]?.id;
+  snapshotNow();
+  scenes.splice(0, scenes.length, ...list);
+  current = scenes.findIndex(s => s.id == was);
+  save();
+  snapshotNow();
+  ui();
+  return true;
+}
+// Moves the scenes with the given ids, in their tour order, to place k among the others.
+function moveIds(ids, k) {
+  const mv = new Set(ids),
+    rest = idsOf(scenes).filter(id => !mv.has(id));
+  rest.splice(Math.max(0, Math.min(k, rest.length)), 0, ...idsOf(scenes.filter(s => mv.has(s.id))));
+  return setOrder(rest);
+}
 $('scenes').ondragstart = e => {
   const b = e.target.closest('button');
   if (b) {
@@ -4581,6 +4782,7 @@ const cleanScene = s => {
   if (s.pp && typeof s.pp == 'object')
     out.pp = { x: clamp01(num(s.pp.x, 0.5)), y: clamp01(num(s.pp.y, 0.5)) };
   if (typeof s.taken == 'string' && TAKEN.test(s.taken)) out.taken = s.taken;
+  if (s.hide === true) out.hide = true;
   if (s.gps && typeof s.gps == 'object') {
     const lat = num(s.gps.lat, NaN),
       lon = num(s.gps.lon, NaN);
@@ -4960,16 +5162,17 @@ const gridCells = () => [...$('sgl').children].filter(b => !b.hidden);
 function openGrid(from) {
   const L = $('sgl');
   gridFrom = from;
-  L.innerHTML = scenes
-    .map(
-      (s, i) =>
-        `<button data-i="${i}" tabindex="-1"${i == current ? ' class="on" aria-current="true"' : ''}><span class="no" dir="ltr">${i + 1}</span>${thumbOf(s) ? `<img src="${esc(thumbOf(s))}" alt="" loading="lazy" draggable="false">` : '<span class="ph"></span>'}<span class="nm" dir="auto">${esc(s.name)}</span></button>`
-    )
+  // Each cell keeps its scene's place in the tour, and shows its place in the bar's count.
+  L.innerHTML = navScenes()
+    .map((s, n) => {
+      const i = scenes.indexOf(s);
+      return `<button data-i="${i}" data-n="${n}" tabindex="-1"${i == current ? ' class="on" aria-current="true"' : ''}><span class="no" dir="ltr">${n + 1}</span>${thumbOf(s) ? `<img src="${esc(thumbOf(s))}" alt="" loading="lazy" draggable="false">` : '<span class="ph"></span>'}<span class="nm" dir="auto">${esc(s.name)}</span></button>`;
+    })
     .join('');
   $('sgf').value = '';
   filterGrid();
   $('sgm').hidden = false;
-  gridFocus(L.children[current] || L.firstElementChild, true);
+  gridFocus(L.querySelector('.on') || L.firstElementChild, true);
 }
 function closeGrid() {
   if ($('sgm').hidden) return;
@@ -4989,7 +5192,7 @@ function filterGrid() {
     m = sceneMatcher(q, true),
     L = $('sgl'),
     cells = [...L.children].sort((a, b) => a.dataset.i - b.dataset.i),
-    rank = cells.map(b => m(scenes[+b.dataset.i], +b.dataset.i));
+    rank = cells.map(b => m(scenes[+b.dataset.i], +b.dataset.n));
   let hits = 0;
   cells.forEach((b, k) => {
     b.hidden = !rank[k];
@@ -5001,8 +5204,8 @@ function filterGrid() {
   if (order.some((b, k) => L.children[k] !== b)) L.append(...order);
   $('sge').hidden = hits > 0;
   $('sgn').textContent = q.trim()
-    ? t('nav.matches', { n: hits, t: scenes.length })
-    : t('lib.scenes', { n: scenes.length });
+    ? t('nav.matches', { n: hits, t: cells.length })
+    : t('lib.scenes', { n: cells.length });
   // The tab stop moves to the first match when its own cell is filtered out.
   const c = gridCells();
   if (c.length && !c.some(b => b.tabIndex == 0)) {
@@ -5097,6 +5300,518 @@ $('sgm').addEventListener('keydown', e => {
   if (k >= c.length) k = c[c.length - 1].offsetTop > a.offsetTop ? c.length - 1 : i;
   gridFocus(c[k]);
 });
+
+// ───────────── scene manager ─────────────
+// Every scene of the tour as a card on a full screen: the panel's list fits a few dozen, and a
+// survey has a hundred and fifty. The view can be searched and sorted without touching the
+// tour's order; "Use this order" makes the sorted view the tour's. Scenes are selected with the
+// pointer (Shift for a range, Ctrl or Cmd for one), a long press on a phone, or Space on a card's
+// checkbox, and the selection is deleted, moved to either end or hidden from the bar together,
+// each as one step of undo.
+// Thumbnails load as their cards come near the screen and are let go once they are well past it,
+// so 150 of them are never decoded at once on a phone.
+const SM_DENS = ['l', 's', 'list'];
+let smFrom = null,
+  smSel = new Set(), // selected scene ids
+  smAnchor = null, // the id a Shift range starts from
+  smSort = 'tour',
+  smDens = lsGet('vrt.smd'),
+  smIO = null,
+  smEdit = null, // the id of the scene being renamed
+  smDelArmed = 0;
+if (SM_DENS.indexOf(smDens) < 0) smDens = 'l';
+const smOpen = () => !EMBED && !$('smg').hidden,
+  smCards = () => [...$('sml').children].filter(c => !c.hidden),
+  smStop = () => $('sml').querySelector('.smk[tabindex="0"]')?.closest('.smc'),
+  smScene = c => scenes.find(s => s.id == c.dataset.id);
+function smOrder(list) {
+  if (smSort == 'tour') return list;
+  const k = smSort.replace('-', ''),
+    dir = smSort[0] == '-' ? -1 : 1,
+    pos = new Map(scenes.map((s, i) => [s, i])),
+    col = new Intl.Collator(LANG, { numeric: true, sensitivity: 'base' });
+  return list.slice().sort((a, b) => {
+    let r;
+    if (k == 'name') r = dir * col.compare(a.name, b.name);
+    // Scenes without a capture date come last either way.
+    else r = !a.taken - !b.taken || dir * (a.taken < b.taken ? -1 : a.taken > b.taken ? 1 : 0);
+    return r || pos.get(a) - pos.get(b);
+  });
+}
+// A card's thumbnail is loaded while the card is near the screen, and let go otherwise.
+function smThumb(c) {
+  const im = c.querySelector('img');
+  if (!c._near || !c._src) im.removeAttribute('src');
+  else if (im.getAttribute('src') != c._src) im.src = c._src;
+}
+function smCard(s) {
+  const c = document.createElement('div');
+  c.className = 'smc';
+  c.setAttribute('role', 'listitem');
+  c.dataset.id = s.id;
+  c.innerHTML = `<input type="checkbox" class="smk" tabindex="-1" aria-keyshortcuts="Enter F2 Delete"><span class="smth"><img alt="" draggable="false"></span><span class="smno" dir="ltr"></span><span class="smbd"></span><span class="smtx"><span class="smnm" dir="auto"></span><span class="smmeta"></span></span><span class="smln" dir="ltr" aria-hidden="true"></span><button type="button" class="smr" tabindex="-1"><svg class="ic"><use href="#i-edit"/></svg></button>`;
+  smIO.observe(c);
+  return c;
+}
+// Fills card c for scene s, at place i in the tour with n links into it; only what changed.
+function smPaint(c, s, i, n) {
+  const out = s.hs.filter(h => h.type == 'link' && h.to != s.id).length,
+    badges = [i == 0 && 'st', s.hide && 'hdn', s.hdBlob && 'hd'].filter(Boolean),
+    meta =
+      smDens == 'list'
+        ? [
+            s.taken ? fmtTaken(s.taken) : '',
+            s.src?.w && s.src.h0 ? fmtPx(s.src.w, s.src.h0) : '',
+            s.src?.bytes ? fmtMB(s.src.bytes) : '',
+          ]
+            .filter(Boolean)
+            .join(' · ')
+        : '',
+    k = [LANG, i, s.name, badges, out, n, meta, smEdit == s.id].join('\n');
+  c.classList.toggle('on', i == current);
+  c.classList.toggle('sel', smSel.has(s.id));
+  c.querySelector('.smk').checked = smSel.has(s.id);
+  c._src = thumbOf(s) || '';
+  smThumb(c);
+  if (c._k == k) return;
+  c._k = k;
+  const lb = { st: t('smg.start'), hdn: t('smg.hidden'), hd: 'HD' };
+  c.classList.toggle('hid', !!s.hide);
+  c.querySelector('.smno').textContent = i + 1;
+  c.querySelector('.smbd').innerHTML = badges
+    .map(b => `<b class="${b}">${esc(lb[b])}</b>`)
+    .join('');
+  if (smEdit != s.id) c.querySelector('.smnm').textContent = s.name;
+  c.querySelector('.smmeta').textContent = meta;
+  c.querySelector('.smmeta').hidden = !meta;
+  const links = t('smg.links', { o: out, i: n });
+  c.querySelector('.smln').textContent = `→ ${out}  ← ${n}`;
+  c.querySelector('.smln').title = links;
+  c.querySelector('.smr').setAttribute('aria-label', t('smg.rename'));
+  c.querySelector('.smr').title = t('smg.rename');
+  c.querySelector('.smk').setAttribute(
+    'aria-label',
+    [`${i + 1}. ${s.name}`, ...badges.map(b => lb[b]), links, meta]
+      .filter(Boolean)
+      .join(isRTL() ? '، ' : ', ')
+  );
+}
+// Brings the dialog up to date with the tour: cards made, filled and put in the view's order.
+function smDraw() {
+  if (!smOpen()) return;
+  const L = $('sml'),
+    f = document.activeElement,
+    hadFocus = L.contains(f) && f.closest('.smc')?.dataset.id,
+    q = $('smf').value,
+    m = sceneMatcher(q, true),
+    pos = new Map(scenes.map((s, i) => [s.id, i])),
+    into = new Map();
+  scenes.forEach(s =>
+    s.hs.forEach(h => {
+      if (h.type == 'link' && h.to != s.id && pos.has(h.to))
+        into.set(h.to, (into.get(h.to) || 0) + 1);
+    })
+  );
+  for (const id of smSel) if (!pos.has(id)) smSel.delete(id);
+  const view = smOrder(scenes.filter((s, i) => m(s, i))),
+    have = new Map([...L.children].map(c => [c.dataset.id, c])),
+    cards = view.map(s => {
+      const c = have.get(s.id) || smCard(s);
+      have.delete(s.id);
+      smPaint(c, s, pos.get(s.id), into.get(s.id) || 0);
+      return c;
+    });
+  have.forEach(c => {
+    smIO.unobserve(c);
+    c.remove();
+  });
+  // Moving the cards drops the focus from the one that had it, so it is put back.
+  if (cards.some((c, k) => L.children[k] !== c)) L.append(...cards);
+  $('smb').dataset.d = smDens;
+  // One card is the list's tab stop: the one that had it, else the current scene's, else the first.
+  if (!smStop() && cards.length)
+    (L.querySelector('.smc.on') || cards[0]).querySelector('.smk').tabIndex = 0;
+  if (hadFocus && document.activeElement !== f && !smEdit)
+    (cards.find(x => x.dataset.id == hadFocus) || smStop())
+      ?.querySelector('.smk')
+      .focus({ preventScroll: true });
+  $('sme').hidden = view.length > 0;
+  const n = smSel.size;
+  $('smn').textContent =
+    (q.trim()
+      ? t('nav.matches', { n: view.length, t: scenes.length })
+      : t('lib.scenes', { n: scenes.length })) + (n ? ' · ' + t('smg.selected', { n }) : '');
+  $('smbar').hidden = !n;
+  $('smhint').hidden = !!n;
+  $('smclr').disabled = !n;
+  $('small').disabled = !view.length || view.every(s => smSel.has(s.id));
+  // Hide or show, or both for a selection with scenes of either kind.
+  const sel = scenes.filter(s => smSel.has(s.id));
+  $('smhd').hidden = sel.every(s => s.hide);
+  $('smsh').hidden = !sel.some(s => s.hide);
+  if (!n) smArm(false);
+  $('smdel').lastChild.textContent = t(smDelArmed ? 'smg.delAsk' : 'smg.del', { n });
+  $('smap').hidden = smSort == 'tour';
+  $('sms').value = smSort;
+  $('smd')
+    .querySelectorAll('button')
+    .forEach(b => b.setAttribute('aria-pressed', b.dataset.d == smDens));
+}
+function openManager(from) {
+  if (EMBED || mode != 'edit' || !scenes.length || smOpen() || !$('libm').hidden) return;
+  closeGrid();
+  smFrom = from || document.activeElement;
+  smSel = new Set();
+  smAnchor = null;
+  smSort = 'tour';
+  $('smf').value = '';
+  // Thumbnails load within 100 px of the list's edges and are let go beyond that.
+  smIO = new IntersectionObserver(
+    es =>
+      es.forEach(e => {
+        e.target._near = e.isIntersecting;
+        smThumb(e.target);
+      }),
+    { root: $('sml'), rootMargin: '100px 0px' }
+  );
+  $('smg').hidden = false;
+  smDraw();
+  const c = $('sml').querySelector('.smc.on') || $('sml').firstElementChild;
+  smFocus(c, true);
+}
+function closeManager() {
+  if (!smOpen()) return;
+  if (smEdit) smRenameEnd(false);
+  $('smg').hidden = true;
+  smIO.disconnect();
+  smIO = null;
+  $('sml').innerHTML = '';
+  smArm(false);
+  const f = smFrom?.isConnected && smFrom.offsetParent ? smFrom : $('smo');
+  smFrom = null;
+  f?.focus({ preventScroll: true });
+}
+// Makes card c the list's tab stop and focuses it, centred or just brought into view.
+function smFocus(c, centre) {
+  if (!c) return;
+  const L = $('sml');
+  L.querySelectorAll('.smk[tabindex="0"]').forEach(x => (x.tabIndex = -1));
+  const k = c.querySelector('.smk');
+  k.tabIndex = 0;
+  k.focus({ preventScroll: true });
+  const y = c.offsetTop,
+    h = c.offsetHeight,
+    pad = 16;
+  if (centre) L.scrollTop = y - (L.clientHeight - h) / 2;
+  else if (y - pad < L.scrollTop) L.scrollTop = y - pad;
+  else if (y + h + pad > L.scrollTop + L.clientHeight) L.scrollTop = y + h + pad - L.clientHeight;
+}
+function smPick(id, on) {
+  if (on) smSel.add(id);
+  else smSel.delete(id);
+  smAnchor = id;
+}
+// Adds the cards from the anchor to c, in the view's order, to the selection.
+function smRange(c) {
+  const cs = smCards(),
+    a = cs.findIndex(x => x.dataset.id == smAnchor),
+    b = cs.indexOf(c);
+  if (a < 0) return smPick(c.dataset.id, true);
+  cs.slice(Math.min(a, b), Math.max(a, b) + 1).forEach(x => smSel.add(x.dataset.id));
+}
+function smOpenScene(c) {
+  const i = scenes.findIndex(s => s.id == c.dataset.id);
+  closeManager();
+  if (i >= 0 && i != current) showScene(i);
+}
+function smArm(on) {
+  clearTimeout(smDelArmed);
+  smDelArmed = on ? setTimeout(() => smArm(false), 3000) : 0;
+  const b = $('smdel');
+  if (b) b.lastChild.textContent = t(on ? 'smg.delAsk' : 'smg.del', { n: smSel.size });
+}
+function smRename(c) {
+  if (smEdit) smRenameEnd(true);
+  const s = smScene(c);
+  if (!s) return;
+  smEdit = s.id;
+  const nm = c.querySelector('.smnm'),
+    f = document.createElement('input');
+  f.className = 'smi';
+  f.dir = 'auto';
+  f.value = s.name;
+  f.setAttribute('aria-label', t('smg.rename'));
+  nm.hidden = true;
+  nm.after(f);
+  f.focus();
+  f.select();
+  f.onkeydown = e => {
+    if (e.key == 'Enter' || e.key == 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      smRenameEnd(e.key == 'Enter', true);
+    }
+  };
+  f.onblur = () => smEdit == s.id && smRenameEnd(true);
+}
+// Ends the rename, keeping the new name or not; back gives the focus back to the card.
+function smRenameEnd(keep, back) {
+  const id = smEdit,
+    c = [...$('sml').children].find(x => x.dataset.id == id),
+    f = c?.querySelector('.smi'),
+    s = scenes.find(x => x.id == id),
+    v = f ? f.value.trim() : '';
+  smEdit = null;
+  if (c) {
+    c._k = '';
+    c.querySelector('.smnm').hidden = false;
+    if (back) smFocus(c);
+    f?.remove();
+  }
+  if (keep && s && v && v != s.name) {
+    s.name = v;
+    save();
+    ui();
+  } else smDraw();
+}
+if (!EMBED) {
+  $('smo').onclick = e => openManager(e.currentTarget);
+  $('smx').onclick = closeManager;
+  $('smg').onclick = e => {
+    if (e.target == $('smg')) closeManager();
+  };
+  $('smf').oninput = smDraw;
+  $('sms').onchange = e => {
+    smSort = e.target.value;
+    smDraw();
+  };
+  $('smd').onclick = e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    smDens = b.dataset.d;
+    lsSet('vrt.smd', smDens);
+    $('sml')
+      .querySelectorAll('.smc')
+      .forEach(c => (c._k = ''));
+    smDraw();
+  };
+  $('smap').onclick = () => {
+    const pid = projectId,
+      was = idsOf(scenes);
+    if (!setOrder(idsOf(smOrder(scenes)))) return;
+    smSort = 'tour';
+    smDraw();
+    toast(t('smg.ordered'), {
+      action: { label: t('act.undo'), fn: () => pid == projectId && setOrder(was) },
+    });
+  };
+  $('small').onclick = () => {
+    smCards().forEach(c => smSel.add(c.dataset.id));
+    smDraw();
+  };
+  $('smclr').onclick = () => {
+    smSel.clear();
+    smAnchor = null;
+    smDraw();
+    smStop()?.querySelector('.smk').focus();
+  };
+  $('smdel').onclick = () => {
+    if (!smSel.size) return;
+    if (!smDelArmed) return smArm(true);
+    smArm(false);
+    // The focus goes on to the card after the last one selected, or else back to one before.
+    const ids = [...smSel],
+      cs = smCards(),
+      last = cs.map(c => smSel.has(c.dataset.id)).lastIndexOf(true),
+      next =
+        cs.slice(last + 1).find(c => !smSel.has(c.dataset.id)) ||
+        cs
+          .slice(0, last)
+          .reverse()
+          .find(c => !smSel.has(c.dataset.id));
+    smSel.clear();
+    deleteScenes(ids);
+    if (!scenes.length) return closeManager();
+    smDraw();
+    smFocus(next?.isConnected ? next : smCards()[0]);
+  };
+  const toEnd = end => moveIds([...smSel], end ? 1 / 0 : 0);
+  $('smst').onclick = () => toEnd(false);
+  $('smen').onclick = () => toEnd(true);
+  const hide = on => {
+    let n = 0;
+    snapshotNow();
+    scenes.forEach(s => {
+      if (!smSel.has(s.id) || !!s.hide == on) return;
+      if (on) s.hide = true;
+      else delete s.hide;
+      n++;
+    });
+    if (!n) return;
+    save();
+    snapshotNow();
+    ui();
+  };
+  $('smhd').onclick = () => hide(true);
+  $('smsh').onclick = () => hide(false);
+  $('sml').onclick = e => {
+    const c = e.target.closest('.smc');
+    if (!c || e.target.closest('.smi')) return;
+    const id = c.dataset.id,
+      k = e.target.closest('.smk');
+    if (e.target.closest('.smr')) return smRename(c);
+    if (k) {
+      // The checkbox has already changed; Shift on it selects a range, as on the card.
+      if (e.shiftKey && k.checked && smAnchor) smRange(c);
+      smPick(id, k.checked);
+    } else if (e.shiftKey && smAnchor) smRange(c);
+    else if (e.ctrlKey || e.metaKey || smSel.size) smPick(id, !smSel.has(id));
+    else return smOpenScene(c);
+    smDraw();
+    smFocus(c);
+  };
+  // A finger held still on a card selects it, which starts selecting; the click that follows
+  // when it lifts is not a tap.
+  const LONG_MS = 500;
+  let smPress = null;
+  $('sml').addEventListener('pointerdown', e => {
+    const c =
+      e.pointerType == 'touch' && !e.target.closest('.smk, .smr, .smi') && e.target.closest('.smc');
+    if (!c) return;
+    const p = (smPress = { x: e.clientX, y: e.clientY, id: e.pointerId });
+    p.t = setTimeout(() => {
+      p.done = true;
+      smPick(c.dataset.id, true);
+      smDraw();
+      smFocus(c);
+    }, LONG_MS);
+  });
+  $('sml').addEventListener('pointermove', e => {
+    const p = smPress;
+    if (p && e.pointerId == p.id && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 8)
+      clearTimeout(p.t);
+  });
+  const smRelease = e => {
+    if (smPress && e.pointerId == smPress.id) clearTimeout(smPress.t);
+  };
+  $('sml').addEventListener('pointerup', smRelease);
+  $('sml').addEventListener('pointercancel', smRelease);
+  $('sml').addEventListener('contextmenu', e => {
+    if (smPress?.done) e.preventDefault();
+  });
+  $('sml').addEventListener(
+    'click',
+    e => {
+      if (!smPress?.done) return;
+      smPress = null;
+      e.preventDefault();
+      e.stopPropagation();
+    },
+    true
+  );
+  $('smb').addEventListener('keydown', e => {
+    const a = document.activeElement,
+      f = $('smf'),
+      c = a?.classList.contains('smk') && a.closest('.smc'),
+      txt = a == f || a?.classList.contains('smi');
+    if (e.key == 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (a == f && f.value) {
+        f.value = '';
+        smDraw();
+      } else closeManager();
+      return;
+    }
+    // Focus stays in the dialog.
+    if (e.key == 'Tab') {
+      const ring = [...$('smb').querySelectorAll('button, input, select')].filter(
+        x => x.tabIndex >= 0 && !x.disabled && x.offsetParent
+      );
+      const k = ring.indexOf(a),
+        last = ring.length - 1;
+      if (k < 0 || (e.shiftKey ? k == 0 : k == last)) {
+        e.preventDefault();
+        ring[e.shiftKey ? last : 0]?.focus();
+      }
+      return;
+    }
+    const mod = e.ctrlKey || e.metaKey,
+      key = e.key.toLowerCase();
+    // Undo and redo work here too; a text field keeps them for its text.
+    if (mod && !e.altKey && !txt && (key == 'z' || key == 'y')) {
+      e.preventDefault();
+      e.stopPropagation();
+      key == 'y' || e.shiftKey ? redo() : undo();
+      return;
+    }
+    if (a == f && e.key == 'ArrowDown' && smStop()) {
+      e.preventDefault();
+      smFocus(smStop());
+      return;
+    }
+    if (!c) return;
+    if (mod && key == 'a') {
+      e.preventDefault();
+      $('small').click();
+      return;
+    }
+    if (mod || e.altKey) return;
+    if (e.key == 'Enter') {
+      e.preventDefault();
+      smOpenScene(c);
+      return;
+    }
+    if (e.key == 'F2') {
+      e.preventDefault();
+      smRename(c);
+      return;
+    }
+    if (e.key == 'Delete' || e.key == 'Backspace') {
+      // Deletes the selection, or this card when nothing is selected, after a second press.
+      e.preventDefault();
+      if (!smSel.size) smPick(c.dataset.id, true);
+      smDraw();
+      smArm(true);
+      $('smdel').focus();
+      return;
+    }
+    const cs = smCards(),
+      i = cs.indexOf(c);
+    let cols = 1;
+    if (smDens != 'list') while (cols < cs.length && cs[cols].offsetTop == cs[0].offsetTop) cols++;
+    const rtl = isRTL(),
+      go = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1, ArrowDown: cols, ArrowUp: -cols }[
+        e.key
+      ];
+    let k;
+    if (go != null) k = i + go;
+    else if (e.key == 'Home') k = 0;
+    else if (e.key == 'End') k = cs.length - 1;
+    else {
+      // Typing a letter goes to the search field, which takes the letter.
+      if (e.key.length == 1 && e.key != ' ') f.focus();
+      return;
+    }
+    e.preventDefault();
+    if (k < 0) {
+      if (e.key == 'ArrowUp') f.focus();
+      return;
+    }
+    if (k >= cs.length) k = cs[cs.length - 1].offsetTop > c.offsetTop ? cs.length - 1 : i;
+    smFocus(cs[k]);
+  });
+  addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.altKey || e.key.toLowerCase() != 'm') return;
+    if (smOpen()) {
+      e.preventDefault();
+      closeManager();
+    } else if (mode == 'edit' && scenes.length && $('libm').hidden) {
+      e.preventDefault();
+      openManager();
+    }
+  });
+}
 
 // ───────────── walkthrough transition ─────────────
 let worldTurn = 0,

@@ -117,6 +117,29 @@ that isn't granted it says once per session that the browser may clear the work.
 - Glyphs on light icon colours, such as white, are drawn dark so they stay visible.
 - 60 steps of undo and redo.
 - Scene thumbnails, drag-to-reorder, rename and delete.
+- A scene manager for large tours: "Manage scenes" over the scene list, or Ctrl+Shift+M
+  (Cmd+Shift+M on a Mac), opens every scene as a card on the whole screen, as large cards,
+  small cards or a list with the capture date, the original's pixel size and its file size.
+  Each card shows the scene's place in the tour, Start, Hidden and HD badges and its links
+  out and in (→ 3 ← 2), and can be renamed in place (the pencil, or F2; Enter keeps the
+  name and Escape puts it back).
+  - The view can be searched (names and notes, as in the scene list) and sorted by name or
+    capture date either way without touching the tour; "Use this order for the tour" then
+    makes the tour follow it, as one step of undo with Undo in its message.
+  - Select with a click on the checkbox, Shift-click for a range, Ctrl or Cmd-click for one
+    more, or a long press on a phone; once something is selected, a click selects too.
+    Otherwise a click opens the scene. The selection can be deleted (a second press
+    confirms, with the count), moved to the start or the end of the tour, or hidden from
+    the scene bar, each as one step of undo. A deletion takes the links that led to the
+    scenes along and says how many; its Undo puts back every scene at its place, with its
+    images, clip, thumbnail and links.
+  - From the keyboard, the arrow keys move between cards, Space selects, Enter opens, F2
+    renames and Delete deletes the selection; Ctrl+Z undoes. Thumbnails load as cards come
+    near the screen and are let go once they are past it, so a phone never holds all 143
+    at once. With 143 scenes it opens in about 25 ms.
+- Hide a scene from the tour's scene bar, its grid and previous and next, for a corridor or
+  a detail that only makes sense from the hotspot that leads to it. Hotspots and the plan
+  still reach it, and the counter shows "–/n" while it is on show.
 - Square scene thumbnails that look like the place: a 320 × 320 picture of a real view,
   without hotspots, for the scene list, the tour's scene grid and the library (for a
   project without a cover). It is taken from the start view at a fixed 75°, wider than most
@@ -430,6 +453,7 @@ whichever way the project was opened.
     "lq": [0.0262, 0, 0, 0.9997],
     "pp": { "x": 0.4, "y": 0.6 },
     "taken": "2026-10-20T09:14:37",
+    "hide": true,
     "gps": { "lat": 24.7136111, "lon": 46.6752778 },
     "cam": "RICOH THETA Z1, 2.6 mm",
     "snd": { "src": "data:audio/mpeg;base64,...", "name": "guide.mp3", "loop": true, "delay": 2 },
@@ -497,6 +521,9 @@ whichever way the project was opened.
 - Scene `note`, optional, is the scene's notes for visitors: plain text with `\n` line
   breaks. Import trims it, turns `\r\n` into `\n` and keeps at most 2000 characters; an
   empty note is left out. An exported tour always carries it.
+- Scene `hide`, optional, keeps the scene out of the tour's scene bar, scene grid and
+  previous and next; hotspots and the plan still lead to it. Only `true` is accepted on
+  import, and it is left out otherwise. An exported tour keeps it.
 - `taken` is the camera's local capture time, with no time zone, and `gps` the position in
   decimal degrees. Both are optional. `meta` decides whether the tour shows them; an
   exported tour carries them only when it is `true`.
@@ -578,7 +605,8 @@ GitHub Pages, Cloudflare Pages and Netlify all provide it on free tiers.
 Colour pairs are checked numerically: text at 4.5:1 or better (WCAG 1.4.3), control
 borders and focus rings at 3:1 or better (WCAG 1.4.11). Touch targets are 44px on
 coarse pointers (WCAG 2.5.5). The panorama is fully keyboard operable, every scene of a tour
-can be reached from the keyboard through the scene bar and the scene grid, status messages
+not hidden from the bar can be reached from the keyboard through the scene bar and the scene
+grid, status messages
 are announced through `aria-live`, and `prefers-reduced-motion` is respected: in the
 interface, and in the tour, where it turns the walk into a short cross-fade, keeps
 auto-rotate off and makes hotspots grow at once (see Viewing).
@@ -601,6 +629,9 @@ auto-rotate off and makes hotspots grow at once (see Viewing).
 - Safari may evict site storage after a period without visits. Keep `.json` backups.
 - Renaming a scene or changing its north direction does not update tours you already
   exported. Export again.
+- A scene hidden from the scene bar is reached only through hotspots, which the keyboard
+  can't focus, so keyboard and screen-reader visitors can't open it. Hide only scenes that
+  don't hold information found nowhere else.
 - The logo is a screen overlay, so it does not appear inside a VR headset. Nor do the
   scene bar and the scene grid.
 - Click anywhere stays off in a VR headset: a trigger pulled at empty space does nothing.
