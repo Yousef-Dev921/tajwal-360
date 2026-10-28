@@ -65,6 +65,35 @@ const I18N = {
     'act.addImages': 'إضافة صور \u2066360°\u2069',
     'act.undo': 'تراجع',
     'act.undoTitle': 'تراجع (Ctrl+Z)',
+    'act.dismiss': 'إغلاق التنبيه',
+    'act.applyLook': 'تطبيق المظهر على…',
+    'act.apply': 'تطبيق',
+    'act.cancel': 'إلغاء',
+    'look.scene': 'كل نقاط الانتقال في هذا المشهد',
+    'look.tour': 'كل نقاط الانتقال في الجولة',
+    'look.sceneInfo': 'كل نقاط المعلومات في هذا المشهد',
+    'look.tourInfo': 'كل نقاط المعلومات في الجولة',
+    'look.sameIcon': 'النقاط ذات الأيقونة نفسها',
+    'hint.look':
+      'يُنسخ الشكل واللون والحجم وإعدادات العنوان، ولا يتغير العنوان ولا النص ولا الوجهة ولا الموضع ولا الاتجاه.',
+    'look.confirm': {
+      one: 'تغيير نقطة واحدة؟',
+      two: 'تغيير نقطتين؟',
+      few: 'تغيير \u2066{n}\u2069 نقاط؟',
+      many: 'تغيير \u2066{n}\u2069 نقطة؟',
+      other: 'تغيير \u2066{n}\u2069 نقطة؟',
+    },
+    'look.none': 'لها كلها هذا المظهر من قبل.',
+    'msg.lookApplied': {
+      one: 'طُبّق المظهر على نقطة واحدة.',
+      two: 'طُبّق المظهر على نقطتين.',
+      few: 'طُبّق المظهر على \u2066{n}\u2069 نقاط.',
+      many: 'طُبّق المظهر على \u2066{n}\u2069 نقطة.',
+      other: 'طُبّق المظهر على \u2066{n}\u2069 نقطة.',
+    },
+    'look.moved': 'ونُقل بعضها ليبقى على الأرض أو ضمن نطاق الجدار.',
+    'msg.sceneDel': 'حُذف المشهد «\u2068{name}\u2069».',
+    'msg.hsDel': 'حُذفت النقطة.',
     'act.redo': 'إعادة',
     'act.redoTitle': 'إعادة (Ctrl+Shift+Z)',
     'act.preview': 'معاينة',
@@ -215,6 +244,8 @@ const I18N = {
       'يبقى ظاهراً في المحرر. في الجولة يظهر عند مرور المؤشر، وعلى شاشات اللمس تُظهره اللمسة الأولى وتفتح الثانية النقطة.',
     'f.floor': 'ممدّدة على الأرض',
     'msg.floorClamp': 'نُقلت النقطة إلى ما تحت الأفق، فالنقطة الممدّدة على الأرض لا تعلوه.',
+    'f.wall': 'ملصقة على الجدار',
+    'msg.wallClamp': 'نُقلت النقطة لتبقى ضمن نطاق الجدار.',
     'act.copy': 'نسخ',
     'act.copyTitle': 'انسخ النقطة لتلصقها في مشهد آخر (Ctrl+C)',
     'act.dup': 'تكرار',
@@ -381,6 +412,26 @@ const I18N = {
     'act.addImages': 'Add 360° images',
     'act.undo': 'Undo',
     'act.undoTitle': 'Undo (Ctrl+Z)',
+    'act.dismiss': 'Dismiss',
+    'act.applyLook': 'Apply look to…',
+    'act.apply': 'Apply',
+    'act.cancel': 'Cancel',
+    'look.scene': 'All link hotspots in this scene',
+    'look.tour': 'All link hotspots in the tour',
+    'look.sceneInfo': 'All info hotspots in this scene',
+    'look.tourInfo': 'All info hotspots in the tour',
+    'look.sameIcon': 'Hotspots with the same icon',
+    'hint.look':
+      'Copies the shape, colour, size and label settings. Labels, text, destinations, positions and directions stay as they are.',
+    'look.confirm': { one: 'Change 1 hotspot?', other: 'Change {n} hotspots?' },
+    'look.none': 'They all have this look already.',
+    'msg.lookApplied': {
+      one: 'Applied the look to 1 hotspot.',
+      other: 'Applied the look to {n} hotspots.',
+    },
+    'look.moved': 'Some moved to stay on the floor or within the wall band.',
+    'msg.sceneDel': 'Deleted the scene “\u2068{name}\u2069”.',
+    'msg.hsDel': 'Deleted the hotspot.',
     'act.redo': 'Redo',
     'act.redoTitle': 'Redo (Ctrl+Shift+Z)',
     'act.preview': 'Preview',
@@ -531,6 +582,8 @@ const I18N = {
       'Always shown in the editor. In the tour it appears under the pointer; on touch screens the first tap shows it and the second opens the hotspot.',
     'f.floor': 'Lie flat on the floor',
     'msg.floorClamp': 'Moved below the horizon: a hotspot lying on the floor can’t sit above it.',
+    'f.wall': 'Flat on the wall',
+    'msg.wallClamp': 'Moved the hotspot to stay on the wall band.',
     'act.copy': 'Copy',
     'act.copyTitle': 'Copy the hotspot to paste into another scene (Ctrl+C)',
     'act.dup': 'Duplicate',
@@ -739,13 +792,111 @@ else {
 }
 applyI18N();
 syncToggles();
-// Status toast. Defined early because the storage layer calls it on failure.
-let toastTimer,
-  toastMs = 5200;
-function toast(text, ms) {
-  toastMs = ms || 5200;
-  const m = $('msg');
-  if (m) m.textContent = text;
+// Status toasts. Defined early because the storage layer calls it on failure.
+// toast(text, ms) or toast(text, { ms, action: { label, fn }, key }). Up to TOAST_MAX stack,
+// the newest at the bottom; each closes after ms, by its close button, or by its action, and
+// toast('') closes them all. A toast with a key is updated in place by the next one with that
+// key, so a long task's progress stays one message, and the same text again restarts its
+// toast rather than stacking a copy. The timers pause while the pointer is over the stack or
+// focus is in it. Screen readers hear the text alone, once per toast, from the live region
+// #msgs: the stack itself isn't live, so the buttons aren't read out with every message.
+const TOAST_MAX = 3,
+  TOAST_MS = 5200,
+  TOAST_ACT_MS = 10000;
+let toasts = [],
+  toastHover = false,
+  toastFocus = false;
+function toast(text, o) {
+  if (!o || typeof o != 'object') o = { ms: o };
+  const box = $('msg');
+  if (!box) return;
+  if (!text) {
+    toasts.slice().forEach(x => dropToast(x));
+    return;
+  }
+  let x = toasts.find(x => (o.key ? x.key == o.key : !x.act && !o.action && x.text == text));
+  if (x) toasts.splice(toasts.indexOf(x), 1);
+  else {
+    x = { el: document.createElement('div') };
+    x.el.className = 'tst';
+    x.el.innerHTML = `<span class="tsm"></span><button type="button" class="tsx" data-i18n-aria="act.dismiss" aria-label="${esc(t('act.dismiss'))}"><svg class="ic"><use href="#i-close"/></svg></button>`;
+    // A click has no detail when it comes from the keyboard.
+    x.el.querySelector('.tsx').onclick = e => dropToast(x, !e.detail);
+    x.el.onkeydown = e => {
+      if (e.key != 'Escape') return;
+      e.stopPropagation();
+      dropToast(x, true);
+    };
+  }
+  toasts.push(x);
+  // Moving or rebuilding a toast would drop the focus inside it, so it is put back.
+  const had = x.el.contains(document.activeElement);
+  if (box.lastChild !== x.el) box.appendChild(x.el);
+  x.key = o.key;
+  x.text = text;
+  x.el.querySelector('.tsm').textContent = text;
+  x.el.querySelector('.tsa')?.remove();
+  x.act = o.action;
+  if (x.act) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tsa';
+    b.textContent = x.act.label;
+    b.onclick = e => {
+      dropToast(x, !e.detail);
+      x.act.fn();
+    };
+    x.el.insertBefore(b, x.el.lastChild);
+  }
+  if (had && !x.el.contains(document.activeElement)) x.el.querySelector('.tsa, .tsx').focus();
+  // A fresh node in the live region is read; the one it replaces, removed, is not.
+  x.sr?.remove();
+  x.sr = document.createElement('span');
+  x.sr.textContent = text + ' ';
+  $('msgs').appendChild(x.sr);
+  x.left = o.ms || (x.act ? TOAST_ACT_MS : TOAST_MS);
+  toastRun(x);
+  // Too many: the oldest goes first, unless it still offers to undo something.
+  while (toasts.length > TOAST_MAX) dropToast(toasts.slice(0, -1).find(y => !y.act) || toasts[0]);
+}
+function toastRun(x) {
+  clearTimeout(x.timer);
+  x.at = 0;
+  if (toastHover || toastFocus) return;
+  x.at = Date.now();
+  x.timer = setTimeout(() => dropToast(x), x.left);
+}
+function holdToasts() {
+  const on = toastHover || toastFocus;
+  for (const x of toasts) {
+    if (!on) {
+      if (!x.at) toastRun(x);
+    } else if (x.at) {
+      clearTimeout(x.timer);
+      // Read in full by then, but still worth a moment once the pointer leaves.
+      x.left = Math.max(1500, x.left - (Date.now() - x.at));
+      x.at = 0;
+    }
+  }
+}
+// Closes toast x. Closed from the keyboard, focus moves to the next toast so the stack can be
+// gone through; otherwise it leaves the stack, which nothing would report once the element is
+// gone. With the last toast gone, the pointer is no longer over anything to hold.
+function dropToast(x, kbd) {
+  const i = toasts.indexOf(x);
+  if (i < 0) return;
+  clearTimeout(x.timer);
+  toasts.splice(i, 1);
+  const had = x.el.contains(document.activeElement),
+    n = toasts[Math.min(i, toasts.length - 1)];
+  x.el.remove();
+  x.sr.remove();
+  if (had && kbd && n) n.el.querySelector('.tsa, .tsx').focus();
+  else if (had || !toasts.length) {
+    toastFocus = false;
+    if (!toasts.length) toastHover = false;
+    holdToasts();
+  }
 }
 // The default zoom, as the camera's vertical field of view in degrees; zoom runs from 40 to 95.
 const FOV0 = 75,
@@ -1499,27 +1650,40 @@ const HS_PX = 512 / 70,
 // depth, scaled with its distance, so its width matches the sprite's and lying down shortens
 // it as perspective does; it is drawn FLOOR_K times larger to make up for that. Close to the
 // horizon it would flatten to a line, so it is kept 5° below it.
+// A hotspot can also hang flat on a wall: a decal upright in the level-corrected frame, facing
+// the viewer across the room (its normal level, pointing at the centre). Seen from the centre
+// at the horizon it is exactly the sprite, so it is drawn at the sprite's size; above or below
+// it, it shortens by the cosine of the angle, as a poster on a wall does, and its sides lean
+// in perspective as the view turns. Past 60° from the horizon it would be a sliver seen from
+// below or above, so it is kept within WALL_SIN of it. The floor wins over the wall.
 const FLOOR_K = 1.33,
   FLOOR_SIN = Math.sin((5 * PI) / 180),
+  WALL_SIN = Math.sin((60 * PI) / 180),
   FLOOR_GEO = new THREE.PlaneGeometry(1, 1);
-const onFloor = h => !!h.fl && h.shape != 'none';
+const onFloor = h => !!h.fl && h.shape != 'none',
+  onWall = h => !!h.wl && h.shape != 'none' && !h.fl;
 // Keeps a floor hotspot 5° below the horizon of a scene levelled by lq, the current scene's
-// by default, moving it straight down to there if it is higher. Returns whether it had to
-// move; with dry set it only says so. The horizon is the corrected one, which the decal lies
-// against: on a photo tilted by more than 5°, the photo's own would let it rise above it.
-const floorClamp = (h, lq = scenes[current]?.lq, dry) => {
-  if (!onFloor(h)) return false;
+// by default, moving it straight down to there if it is higher, and a wall hotspot within 60°
+// of it, moving it straight up or down. Returns whether it had to move; with dry set it only
+// says so. The horizon is the corrected one, which the decal lies against: on a photo tilted
+// by more than 5°, the photo's own would let a floor decal rise above it.
+const layClamp = (h, lq = scenes[current]?.lq, dry) => {
+  const fl = onFloor(h);
+  if (!fl && !onWall(h)) return false;
   const q = new THREE.Quaternion().fromArray(lq || NO_TILT),
-    d = sphereToVec(h.u, h.v, 1).applyQuaternion(q);
-  if (d.y <= -FLOOR_SIN + 1e-9) return false;
+    d = sphereToVec(h.u, h.v, 1).applyQuaternion(q),
+    y = fl ? -FLOOR_SIN : Math.max(-WALL_SIN, Math.min(WALL_SIN, d.y));
+  if (fl ? d.y <= y + 1e-9 : Math.abs(d.y) <= WALL_SIN + 1e-9) return false;
   if (dry) return true;
-  const k = Math.sqrt(1 - FLOOR_SIN * FLOOR_SIN) / (Math.hypot(d.x, d.z) || 1);
-  if (!d.x && !d.z) d.x = 1; // straight up: any way down will do
-  d.set(d.x * k, -FLOOR_SIN, d.z * k).applyQuaternion(q.invert());
+  const k = Math.sqrt(1 - y * y) / (Math.hypot(d.x, d.z) || 1);
+  if (!d.x && !d.z) d.x = 1; // straight up or down: any way back will do
+  d.set(d.x * k, y, d.z * k).applyQuaternion(q.invert());
   h.u = (Math.atan2(d.z, d.x) / (2 * PI) + 1) % 1;
   h.v = Math.acos(Math.max(-1, Math.min(1, d.y))) / PI;
   return true;
 };
+// What to say when layClamp() moved h.
+const clampNote = h => t(onWall(h) ? 'msg.wallClamp' : 'msg.floorClamp');
 // A text-only hotspot is its own label, so it is always shown.
 const hoverLabel = h => !!h.hov && h.shape != 'none';
 const canvasTex = c => {
@@ -1597,16 +1761,19 @@ function hotspotLabel(h, sel) {
   });
   return c;
 }
-// The objects that show hotspot h: the icon sprite ic, or on the floor the decal dc with an
-// invisible sprite ic over it that catches the pointer (a decal near the horizon is too thin
-// to hit), and the label sprite lb. Sizes are in world units at scale 1; a is the label's
-// opacity and g the hotspot's growth on hover, eased in the render loop.
+// The objects that show hotspot h: the icon sprite ic, or on the floor or a wall the decal dc
+// with an invisible sprite ic over it that catches the pointer (a decal near the horizon is
+// too thin to hit), and the label sprite lb. Sizes are in world units at scale 1, the decal's
+// dk times the sprite's; a is the label's opacity and g the hotspot's growth on hover, eased
+// in the render loop. A wall decal shows the sprite's own drawing, turned as the sprite is.
 function makeHotspotSprite(h) {
   const sel = mode == 'edit' && selId == h.id,
     e = { h, a: 1, g: h === hovered || h === peek?.h ? 1.2 : 1 };
   if (h.shape != 'none') {
     const tex = canvasTex(hotspotIcon(h, sel, onFloor(h)));
-    if (onFloor(h)) {
+    if (onFloor(h) || onWall(h)) {
+      e.wall = onWall(h);
+      e.dk = e.wall ? 1 : FLOOR_K;
       tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
       e.dc = new THREE.Mesh(
         FLOOR_GEO,
@@ -1649,7 +1816,7 @@ function makeHotspotSprite(h) {
 function placeLabel(e, vs) {
   const h = e.h,
     side = h.shape == 'none' ? '' : h.lp || 'b',
-    hx = (HS_ICON / 2) * (e.dc ? FLOOR_K : 1),
+    hx = (HS_ICON / 2) * (e.dk || 1),
     off = HS_GAP - HS_M;
   if (side == 'b') e.lb.center.set(0.5, 1 + (hx * vs + off) / e.lH);
   else if (side == 't') e.lb.center.set(0.5, -(hx * vs + off) / e.lH);
@@ -1660,7 +1827,8 @@ function placeLabel(e, vs) {
 // Lays decal e flat on the floor, whose up is the given direction in the panorama's frame. Its
 // top edge faces away from the viewer, so an arrow at 0° points ahead along the floor and
 // rot turns it clockwise as seen from above. Returns the sine of the angle below the horizon,
-// by which it looks shortened.
+// by which it looks shortened. A wall decal stands upright instead, facing the viewer, and
+// looks shortened by the cosine of its angle from the horizon.
 const _fd = new THREE.Vector3(),
   _fr = new THREE.Vector3(),
   _fx = new THREE.Vector3(),
@@ -1669,6 +1837,14 @@ function layDecal(e, up) {
   const h = e.h;
   _fd.copy(e.dc.position).normalize();
   const s = -_fd.dot(up);
+  if (e.wall) {
+    _fr.copy(_fd).addScaledVector(up, s).negate(); // level, toward the viewer
+    if (_fr.lengthSq() < 1e-8) _fr.set(1, 0, 0).addScaledVector(up, -up.x);
+    _fr.normalize();
+    _fx.crossVectors(up, _fr);
+    e.dc.quaternion.setFromRotationMatrix(_fm.makeBasis(_fx, up, _fr));
+    return Math.sqrt(Math.max(0, 1 - s * s));
+  }
   _fr.copy(_fd).addScaledVector(up, s);
   if (_fr.lengthSq() < 1e-8) _fr.set(1, 0, 0).addScaledVector(up, -up.x); // straight down
   _fr.normalize();
@@ -2468,15 +2644,17 @@ function renderHotspotList() {
     )
     .join('');
 }
-// The look of the last link and the last info hotspot the author styled. A new hotspot of
-// the same kind starts from it, so a tour of many scenes needs its arrows styled only once.
-// Held for the session only.
-const LOOK = ['shape', 'icon', 'color', 'size', 'ts', 'box', 'fix', 'lp', 'hov', 'fl'],
-  hsLook = { link: null, info: null };
+// A hotspot's look: everything about how it is drawn, but not what it says, where it leads,
+// where it sits or which way it points. The project keeps the look of the last link and the
+// last info hotspot the author styled, as look.link and look.info; a new hotspot of the same
+// kind starts from it, so a tour of many scenes needs its arrows styled only once.
+const LOOK = ['shape', 'icon', 'color', 'size', 'ts', 'box', 'fix', 'lp', 'hov', 'fl', 'wl'];
+const lookOf = h => Object.fromEntries(LOOK.filter(k => h[k] !== undefined).map(k => [k, h[k]]));
+const sameLook = (a, b) => LOOK.every(k => a[k] === b[k]);
 const updateHotspot = o => {
   const h = selHotspot();
   Object.assign(h, o);
-  hsLook[h.type] = Object.fromEntries(LOOK.filter(k => h[k] !== undefined).map(k => [k, h[k]]));
+  project.look = { ...project.look, [h.type]: lookOf(h) };
   buildHotspots();
   renderHotspotList();
   save();
@@ -2534,6 +2712,7 @@ function renderHotspotProps() {
       .join('')}</select></label>
   <label class="btn" for="pif"><svg class="ic"><use href="#i-image"/></svg><span>${t('act.upIcon')}</span></label><input id="pif" type="file" accept="image/png,image/webp,image/svg+xml,image/gif,image/jpeg" hidden>
   <label class="opt" id="pflw"><input type="checkbox" id="pfl" ${h.fl ? 'checked' : ''}><span>${t('f.floor')}</span></label>
+  <label class="opt" id="pwlw"><input type="checkbox" id="pwl" ${onWall(h) ? 'checked' : ''}><span>${t('f.wall')}</span></label>
   ${rng('pr', 'f.rotation', -180, 180, 5, h.rot || 0, (h.rot || 0) + '°')}
   <label id="pcw">${t('f.color')}<input id="pc" type="color" value="${esc(h.color)}"></label>
   ${rng('pz', 'f.size', 0.5, 2.5, 0.1, h.size, '×' + h.size)}
@@ -2548,6 +2727,11 @@ function renderHotspotProps() {
   <label class="opt"><input type="checkbox" id="pb" ${h.box !== false ? 'checked' : ''}><span>${t('f.labelBox')}</span></label>
   <label class="opt" id="phvw"><input type="checkbox" id="phv" aria-describedby="phvh" ${h.hov ? 'checked' : ''}><span>${t('f.labelHover')}</span></label>
   <p id="phvh" class="hint">${t('hint.labelHover')}</p>
+  <div id="plk"><button id="plkb" aria-expanded="false" aria-controls="plkm"><svg class="ic"><use href="#i-look"/></svg><span>${t('act.applyLook')}</span></button>
+  <div id="plkm" hidden><p class="hint">${t('hint.look')}</p>${lookScopes(h)
+    .map(k => `<button data-k="${k}">${esc(t(lookLabel(h, k)))}</button>`)
+    .join('')}</div>
+  <div id="plkc" hidden><p id="plkq" role="status"></p><div class="row"><button id="plky" class="pri">${t('act.apply')}</button><button id="plkn">${t('act.cancel')}</button></div></div></div>
   <p id="hint3">${t('hint.dragHs')}</p>
   <div class="row"><button id="pdup" title="${esc(t('act.dupTitle'))}"><svg class="ic"><use href="#i-dup"/></svg><span>${t('act.dup')}</span></button><button id="pcopy" title="${esc(t('act.copyTitle'))}"><svg class="ic"><use href="#i-copy"/></svg><span>${t('act.copy')}</span></button></div>
   <button id="pd" class="dng">${t('act.delHs')}</button>`;
@@ -2561,9 +2745,11 @@ function renderHotspotProps() {
       none = s == 'none';
     $('prw').hidden = !TURNS.includes(s);
     $('pcw').hidden = none || s == 'img';
-    $('pfw').hidden = $('pflw').hidden = $('plpw').hidden = $('phvw').hidden = none;
+    $('pfw').hidden = $('pflw').hidden = $('pwlw').hidden = $('plpw').hidden = none;
+    $('phvw').hidden = none;
     $('phvh').hidden = none || !h?.hov;
     $('pfl').checked = !!h?.fl;
+    $('pwl').checked = !!h && onWall(h);
   };
   fit();
   bind('pl', 'input', e => updateHotspot({ label: e.target.value }));
@@ -2589,23 +2775,29 @@ function renderHotspotProps() {
       h = selHotspot(),
       o = v.startsWith('img:') ? { shape: 'img', icon: v.slice(4) } : { shape: v, icon: undefined };
     // A floor spot is made to lie on the floor, so choosing one lays it down, unless that would
-    // move it; the checkbox stands it up again.
-    if (o.shape == 'none') o.fl = undefined;
+    // move it or it hangs on a wall; the checkbox stands it up again.
+    if (o.shape == 'none') o.fl = o.wl = undefined;
     else if (
       o.shape == 'spot' &&
       h.shape != 'spot' &&
-      !floorClamp({ ...h, ...o, fl: true }, undefined, 1)
+      !h.wl &&
+      !layClamp({ ...h, ...o, fl: true }, undefined, 1)
     )
       o.fl = true;
     updateHotspot(o);
     fit();
   });
-  bind('pfl', 'change', e => {
-    const o = { ...selHotspot(), fl: e.target.checked || undefined },
-      moved = floorClamp(o);
-    updateHotspot({ fl: o.fl, u: o.u, v: o.v });
-    if (moved) toast(t('msg.floorClamp'));
-  });
+  // On the floor and on a wall exclude each other: ticking one unticks the other.
+  const lay = (k, on) => {
+    const o = { ...selHotspot(), fl: undefined, wl: undefined };
+    o[k] = on || undefined;
+    const moved = layClamp(o);
+    updateHotspot({ fl: o.fl, wl: o.wl, u: o.u, v: o.v });
+    fit();
+    if (moved) toast(clampNote(o));
+  };
+  bind('pfl', 'change', e => lay('fl', e.target.checked));
+  bind('pwl', 'change', e => lay('wl', e.target.checked));
   bind('plp', 'change', e =>
     updateHotspot({ lp: e.target.value == 'b' ? undefined : e.target.value })
   );
@@ -2633,9 +2825,133 @@ function renderHotspotProps() {
   });
   bind('pb', 'change', e => updateHotspot({ box: e.target.checked }));
   bind('pk', 'change', e => updateHotspot({ fix: e.target.checked }));
+  // Apply look to…: a choice of hotspots, then the count to confirm, inline.
+  let lookK = null;
+  const lookShut = () => {
+    lookK = null;
+    $('plkm').hidden = $('plkc').hidden = true;
+    $('plkb').setAttribute('aria-expanded', 'false');
+    $('plkb').focus();
+  };
+  bind('plkb', 'click', () => {
+    const on = $('plkm').hidden && $('plkc').hidden;
+    if (!on) return lookShut();
+    $('plkm').hidden = false;
+    $('plkb').setAttribute('aria-expanded', 'true');
+    $('plkm').querySelector('button').focus();
+  });
+  bind('plkm', 'click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const h = selHotspot(),
+      n = lookTargets(h, b.dataset.k).filter(([, x]) => !sameLook(x, h)).length;
+    lookK = n ? b.dataset.k : null;
+    $('plkm').hidden = true;
+    $('plkc').hidden = false;
+    $('plkq').textContent = n ? t('look.confirm', { n }) : t('look.none');
+    $('plky').hidden = !n;
+    (n ? $('plky') : $('plkn')).focus();
+  });
+  bind('plky', 'click', () => {
+    const k = lookK;
+    lookShut();
+    if (k) applyLook(selHotspot(), k);
+    $('plkb')?.focus();
+  });
+  bind('plkn', 'click', lookShut);
+  bind('plk', 'keydown', e => {
+    if (e.key != 'Escape' || ($('plkm').hidden && $('plkc').hidden)) return;
+    e.stopPropagation();
+    lookShut();
+  });
   bind('pd', 'click', deleteHotspot);
   bind('pdup', 'click', duplicateHotspot);
   bind('pcopy', 'click', copyHotspot);
+}
+// ── apply look ──
+// Where h's look can go: hotspots of its type in this scene or in the tour, and for a custom
+// icon, the hotspots with that icon anywhere in the tour.
+function lookScopes(h) {
+  return ['scene', 'tour', ...(h.shape == 'img' ? ['icon'] : [])];
+}
+function lookLabel(h, k) {
+  return k == 'icon' ? 'look.sameIcon' : 'look.' + k + (h.type == 'info' ? 'Info' : '');
+}
+// The hotspots, as [scene, hotspot], that choice k reaches from h, h aside.
+function lookTargets(h, k) {
+  const out = [];
+  scenes.forEach((s, i) => {
+    if (k == 'scene' && i != current) return;
+    for (const x of s.hs)
+      if (x !== h && (k == 'icon' ? x.shape == 'img' && x.icon == h.icon : x.type == h.type))
+        out.push([s, x]);
+  });
+  return out;
+}
+// x with the look l, as a new object; the look fields l lacks are dropped.
+function withLook(x, l) {
+  const n = { ...x };
+  for (const k of LOOK) l[k] === undefined ? delete n[k] : (n[k] = l[k]);
+  return n;
+}
+// Gives h's look to the hotspots choice k reaches, as one step of undo, and offers to undo it
+// from the message too. A hotspot laid on the floor or a wall may have to move to stay there.
+function applyLook(h, k) {
+  if (!h) return;
+  const l = lookOf(h),
+    pid = projectId,
+    hit = new Set(lookTargets(h, k).map(([, x]) => x)),
+    done = []; // [scene id, the hotspot before, after, whether it moved]
+  let moved = false;
+  // Edits waiting for their snapshot get theirs first, so this is a step of its own.
+  snapshotNow();
+  for (const s of scenes) {
+    if (!s.hs.some(x => hit.has(x) && !sameLook(x, l))) continue;
+    s.hs = s.hs.map(x => {
+      if (!hit.has(x) || sameLook(x, l)) return x;
+      const n = withLook(x, l),
+        m = layClamp(n, s.lq || NO_TILT);
+      if (m) moved = true;
+      done.push([s.id, x, n, m]);
+      return n;
+    });
+  }
+  if (!done.length) return;
+  project.look = { ...project.look, [h.type]: l };
+  buildHotspots();
+  ui();
+  save();
+  snapshotNow();
+  toast(t('msg.lookApplied', { n: done.length }) + (moved ? ' ' + t('look.moved') : ''), {
+    action: { label: t('act.undo'), fn: () => unapplyLook(pid, done) },
+  });
+}
+// Puts back the look each hotspot had, and the place of those the look moved, leaving
+// whatever else was edited since. A hotspot untouched since comes back exactly as it was, its
+// fields in their old order.
+function unapplyLook(pid, done) {
+  if (pid != projectId) return;
+  const by = new Map(done.map(r => [r[0] + '\n' + r[2].id, r])),
+    look = new Set(LOOK),
+    lookAt = new Set([...LOOK, 'u', 'v']);
+  snapshotNow();
+  for (const s of scenes) {
+    if (!s.hs.some(x => by.has(s.id + '\n' + x.id))) continue;
+    s.hs = s.hs.map(x => {
+      const r = by.get(s.id + '\n' + x.id);
+      if (!r) return x;
+      const was = r[1],
+        own = r[3] ? lookAt : look,
+        o = {};
+      for (const k of Object.keys(was)) o[k] = own.has(k) ? was[k] : x[k];
+      for (const k of Object.keys(x)) if (!(k in o) && !own.has(k)) o[k] = x[k];
+      return o;
+    });
+  }
+  buildHotspots();
+  ui();
+  save();
+  snapshotNow();
 }
 // ── custom icons ──
 // Raster icons are re-encoded as PNG at up to ICON_MAX_PX, keeping transparency. SVG is drawn
@@ -2687,12 +3003,37 @@ async function addIcon(f) {
 // a long tour. It is held in memory only, and survives switching scenes and projects.
 let hsClip = null;
 function deleteHotspot() {
-  if (!selHotspot()) return;
-  scenes[current].hs = scenes[current].hs.filter(x => x.id != selId);
+  const h = selHotspot();
+  if (!h) return;
+  const s = scenes[current],
+    pid = projectId;
+  takeHs(s, x => x === h);
   selId = null;
   buildHotspots();
   ui();
   save();
+  toast(t('msg.hsDel'), {
+    action: { label: t('act.undo'), fn: () => undeleteHotspot(pid, s.id, h) },
+  });
+}
+// Puts a deleted hotspot back where it was in its scene's list, and shows it selected. A link
+// whose destination has been deleted since waits in heldLinks until that scene comes back.
+async function undeleteHotspot(pid, sid, h) {
+  const i = scenes.findIndex(s => s.id == sid);
+  if (pid != projectId || i < 0 || scenes[i].hs.some(x => x.id == h.id)) return;
+  if (h.type == 'link' && !scenes.some(s => s.id == h.to)) {
+    heldLinks.push([sid, h]);
+    return;
+  }
+  const s = scenes[i];
+  putHs(s, h);
+  save();
+  if (i != current) await showScene(i);
+  if (scenes[current] !== s) return;
+  selId = h.id;
+  placing = null;
+  buildHotspots();
+  ui();
 }
 function copyHotspot() {
   const h = selHotspot();
@@ -2716,7 +3057,7 @@ function addHotspotCopy(h, from, p, icon) {
   const s = scenes[current];
   if (!s) return;
   const n = { ...JSON.parse(JSON.stringify(h)), id: uid(), ...p },
-    moved = floorClamp(n);
+    moved = layClamp(n);
   if (n.shape == 'img' && !projectIcon(n.icon)) {
     if (icon) (project.icons || (project.icons = [])).push({ ...icon });
     else n.shape = 'arrow';
@@ -2735,7 +3076,7 @@ function addHotspotCopy(h, from, p, icon) {
   buildHotspots();
   ui();
   save();
-  if (moved) toast(t('msg.floorClamp'));
+  if (moved) toast(clampNote(n));
 }
 const pasteHotspot = () => hsClip && addHotspotCopy(hsClip.h, hsClip.from, viewUV(), hsClip.icon);
 // The duplicate lands a little to one side, so it doesn't hide the original.
@@ -3121,11 +3462,22 @@ $('sdel').onclick = () => {
   }
   delConfirm = 0;
   $('sdelt').textContent = t('act.delScene');
-  const id = scenes[current].id;
+  const at = current,
+    gone = scenes[at],
+    id = gone.id,
+    pid = projectId,
+    into = h => h.type == 'link' && h.to == id;
   dropTexture(id);
-  scenes.splice(current, 1);
-  scenes.forEach(s => (s.hs = s.hs.filter(h => h.type != 'link' || h.to != id)));
+  sceneWas = ghostMerge(idsOf(scenes), sceneWas);
+  scenes.splice(at, 1);
+  // The links into it go with it, held until undo brings it back.
+  scenes.forEach(s => {
+    if (s.hs.some(into)) heldLinks.push(...takeHs(s, into).map(h => [s.id, h]));
+  });
   save();
+  toast(t('msg.sceneDel', { name: gone.name }), {
+    action: { label: t('act.undo'), fn: () => undeleteScene(pid, at, gone) },
+  });
   if (scenes.length) showScene(Math.min(current, scenes.length - 1));
   else {
     current = -1;
@@ -3135,6 +3487,79 @@ $('sdel').onclick = () => {
     ui();
   }
 };
+// What undo puts back goes where it was, whatever else was taken out and put back meanwhile
+// and in whatever order. sceneWas is the tour's order and hsWas each scene's hotspot order
+// (by id), as they were with everything taken out since; ghostMerge() brings such an order up
+// to date with the list as it is now, keeping what is gone after what came before it.
+let sceneWas = [],
+  hsWas = new Map(),
+  // Links taken out with a deleted scene, or brought back by undo while their destination is
+  // deleted, as [scene id, hotspot]. Each goes back once both of its scenes are there again.
+  heldLinks = [];
+const idsOf = a => a.map(x => x.id);
+function ghostMerge(ids, was) {
+  const here = new Set(ids),
+    out = ids.slice();
+  was.forEach((id, k) => {
+    if (here.has(id)) return;
+    let j = -1;
+    for (let m = k - 1; m >= 0 && j < 0; m--) j = out.indexOf(was[m]);
+    out.splice(j + 1, 0, id);
+  });
+  return out;
+}
+// Where id goes back into ids: after the nearest thing before it that is there now, or -1
+// when the order never had it.
+function ghostPlace(ids, was, id) {
+  const all = ghostMerge(ids, was),
+    k = all.indexOf(id);
+  if (k < 0) return -1;
+  for (let m = k - 1; m >= 0; m--) {
+    const j = ids.indexOf(all[m]);
+    if (j >= 0) return j + 1;
+  }
+  return 0;
+}
+// Takes the hotspots f picks out of scene o, remembering where they were; returns them.
+function takeHs(o, f) {
+  hsWas.set(o.id, ghostMerge(idsOf(o.hs), hsWas.get(o.id) || []));
+  const out = o.hs.filter(f);
+  o.hs = o.hs.filter(h => !f(h));
+  return out;
+}
+// Puts hotspot h back into scene o where it was.
+function putHs(o, h) {
+  const k = ghostPlace(idsOf(o.hs), hsWas.get(o.id) || [], h.id);
+  o.hs = k < 0 ? [...o.hs, h] : [...o.hs.slice(0, k), h, ...o.hs.slice(k)];
+}
+function relink() {
+  const has = id => scenes.some(s => s.id == id);
+  heldLinks = heldLinks.filter(([sid, h]) => {
+    const o = scenes.find(s => s.id == sid);
+    if (!o || !has(h.to)) return true;
+    if (!o.hs.some(x => x.id == h.id)) putHs(o, h);
+    return false;
+  });
+}
+// Brings a deleted scene back at its place in the tour, with the links into it and out of it
+// whose other end is there too. The
+// scene object kept its images, clip and thumbnail; the autosave since has taken its images
+// and clip out of storage, so they are marked to be written again (a clip is written whenever
+// it differs from what storage holds). Marked whatever storedSceneIds says, since an autosave
+// may be between reading the scene list and deleting the files.
+function undeleteScene(pid, at, s) {
+  if (pid != projectId || scenes.some(x => x.id == s.id)) return;
+  const k = ghostPlace(idsOf(scenes), sceneWas, s.id),
+    i = k < 0 ? Math.min(at, scenes.length) : k,
+    dead = h => h.type == 'link' && !scenes.some(x => x.id == h.to);
+  scenes.splice(i, 0, s);
+  // Its own links to scenes deleted since it went wait for those.
+  if (s.hs.some(dead)) heldLinks.push(...takeHs(s, dead).map(h => [s.id, h]));
+  relink();
+  if (s.blob) dirtyScenes.add(s.id);
+  save();
+  showScene(i);
+}
 $('addl').onclick = () => {
   if (scenes.length < 2) toast(t('msg.needTwoScenes'));
   else {
@@ -3250,7 +3675,11 @@ async function toPortable(Q, forTour, put) {
   if (!out.icons.length) delete out.icons;
   if (zip && Q.nadir) out.nadir = { ...Q.nadir, img: await inline(Q.nadir.img, 'nadir') };
   if (zip && Q.logo) out.logo = { ...Q.logo, img: await inline(Q.logo.img, 'logo') };
-  if (forTour) delete out.hd; // an editor setting
+  if (forTour) {
+    // editor settings
+    delete out.hd;
+    delete out.look;
+  }
   out.lang = LANG; // an exported tour renders in the language its author was using
   // Not a field of the file: tells the caller the masters were left out.
   if (!forTour && !withHd && Q.scenes.some(s => s.hdBlob))
@@ -3278,11 +3707,11 @@ $('exp').onclick = async () => {
   // A large file takes a second click, once the author has read what it will weigh.
   if (mb > EXPORT_BIG_MB && Date.now() - expArmed > 15000) {
     expArmed = Date.now();
-    toast(t('msg.exportBig', { mb: Math.round(mb) }), 15000);
+    toast(t('msg.exportBig', { mb: Math.round(mb) }), { ms: 15000, key: 'exp' });
     return;
   }
   expArmed = 0;
-  toast(t('msg.preparing'), 60000);
+  toast(t('msg.preparing'), { ms: 60000, key: 'exp' });
   try {
     const [css, three, app, data] = await Promise.all([
       fetchText('style.css'),
@@ -3294,9 +3723,12 @@ $('exp').onclick = async () => {
     const bytes = saveFile(fileName('.html'), html, 'text/html');
     editCount = 0;
     const hdNote = scenes.some(s => s.hdBlob) ? ' ' + t('msg.exportedHd') : '';
-    toast(t('msg.exported', { mb: (bytes / 1048576).toFixed(1) }) + hdNote, hdNote ? 9000 : 0);
+    toast(t('msg.exported', { mb: (bytes / 1048576).toFixed(1) }) + hdNote, {
+      ms: hdNote ? 9000 : 0,
+      key: 'exp',
+    });
   } catch (e) {
-    toast(t('msg.exportFail'), 9000);
+    toast(t('msg.exportFail'), { ms: 9000, key: 'exp' });
   }
 };
 // ───────────── folder (ZIP) export ─────────────
@@ -3464,20 +3896,27 @@ $('expz').onclick = async () => {
     toast(t('msg.needOneScene'));
     return;
   }
-  toast(t('msg.preparing'), 600000);
+  toast(t('msg.preparing'), { ms: 600000, key: 'exp' });
   busy(1);
   try {
     let last = -1;
     const zip = await zipBlob(await folderTour(), (i, n) => {
         // In steps of ten, so a screen reader isn't read every file.
         const p = Math.floor((i / n) * 10) * 10;
-        if (p != last) toast(t('msg.zipProgress', { p: (last = p) }), 600000);
+        if (p != last)
+          toast(t('msg.zipProgress', { p: (last = p) }), {
+            ms: 600000,
+            key: 'exp',
+          });
       }),
       bytes = saveFile(fileName('.zip'), zip, 'application/zip');
     editCount = 0;
-    toast(t('msg.zipDone', { mb: (bytes / 1048576).toFixed(1) }), 12000);
+    toast(t('msg.zipDone', { mb: (bytes / 1048576).toFixed(1) }), { ms: 12000, key: 'exp' });
   } catch (e) {
-    toast(t(e.message == 'zip-limit' ? 'msg.zipLimit' : 'msg.exportFail'), 12000);
+    toast(t(e.message == 'zip-limit' ? 'msg.zipLimit' : 'msg.exportFail'), {
+      ms: 12000,
+      key: 'exp',
+    });
   }
   busy(-1);
 };
@@ -3526,14 +3965,17 @@ $('psave').onclick = async () => {
     toast(t('msg.nothingToSave'));
     return;
   }
-  toast(t('msg.preparingProj'), 60000);
+  toast(t('msg.preparingProj'), { ms: 60000, key: 'exp' });
   try {
     const out = await portableProject();
     saveFile(fileName('.json'), JSON.stringify(out), 'application/json');
     editCount = 0;
-    toast(t('msg.projSaved') + (out.hdLeft ? ' ' + t('msg.hdLeft') : ''), out.hdLeft ? 12000 : 0);
+    toast(t('msg.projSaved') + (out.hdLeft ? ' ' + t('msg.hdLeft') : ''), {
+      ms: out.hdLeft ? 12000 : 0,
+      key: 'exp',
+    });
   } catch (x) {
-    toast(t('msg.projSaveFail'));
+    toast(t('msg.projSaveFail'), { key: 'exp' });
   }
 };
 // An imported file is untrusted. Keep only well-formed fields with the expected types,
@@ -3568,7 +4010,9 @@ const cleanHotspot = h => {
   if (h.fix === true) out.fix = true;
   if (h.lp == 't' || h.lp == 'l' || h.lp == 'r') out.lp = h.lp;
   if (h.hov === true) out.hov = true;
-  if (h.fl === true && out.shape != 'none') out.fl = true; // kept off the horizon by cleanScene
+  // Kept off the horizon, or near it on a wall, by cleanScene; the floor wins over the wall.
+  if (h.fl === true && out.shape != 'none') out.fl = true;
+  else if (h.wl === true && out.shape != 'none') out.wl = true;
   // A custom icon is named by its id in the project's icon list; the import checks it exists.
   if (out.shape == 'img') {
     if (typeof h.icon == 'string' && h.icon) out.icon = h.icon;
@@ -3576,6 +4020,27 @@ const cleanHotspot = h => {
   }
   return out;
 };
+// The project's last looks, look.link and look.info, each with the fields cleanHotspot()
+// would keep on a hotspot of that type. Only the fields the file gives are kept, and a
+// shape, icon, colour or label side that cleanHotspot() would replace is dropped, so a new
+// hotspot still takes its type's defaults for those; numbers are brought into range.
+function cleanLook(o) {
+  if (!o || typeof o != 'object' || Array.isArray(o)) return null;
+  const out = {};
+  for (const type of ['link', 'info']) {
+    const v = o[type];
+    if (!v || typeof v != 'object' || Array.isArray(v)) continue;
+    const c = cleanHotspot({ ...v, type }),
+      l = Object.fromEntries(
+        LOOK.filter(
+          k =>
+            v[k] !== undefined && c[k] !== undefined && (typeof c[k] != 'string' || c[k] === v[k])
+        ).map(k => [k, c[k]])
+      );
+    if (Object.keys(l).length) out[type] = l;
+  }
+  return Object.keys(out).length ? out : null;
+}
 const cleanScene = s => {
   const out = {
     id: String(s.id || uid()),
@@ -3609,7 +4074,7 @@ const cleanScene = s => {
         .toArray()
         .map(v => Math.round(v * 1e6) / 1e6);
   }
-  out.hs.forEach(h => floorClamp(h, out.lq));
+  out.hs.forEach(h => layClamp(h, out.lq || NO_TILT));
   if (s.pp && typeof s.pp == 'object')
     out.pp = { x: clamp01(num(s.pp.x, 0.5)), y: clamp01(num(s.pp.y, 0.5)) };
   if (typeof s.taken == 'string' && TAKEN.test(s.taken)) out.taken = s.taken;
@@ -3641,7 +4106,7 @@ $('pfile').onchange = async e => {
   const f = e.target.files[0];
   e.target.value = '';
   if (!f) return;
-  toast(t('msg.importing'), 60000);
+  toast(t('msg.importing'), { ms: 60000, key: 'imp' });
   try {
     const raw = JSON.parse(await f.text());
     if (!raw || typeof raw != 'object') throw new Error('invalid');
@@ -3694,6 +4159,15 @@ $('pfile').onchange = async e => {
           h.shape = 'arrow';
           delete h.icon;
         }
+    const look = cleanLook(raw.look);
+    if (look) {
+      for (const l of Object.values(look))
+        if (l.icon !== undefined && !icons.some(ic => ic.id == l.icon)) {
+          delete l.shape;
+          delete l.icon;
+        }
+      d.look = look;
+    }
     const a = raw.audio;
     if (a && typeof a.src == 'string' && a.src.startsWith('data:'))
       d.audio = {
@@ -3738,10 +4212,14 @@ $('pfile').onchange = async e => {
     storedSnd = new Map();
     await flush();
     closeLib();
-    toast(t('msg.imported'));
-    if (!(await storageKept())) toast(t('msg.imported') + ' ' + t('msg.notPersisted'), 14000);
+    toast(t('msg.imported'), { key: 'imp' });
+    if (!(await storageKept()))
+      toast(t('msg.imported') + ' ' + t('msg.notPersisted'), {
+        ms: 14000,
+        key: 'imp',
+      });
   } catch (x) {
-    toast(t(x.message == 'newer' ? 'msg.newerFile' : 'msg.badFile'));
+    toast(t(x.message == 'newer' ? 'msg.newerFile' : 'msg.badFile'), { key: 'imp' });
   }
 };
 // ───────────── project library ─────────────
@@ -3777,6 +4255,9 @@ function setProject(id, d) {
   storedSceneIds = new Set(scenes.map(s => s.id));
   storedSnd = new Map(scenes.filter(s => s.snd).map(s => [s.id, s.snd.blob]));
   editCount = 0;
+  heldLinks = [];
+  sceneWas = [];
+  hsWas = new Map();
   $('ptitle').value = project.title || '';
   syncAuto();
   $('trn').value = transition();
@@ -3913,7 +4394,7 @@ if (!EMBED) {
     if (a == 'dup') await duplicateProject(id);
     else if (a == 'exp') {
       await flush();
-      toast(t('msg.preparing'), 60000);
+      toast(t('msg.preparing'), { ms: 60000, key: 'exp' });
       try {
         let out;
         if (id == projectId) out = await portableProject();
@@ -3924,12 +4405,12 @@ if (!EMBED) {
           revokeProject(d);
         }
         saveFile(safeName(out.title) + '.json', JSON.stringify(out), 'application/json');
-        toast(
-          t('msg.projFileSaved') + (out.hdLeft ? ' ' + t('msg.hdLeft') : ''),
-          out.hdLeft ? 12000 : 0
-        );
+        toast(t('msg.projFileSaved') + (out.hdLeft ? ' ' + t('msg.hdLeft') : ''), {
+          ms: out.hdLeft ? 12000 : 0,
+          key: 'exp',
+        });
       } catch (x) {
-        toast(t('msg.projExpFail'));
+        toast(t('msg.projExpFail'), { key: 'exp' });
       }
     } else if (a == 'del') {
       if (b.dataset.c != '1') {
@@ -4514,7 +4995,7 @@ glCanvas.addEventListener('pointermove', e => {
         camera
       );
       Object.assign(hsDrag.h, vecToUV(raycaster.ray.direction));
-      floorClamp(hsDrag.h);
+      layClamp(hsDrag.h);
       placeHotspot(hsDrag.e);
       glCanvas.style.cursor = 'grabbing';
     }
@@ -4579,11 +5060,13 @@ glCanvas.addEventListener('pointerup', e => {
   const h = hotspotAt(e);
   if (placing) {
     const p = vecToUV(raycaster.ray.direction);
-    let moved = false;
-    if (placing == 'move') moved = floorClamp(Object.assign(selHotspot(), p));
-    else {
+    let moved = null;
+    if (placing == 'move') {
+      const h = Object.assign(selHotspot(), p);
+      moved = layClamp(h) && h;
+    } else {
       const o = scenes.find(s => s.id != scenes[current].id),
-        look = { ...hsLook[placing] };
+        look = { ...project.look?.[placing] };
       // The last look may name an icon of a project that is no longer open.
       if (look.shape == 'img' && !projectIcon(look.icon)) delete look.shape;
       if (look.shape != 'img') delete look.icon;
@@ -4599,7 +5082,7 @@ glCanvas.addEventListener('pointerup', e => {
         ...look,
         ...p,
       };
-      moved = floorClamp(n);
+      moved = layClamp(n) && n;
       scenes[current].hs.push(n);
       selId = n.id;
     }
@@ -4607,7 +5090,7 @@ glCanvas.addEventListener('pointerup', e => {
     buildHotspots();
     ui();
     save();
-    if (moved) toast(t('msg.floorClamp'));
+    if (moved) toast(clampNote(moved));
     return;
   }
   selId = h ? h.id : null;
@@ -4738,7 +5221,7 @@ renderer.setAnimationLoop(time => {
     let vs = 1;
     if (e.dc) {
       vs = layDecal(e, up);
-      const w = e.iw * k * FLOOR_K;
+      const w = e.iw * k * e.dk;
       e.dc.scale.set(w, w, 1);
       e.ic.scale.set(w, w * Math.max(vs, 0.35), 1);
     } else if (e.ic) e.ic.scale.set(e.iw * k, e.iw * k, 1);
@@ -5987,8 +6470,8 @@ function syncLogo() {
     img = $('logo'),
     stage = $('stage');
   LOGO_CORNERS.forEach(c => stage.classList.toggle('logo-' + c, !!l && l.pos == c));
-  // Bottom corners sit above the scene bar when it is showing.
-  stage.style.setProperty('--sb-h', $('sb').offsetHeight + 'px');
+  // Bottom corners, and the toasts, sit above the scene bar when it is showing.
+  $('root').style.setProperty('--sb-h', $('sb').offsetHeight + 'px');
   img.hidden = !l;
   if (!l) {
     logoSrc = '';
@@ -6146,18 +6629,28 @@ $('logo').addEventListener('pointerup', e => endLogoDrag(e, false));
 $('logo').addEventListener('pointercancel', e => endLogoDrag(e, true));
 
 // ───────────── toasts, pinch zoom, keyboard control, backup reminder ─────────────
-// Auto-dismiss, after the duration the last toast() asked for.
+// Hovering or focusing the stack holds every toast in it.
 (() => {
   const m = $('msg');
   if (!m) return;
-  new MutationObserver(() => {
-    clearTimeout(toastTimer);
-    if (m.textContent)
-      toastTimer = setTimeout(() => {
-        m.textContent = '';
-        toastMs = 5200;
-      }, toastMs);
-  }).observe(m, { childList: true, characterData: true, subtree: true });
+  m.addEventListener('pointerenter', e => {
+    if (e.pointerType == 'touch') return;
+    toastHover = true;
+    holdToasts();
+  });
+  m.addEventListener('pointerleave', () => {
+    toastHover = false;
+    holdToasts();
+  });
+  m.addEventListener('focusin', () => {
+    toastFocus = true;
+    holdToasts();
+  });
+  m.addEventListener('focusout', e => {
+    if (m.contains(e.relatedTarget)) return;
+    toastFocus = false;
+    holdToasts();
+  });
 })();
 
 // Browser storage alone is not a safe home for someone's work.

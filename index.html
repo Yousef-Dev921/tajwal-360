@@ -23,7 +23,7 @@
 <meta property="og:image:alt" content="محرر Tajwal 360 وفيه بانوراما مفتوحة وقائمة المشاهد">
 <title data-i18n="doc.title">Tajwal 360 — استوديو الجولات الافتراضية</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='4' y1='4' x2='28' y2='28' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%23818cf8'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='12.4' fill='none' stroke='url(%23g)' stroke-width='2.6'/%3E%3Cellipse cx='16' cy='16' rx='12.4' ry='4.9' fill='none' stroke='url(%23g)' stroke-width='1.8' opacity='.45'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='url(%23g)'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=5.3">
+<link rel="stylesheet" href="style.css?v=5.4">
 <script src="boot.js?v=4.5"></script>
 </head>
 <body>
@@ -53,6 +53,7 @@
  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11.5v5M9.8 14.5l2.2 2.2 2.2-2.2"/></symbol>
  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></symbol>
+ <symbol id="i-look" viewBox="0 0 24 24"><path d="M4 4h13v5H4z"/><path d="M17 6.5h3v5.5h-8.5v3"/><path d="M10.5 15h2v5h-2z"/></symbol>
  <symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h10v10H9z"/><path d="M5 15V5h10"/></symbol>
  <symbol id="i-paste" viewBox="0 0 24 24"><path d="M9 4h6v3H9z"/><path d="M15 5.5h3v15H6v-15h3"/><path d="M9.5 13.5h5M9.5 17h3"/></symbol>
  <symbol id="i-rotl" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 3.5v4.5h4.5"/></symbol>
@@ -375,7 +376,8 @@
   </div>
 </main>
 
-<p id="msg" role="status" aria-live="polite"></p>
+<div id="msg"></div>
+<p id="msgs" class="vh" role="status" aria-live="polite"></p>
 
 </div>
 
@@ -392,6 +394,6 @@
 </div>
 
 <script src="vendor/three.min.js?v=2.0"></script>
-<script src="app.js?v=5.3"></script>
+<script src="app.js?v=5.4"></script>
 </body>
 </html>
