@@ -83,6 +83,13 @@ that isn't granted it says once per session that the browser may clear the work.
   5° below the horizon, where it would flatten to a line: placing, dragging or pasting it
   higher stops it there. A level correction made afterwards doesn't move it. Choosing the floor spot lays a hotspot down, unless it is above
   that limit. Text-only hotspots stand.
+- A hotspot can instead hang flat on a wall, for a sign or a defect marker on a wall: a decal
+  standing upright (after level correction) and facing the viewer across the room, so it
+  shortens when it is high or low and leans in perspective toward the edges of the view,
+  where a marker that always faces the camera would not. At the horizon it is the same size
+  as the standing marker. It stays within 60° of the horizon: placing, dragging or pasting
+  it further up or down stops it there. Floor and wall exclude each other; its label stands
+  beside it as a floor hotspot's does.
 - A label sits below, above, left or right of its icon. The sides are those of the photo,
   not of the reading direction, so a label set to clear a door frame stays clear of it in
   either language.
@@ -98,10 +105,30 @@ that isn't granted it says once per session that the browser may clear the work.
   pasted into its own destination turns into a link back to the scene it came from, which
   is what a return arrow needs.
 - A new hotspot takes the look of the last one of its kind that was edited, so a tour of
-  many scenes needs its arrows styled once.
+  many scenes needs its arrows styled once. The project remembers that look, so it carries
+  over to the next session and into a saved copy.
+- Apply look to… gives the selected hotspot's look (shape or icon, colour, size, text size
+  and box, keep size, label side, label on hover, floor or wall) to every link hotspot (or
+  every info hotspot) in the scene or in the whole tour, or to every hotspot with the same
+  custom icon. Labels, text, destinations, positions and directions stay as they are; a
+  hotspot that has to lie on the floor or hang on a wall is moved only as far as that needs.
+  It asks first with the number of hotspots it will change, is one step of undo, and its
+  message offers Undo too. On a 150-scene tour with 450 hotspots it takes about 30 ms.
 - Glyphs on light icon colours, such as white, are drawn dark so they stay visible.
 - 60 steps of undo and redo.
 - Scene thumbnails, drag-to-reorder, rename and delete.
+- Deleting a scene or a hotspot leaves a message with an Undo button for 10 seconds. Undo
+  puts a scene back at its place in the tour with its images, clip, thumbnail and every link
+  that led to it, at its place in each scene's list, even after autosave has removed its
+  files from storage; a hotspot comes back at its place in its scene, selected. Several
+  scenes deleted one after another can be brought back in any order: each returns to its
+  place, and a link between two of them returns once both are back, so undo never leaves a
+  link to a scene that isn't there.
+- Messages stack, up to three at a time with the newest at the bottom, each with a close
+  button. They wait while the pointer is over them or focus is in them, sit over the
+  panorama clear of the scene bar (on a phone, clear of the bottom sheet too), and are read
+  to screen readers once each, without their buttons. Progress of an export or import stays
+  one message that updates in place.
 - Tours of more than 12 scenes get a search field over the scene list and over a link's
   list of destinations. Search ignores case, accents and Arabic diacritics, treats the alef
   forms (أ إ آ ا) as one, and finds a scene by its number in the tour as well as by name.
@@ -355,6 +382,7 @@ whichever way the project was opened.
   "hd": true,
   "click": true,
   "snap": true,
+  "look": { "link": { "shape": "arrow", "color": "#22c55e", "size": 1.5, "fl": true } },
   "scenes": [{
     "id": "abc123",
     "name": "Entrance",
@@ -376,6 +404,9 @@ whichever way the project was opened.
       "color": "#4f46e5", "size": 1, "u": 0.84, "v": 0.6,
       "rot": 90, "ts": 1.2, "box": false, "fix": true,
       "lp": "t", "hov": true, "fl": true
+    }, {
+      "id": "x2", "type": "info", "label": "Crack", "text": "", "shape": "pin",
+      "color": "#f59e0b", "size": 1, "u": 0.3, "v": 0.45, "wl": true
     }]
   }]
 }
@@ -390,7 +421,7 @@ whichever way the project was opened.
 - A hotspot `label` may contain line breaks. `shape` is one of `arrow`, `spot`, `ring`,
   `dot`, `pin`, `star`, `info`, `none` (text only) or `img`, which names one of the root
   `icons` in an `icon` field; on import, a hotspot whose icon is missing becomes an arrow.
-  The last seven hotspot fields are optional
+  The last eight hotspot fields are optional
   and left out at their defaults: `rot` turns an arrow by -180 to 179 degrees, clockwise
   (on the floor, clockwise as seen from above); `ts` scales the label text, 0.6 to 2;
   `box: false` draws the label with an outline instead of a dark box; `fix: true` keeps the
@@ -398,9 +429,12 @@ whichever way the project was opened.
   right (`r`) of the icon instead of below it, on the photo's sides whatever the language;
   `hov: true` shows the label only on hover; `fl: true` lays the hotspot on the floor, and
   is dropped on import from a text-only hotspot. A floor hotspot sits at least 5° below the
-  horizon as levelled by the scene's `lq`; import moves a higher one straight down to that. A build that
+  horizon as levelled by the scene's `lq`; import moves a higher one straight down to that.
+  `wl: true` hangs the hotspot flat on a wall; it is dropped on import from a text-only
+  hotspot and from one that also has `fl`, which wins, and import moves a wall hotspot more
+  than 60° from the levelled horizon straight back to 60°. A build that
   predates these fields ignores them, shows a text-only hotspot as an arrow, and draws a
-  floor hotspot standing, with its label below.
+  floor or wall hotspot standing, with its label below.
 - `u0` and `p0` are the scene's starting yaw and pitch; `n` is its north offset. `f0`,
   optional, is its starting zoom as a vertical field of view from 40 to 95 degrees
   (75 when absent). `lq`, optional, is its level correction as a quaternion `[x, y, z, w]`.
@@ -417,6 +451,10 @@ whichever way the project was opened.
   out at normal speed, and any other value is dropped on import.
 - `click`, optional, turns on click anywhere. It is left out while off, and only `true`
   is accepted on import.
+- `look`, optional, is the look a new hotspot starts from: `link` and `info`, each with
+  any of the hotspot fields `shape`, `icon`, `color`, `size`, `ts`, `box`, `fix`, `lp`,
+  `hov`, `fl` and `wl`, checked as on a hotspot. Import drops a field that doesn't check
+  out and an icon the file doesn't carry. Exported tours leave it out.
 - `snap`, optional, puts Save view as image in an exported tour. Like `click`, it is left
   out while off and only `true` is accepted on import.
 - Scene `note`, optional, is the scene's notes for visitors: plain text with `\n` line
