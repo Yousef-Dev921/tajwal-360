@@ -65,6 +65,9 @@ const I18N = {
     'act.addImages': 'إضافة صور \u2066360°\u2069',
     'act.undo': 'تراجع',
     'act.undoTitle': 'تراجع (Ctrl+Z)',
+    'act.dismiss': 'إغلاق التنبيه',
+    'msg.sceneDel': 'حُذف المشهد «\u2068{name}\u2069».',
+    'msg.hsDel': 'حُذفت النقطة.',
     'act.redo': 'إعادة',
     'act.redoTitle': 'إعادة (Ctrl+Shift+Z)',
     'act.preview': 'معاينة',
@@ -381,6 +384,9 @@ const I18N = {
     'act.addImages': 'Add 360° images',
     'act.undo': 'Undo',
     'act.undoTitle': 'Undo (Ctrl+Z)',
+    'act.dismiss': 'Dismiss',
+    'msg.sceneDel': 'Deleted the scene “\u2068{name}\u2069”.',
+    'msg.hsDel': 'Deleted the hotspot.',
     'act.redo': 'Redo',
     'act.redoTitle': 'Redo (Ctrl+Shift+Z)',
     'act.preview': 'Preview',
@@ -739,13 +745,106 @@ else {
 }
 applyI18N();
 syncToggles();
-// Status toast. Defined early because the storage layer calls it on failure.
-let toastTimer,
-  toastMs = 5200;
-function toast(text, ms) {
-  toastMs = ms || 5200;
-  const m = $('msg');
-  if (m) m.textContent = text;
+// Status toasts. Defined early because the storage layer calls it on failure.
+// toast(text, ms) or toast(text, { ms, action: { label, fn }, key }). Up to TOAST_MAX stack,
+// the newest at the bottom; each closes after ms, by its close button, or by its action, and
+// toast('') closes them all. A toast with a key is updated in place by the next one with that
+// key, so a long task's progress stays one message, and the same text again restarts its
+// toast rather than stacking a copy. The timers pause while the pointer is over the stack or
+// focus is in it. Screen readers hear the text alone, once per toast, from the live region
+// #msgs: the stack itself isn't live, so the buttons aren't read out with every message.
+const TOAST_MAX = 3,
+  TOAST_MS = 5200,
+  TOAST_ACT_MS = 10000;
+let toasts = [],
+  toastHover = false,
+  toastFocus = false;
+function toast(text, o) {
+  if (!o || typeof o != 'object') o = { ms: o };
+  const box = $('msg');
+  if (!box) return;
+  if (!text) {
+    toasts.slice().forEach(dropToast);
+    return;
+  }
+  let x = toasts.find(x => (o.key ? x.key == o.key : !x.act && !o.action && x.text == text));
+  if (x) toasts.splice(toasts.indexOf(x), 1);
+  else {
+    x = { el: document.createElement('div') };
+    x.el.className = 'tst';
+    x.el.innerHTML = `<span class="tsm"></span><button type="button" class="tsx" data-i18n-aria="act.dismiss" aria-label="${esc(t('act.dismiss'))}"><svg class="ic"><use href="#i-close"/></svg></button>`;
+    x.el.querySelector('.tsx').onclick = () => dropToast(x);
+    x.el.onkeydown = e => {
+      if (e.key != 'Escape') return;
+      e.stopPropagation();
+      dropToast(x);
+    };
+  }
+  toasts.push(x);
+  box.appendChild(x.el);
+  x.key = o.key;
+  x.text = text;
+  x.el.querySelector('.tsm').textContent = text;
+  x.el.querySelector('.tsa')?.remove();
+  x.act = o.action;
+  if (x.act) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tsa';
+    b.textContent = x.act.label;
+    b.onclick = () => {
+      dropToast(x);
+      x.act.fn();
+    };
+    x.el.insertBefore(b, x.el.lastChild);
+  }
+  // A fresh node in the live region is read; the one it replaces, removed, is not.
+  x.sr?.remove();
+  x.sr = document.createElement('span');
+  x.sr.textContent = text + ' ';
+  $('msgs').appendChild(x.sr);
+  x.left = o.ms || (x.act ? TOAST_ACT_MS : TOAST_MS);
+  toastRun(x);
+  // Too many: the oldest goes first, unless it still offers to undo something.
+  while (toasts.length > TOAST_MAX) dropToast(toasts.slice(0, -1).find(y => !y.act) || toasts[0]);
+}
+function toastRun(x) {
+  clearTimeout(x.timer);
+  x.at = 0;
+  if (toastHover || toastFocus) return;
+  x.at = Date.now();
+  x.timer = setTimeout(() => dropToast(x), x.left);
+}
+function holdToasts() {
+  const on = toastHover || toastFocus;
+  for (const x of toasts) {
+    if (!on) {
+      if (!x.at) toastRun(x);
+    } else if (x.at) {
+      clearTimeout(x.timer);
+      // Read in full by then, but still worth a moment once the pointer leaves.
+      x.left = Math.max(1500, x.left - (Date.now() - x.at));
+      x.at = 0;
+    }
+  }
+}
+function dropToast(x) {
+  const i = toasts.indexOf(x);
+  if (i < 0) return;
+  clearTimeout(x.timer);
+  toasts.splice(i, 1);
+  const had = x.el.contains(document.activeElement);
+  x.el.remove();
+  x.sr.remove();
+  // Focus would otherwise fall to the page, and nothing would tell the stack it left.
+  if (had) {
+    const n = toasts[Math.min(i, toasts.length - 1)];
+    if (n) n.el.querySelector('.tsa, .tsx').focus();
+    else {
+      toastFocus = false;
+      holdToasts();
+    }
+  }
 }
 // The default zoom, as the camera's vertical field of view in degrees; zoom runs from 40 to 95.
 const FOV0 = 75,
@@ -2687,12 +2786,33 @@ async function addIcon(f) {
 // a long tour. It is held in memory only, and survives switching scenes and projects.
 let hsClip = null;
 function deleteHotspot() {
-  if (!selHotspot()) return;
-  scenes[current].hs = scenes[current].hs.filter(x => x.id != selId);
+  const h = selHotspot();
+  if (!h) return;
+  const s = scenes[current],
+    k = s.hs.indexOf(h),
+    pid = projectId;
+  s.hs = s.hs.filter(x => x !== h);
   selId = null;
   buildHotspots();
   ui();
   save();
+  toast(t('msg.hsDel'), {
+    action: { label: t('act.undo'), fn: () => undeleteHotspot(pid, s.id, k, h) },
+  });
+}
+// Puts a deleted hotspot back where it was in its scene's list, and shows it selected.
+async function undeleteHotspot(pid, sid, k, h) {
+  const i = scenes.findIndex(s => s.id == sid);
+  if (pid != projectId || i < 0 || scenes[i].hs.some(x => x.id == h.id)) return;
+  const s = scenes[i];
+  s.hs = [...s.hs.slice(0, k), h, ...s.hs.slice(k)];
+  save();
+  if (i != current) await showScene(i);
+  if (scenes[current] !== s) return;
+  selId = h.id;
+  placing = null;
+  buildHotspots();
+  ui();
 }
 function copyHotspot() {
   const h = selHotspot();
@@ -3121,11 +3241,23 @@ $('sdel').onclick = () => {
   }
   delConfirm = 0;
   $('sdelt').textContent = t('act.delScene');
-  const id = scenes[current].id;
+  const at = current,
+    gone = scenes[at],
+    id = gone.id,
+    pid = projectId,
+    // The links into it go with it; undo puts each back at its place in its scene's list.
+    links = [];
   dropTexture(id);
-  scenes.splice(current, 1);
-  scenes.forEach(s => (s.hs = s.hs.filter(h => h.type != 'link' || h.to != id)));
+  scenes.splice(at, 1);
+  scenes.forEach(s => {
+    if (!s.hs.some(h => h.type == 'link' && h.to == id)) return;
+    s.hs.forEach((h, k) => h.type == 'link' && h.to == id && links.push([s.id, k, h]));
+    s.hs = s.hs.filter(h => h.type != 'link' || h.to != id);
+  });
   save();
+  toast(t('msg.sceneDel', { name: gone.name }), {
+    action: { label: t('act.undo'), fn: () => undeleteScene(pid, at, gone, links) },
+  });
   if (scenes.length) showScene(Math.min(current, scenes.length - 1));
   else {
     current = -1;
@@ -3135,6 +3267,23 @@ $('sdel').onclick = () => {
     ui();
   }
 };
+// Brings a deleted scene back at its place in the tour, with the links into it. The scene
+// object kept its images, clip and thumbnail; the autosave since has taken its images and
+// clip out of storage, so they are marked to be written again (a clip is written whenever
+// it differs from what storage holds). Marked whatever storedSceneIds says, since an autosave
+// may be between reading the scene list and deleting the files.
+function undeleteScene(pid, at, s, links) {
+  if (pid != projectId || scenes.some(x => x.id == s.id)) return;
+  const i = Math.min(at, scenes.length);
+  scenes.splice(i, 0, s);
+  for (const [sid, k, h] of links) {
+    const o = scenes.find(x => x.id == sid);
+    if (o && !o.hs.some(x => x.id == h.id)) o.hs = [...o.hs.slice(0, k), h, ...o.hs.slice(k)];
+  }
+  if (s.blob) dirtyScenes.add(s.id);
+  save();
+  showScene(i);
+}
 $('addl').onclick = () => {
   if (scenes.length < 2) toast(t('msg.needTwoScenes'));
   else {
@@ -3278,11 +3427,11 @@ $('exp').onclick = async () => {
   // A large file takes a second click, once the author has read what it will weigh.
   if (mb > EXPORT_BIG_MB && Date.now() - expArmed > 15000) {
     expArmed = Date.now();
-    toast(t('msg.exportBig', { mb: Math.round(mb) }), 15000);
+    toast(t('msg.exportBig', { mb: Math.round(mb) }), { ms: 15000, key: 'exp' });
     return;
   }
   expArmed = 0;
-  toast(t('msg.preparing'), 60000);
+  toast(t('msg.preparing'), { ms: 60000, key: 'exp' });
   try {
     const [css, three, app, data] = await Promise.all([
       fetchText('style.css'),
@@ -3294,9 +3443,12 @@ $('exp').onclick = async () => {
     const bytes = saveFile(fileName('.html'), html, 'text/html');
     editCount = 0;
     const hdNote = scenes.some(s => s.hdBlob) ? ' ' + t('msg.exportedHd') : '';
-    toast(t('msg.exported', { mb: (bytes / 1048576).toFixed(1) }) + hdNote, hdNote ? 9000 : 0);
+    toast(t('msg.exported', { mb: (bytes / 1048576).toFixed(1) }) + hdNote, {
+      ms: hdNote ? 9000 : 0,
+      key: 'exp',
+    });
   } catch (e) {
-    toast(t('msg.exportFail'), 9000);
+    toast(t('msg.exportFail'), { ms: 9000, key: 'exp' });
   }
 };
 // ───────────── folder (ZIP) export ─────────────
@@ -3464,20 +3616,27 @@ $('expz').onclick = async () => {
     toast(t('msg.needOneScene'));
     return;
   }
-  toast(t('msg.preparing'), 600000);
+  toast(t('msg.preparing'), { ms: 600000, key: 'exp' });
   busy(1);
   try {
     let last = -1;
     const zip = await zipBlob(await folderTour(), (i, n) => {
         // In steps of ten, so a screen reader isn't read every file.
         const p = Math.floor((i / n) * 10) * 10;
-        if (p != last) toast(t('msg.zipProgress', { p: (last = p) }), 600000);
+        if (p != last)
+          toast(t('msg.zipProgress', { p: (last = p) }), {
+            ms: 600000,
+            key: 'exp',
+          });
       }),
       bytes = saveFile(fileName('.zip'), zip, 'application/zip');
     editCount = 0;
-    toast(t('msg.zipDone', { mb: (bytes / 1048576).toFixed(1) }), 12000);
+    toast(t('msg.zipDone', { mb: (bytes / 1048576).toFixed(1) }), { ms: 12000, key: 'exp' });
   } catch (e) {
-    toast(t(e.message == 'zip-limit' ? 'msg.zipLimit' : 'msg.exportFail'), 12000);
+    toast(t(e.message == 'zip-limit' ? 'msg.zipLimit' : 'msg.exportFail'), {
+      ms: 12000,
+      key: 'exp',
+    });
   }
   busy(-1);
 };
@@ -3526,14 +3685,17 @@ $('psave').onclick = async () => {
     toast(t('msg.nothingToSave'));
     return;
   }
-  toast(t('msg.preparingProj'), 60000);
+  toast(t('msg.preparingProj'), { ms: 60000, key: 'exp' });
   try {
     const out = await portableProject();
     saveFile(fileName('.json'), JSON.stringify(out), 'application/json');
     editCount = 0;
-    toast(t('msg.projSaved') + (out.hdLeft ? ' ' + t('msg.hdLeft') : ''), out.hdLeft ? 12000 : 0);
+    toast(t('msg.projSaved') + (out.hdLeft ? ' ' + t('msg.hdLeft') : ''), {
+      ms: out.hdLeft ? 12000 : 0,
+      key: 'exp',
+    });
   } catch (x) {
-    toast(t('msg.projSaveFail'));
+    toast(t('msg.projSaveFail'), { key: 'exp' });
   }
 };
 // An imported file is untrusted. Keep only well-formed fields with the expected types,
@@ -3641,7 +3803,7 @@ $('pfile').onchange = async e => {
   const f = e.target.files[0];
   e.target.value = '';
   if (!f) return;
-  toast(t('msg.importing'), 60000);
+  toast(t('msg.importing'), { ms: 60000, key: 'imp' });
   try {
     const raw = JSON.parse(await f.text());
     if (!raw || typeof raw != 'object') throw new Error('invalid');
@@ -3738,10 +3900,14 @@ $('pfile').onchange = async e => {
     storedSnd = new Map();
     await flush();
     closeLib();
-    toast(t('msg.imported'));
-    if (!(await storageKept())) toast(t('msg.imported') + ' ' + t('msg.notPersisted'), 14000);
+    toast(t('msg.imported'), { key: 'imp' });
+    if (!(await storageKept()))
+      toast(t('msg.imported') + ' ' + t('msg.notPersisted'), {
+        ms: 14000,
+        key: 'imp',
+      });
   } catch (x) {
-    toast(t(x.message == 'newer' ? 'msg.newerFile' : 'msg.badFile'));
+    toast(t(x.message == 'newer' ? 'msg.newerFile' : 'msg.badFile'), { key: 'imp' });
   }
 };
 // ───────────── project library ─────────────
@@ -3913,7 +4079,7 @@ if (!EMBED) {
     if (a == 'dup') await duplicateProject(id);
     else if (a == 'exp') {
       await flush();
-      toast(t('msg.preparing'), 60000);
+      toast(t('msg.preparing'), { ms: 60000, key: 'exp' });
       try {
         let out;
         if (id == projectId) out = await portableProject();
@@ -3924,12 +4090,12 @@ if (!EMBED) {
           revokeProject(d);
         }
         saveFile(safeName(out.title) + '.json', JSON.stringify(out), 'application/json');
-        toast(
-          t('msg.projFileSaved') + (out.hdLeft ? ' ' + t('msg.hdLeft') : ''),
-          out.hdLeft ? 12000 : 0
-        );
+        toast(t('msg.projFileSaved') + (out.hdLeft ? ' ' + t('msg.hdLeft') : ''), {
+          ms: out.hdLeft ? 12000 : 0,
+          key: 'exp',
+        });
       } catch (x) {
-        toast(t('msg.projExpFail'));
+        toast(t('msg.projExpFail'), { key: 'exp' });
       }
     } else if (a == 'del') {
       if (b.dataset.c != '1') {
@@ -5987,8 +6153,8 @@ function syncLogo() {
     img = $('logo'),
     stage = $('stage');
   LOGO_CORNERS.forEach(c => stage.classList.toggle('logo-' + c, !!l && l.pos == c));
-  // Bottom corners sit above the scene bar when it is showing.
-  stage.style.setProperty('--sb-h', $('sb').offsetHeight + 'px');
+  // Bottom corners, and the toasts, sit above the scene bar when it is showing.
+  $('root').style.setProperty('--sb-h', $('sb').offsetHeight + 'px');
   img.hidden = !l;
   if (!l) {
     logoSrc = '';
@@ -6146,18 +6312,28 @@ $('logo').addEventListener('pointerup', e => endLogoDrag(e, false));
 $('logo').addEventListener('pointercancel', e => endLogoDrag(e, true));
 
 // ───────────── toasts, pinch zoom, keyboard control, backup reminder ─────────────
-// Auto-dismiss, after the duration the last toast() asked for.
+// Hovering or focusing the stack holds every toast in it.
 (() => {
   const m = $('msg');
   if (!m) return;
-  new MutationObserver(() => {
-    clearTimeout(toastTimer);
-    if (m.textContent)
-      toastTimer = setTimeout(() => {
-        m.textContent = '';
-        toastMs = 5200;
-      }, toastMs);
-  }).observe(m, { childList: true, characterData: true, subtree: true });
+  m.addEventListener('pointerenter', e => {
+    if (e.pointerType == 'touch') return;
+    toastHover = true;
+    holdToasts();
+  });
+  m.addEventListener('pointerleave', () => {
+    toastHover = false;
+    holdToasts();
+  });
+  m.addEventListener('focusin', () => {
+    toastFocus = true;
+    holdToasts();
+  });
+  m.addEventListener('focusout', e => {
+    if (m.contains(e.relatedTarget)) return;
+    toastFocus = false;
+    holdToasts();
+  });
 })();
 
 // Browser storage alone is not a safe home for someone's work.
