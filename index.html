@@ -23,7 +23,7 @@
 <meta property="og:image:alt" content="محرر Tajwal 360 وفيه بانوراما مفتوحة وقائمة المشاهد">
 <title data-i18n="doc.title">Tajwal 360 — استوديو الجولات الافتراضية</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='4' y1='4' x2='28' y2='28' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%23818cf8'/%3E%3Cstop offset='1' stop-color='%2322d3ee'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='12.4' fill='none' stroke='url(%23g)' stroke-width='2.6'/%3E%3Cellipse cx='16' cy='16' rx='12.4' ry='4.9' fill='none' stroke='url(%23g)' stroke-width='1.8' opacity='.45'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='url(%23g)'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=5.6">
+<link rel="stylesheet" href="style.css?v=5.7">
 <script src="boot.js?v=4.5"></script>
 </head>
 <body>
@@ -47,6 +47,7 @@
  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M7 5 3 9l4 4"/><path d="M3 9h11a5 5 0 0 1 0 10h-3"/></symbol>
  <symbol id="i-redo" viewBox="0 0 24 24"><path d="m17 5 4 4-4 4"/><path d="M21 9H10a5 5 0 0 0 0 10h3"/></symbol>
  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+ <symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.5 3.4M6.6 6.6C3.7 8.5 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m3 3 18 18"/></symbol>
  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 11l5 5 5-5M4 20h16"/></symbol>
  <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
  <symbol id="i-import" viewBox="0 0 24 24"><path d="M3 7h6l2 2h10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
@@ -121,7 +122,10 @@
   </div>
 
   <div class="gp">
-    <p class="lb" data-i18n="sec.scenes">المشاهد</p>
+    <div class="lbr">
+      <p class="lb" data-i18n="sec.scenes">المشاهد</p>
+      <button id="smo" hidden aria-haspopup="dialog" aria-keyshortcuts="Control+Shift+M Meta+Shift+M" data-i18n-title="smg.openTitle" title="رتّب المشاهد وحدّدها واحذفها على شاشة كاملة (Ctrl+Shift+M)"><svg class="ic"><use href="#i-grid"/></svg><span data-i18n="smg.open">إدارة المشاهد</span></button>
+    </div>
     <section id="iq" hidden aria-labelledby="iqh">
       <header>
         <b id="iqh" aria-live="polite"></b>
@@ -420,7 +424,36 @@
   </div>
 </div>
 
+<div id="smg" hidden>
+  <div id="smb" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="smt">
+    <header>
+      <b id="smt" data-i18n="smg.open">إدارة المشاهد</b>
+      <span id="smn" aria-live="polite"></span>
+      <button id="smx" data-i18n-aria="act.close" aria-label="إغلاق"><svg class="ic"><use href="#i-close"/></svg></button>
+    </header>
+    <div id="smtb">
+      <input id="smf" type="search" dir="auto" autocomplete="off" data-i18n-placeholder="nav.filterPh" placeholder="ابحث بالاسم أو الملاحظات" data-i18n-aria="nav.filterAria" aria-label="تصفية المشاهد بالاسم أو الملاحظات">
+      <label class="sms"><span data-i18n="smg.sort">ترتيب العرض</span><select id="sms"><option value="tour" data-i18n="smg.sortTour">ترتيب الجولة</option><option value="name" data-i18n="smg.nameAsc">الاسم: من أ إلى ي</option><option value="-name" data-i18n="smg.nameDesc">الاسم: من ي إلى أ</option><option value="date" data-i18n="smg.dateAsc">تاريخ الالتقاط: الأقدم أولاً</option><option value="-date" data-i18n="smg.dateDesc">تاريخ الالتقاط: الأحدث أولاً</option></select></label>
+      <div id="smd" role="group" data-i18n-aria="smg.density" aria-label="حجم البطاقات">
+        <button data-d="l" aria-pressed="false" data-i18n="smg.large">كبيرة</button><button data-d="s" aria-pressed="false" data-i18n="smg.small">صغيرة</button><button data-d="list" aria-pressed="false" data-i18n="smg.list">قائمة</button>
+      </div>
+      <button id="smap" hidden data-i18n="smg.applyOrder">اعتمد هذا الترتيب للجولة</button>
+      <span class="smsel"><button id="small" data-i18n="smg.selectAll">تحديد الكل</button><button id="smclr" data-i18n="smg.clear">إلغاء التحديد</button></span>
+    </div>
+    <div id="sml" role="list" aria-labelledby="smt"></div>
+    <p id="sme" hidden data-i18n="nav.none">لا يوجد مشهد يطابق البحث.</p>
+    <p id="smhint" class="hint"><span class="kb" data-i18n="smg.keys">المسافة تحدّد المشهد، وEnter يفتحه، وF2 يعيد تسميته، وDelete يحذف المحدّد.</span><span class="tc" data-i18n="smg.touch">المس البطاقة مطوّلاً لتحديدها، أو المسها لحظة ثم اسحبها لنقلها.</span></p>
+    <div id="smbar" hidden role="group" data-i18n-aria="smg.bulk" aria-label="إجراءات المشاهد المحدّدة">
+      <button id="smdel" class="dng"><svg class="ic"><use href="#i-trash"/></svg><span></span></button>
+      <button id="smst" data-i18n="smg.toStart">إلى البداية</button>
+      <button id="smen" data-i18n="smg.toEnd">إلى النهاية</button>
+      <button id="smhd"><svg class="ic"><use href="#i-eyeoff"/></svg><span data-i18n="smg.hide">إخفاء من شريط المشاهد</span></button>
+      <button id="smsh"><svg class="ic"><use href="#i-eye"/></svg><span data-i18n="smg.show">إظهار في شريط المشاهد</span></button>
+    </div>
+  </div>
+</div>
+
 <script src="vendor/three.min.js?v=2.0"></script>
-<script src="app.js?v=5.6"></script>
+<script src="app.js?v=5.7"></script>
 </body>
 </html>
