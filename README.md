@@ -120,8 +120,8 @@ project file.
   static markup is translated through `data-i18n` attributes.
 - **Cache.** After changing `app.js`, `boot.js` or `style.css`, bump its `?v=` query in
   `index.html`, or returning visitors keep the old copy.
-- **Formatting.** Run [Prettier](https://prettier.io) on the code you touch
-  (`npx prettier --write app.js boot.js style.css`).
+- **Formatting.** Format only the lines you change with [Prettier](https://prettier.io) and
+  `.prettierrc.json`, for example through your editor's Format Selection.
 - **Security.** The editor's content security policy allows only its own origin; exported
   tours allow no network at all. Treat an imported `.json` as untrusted: validate every
   field and escape every value.
