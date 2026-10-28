@@ -1490,10 +1490,13 @@ canvas {
   border-radius: var(--r2);
   border: 1px solid var(--bd);
   background: var(--pn2);
-  cursor: pointer;
+  cursor: grab;
   transition:
     border-color var(--mo1) var(--ez),
     box-shadow var(--mo1) var(--ez);
+}
+#sml.nodrag .smc {
+  cursor: pointer;
 }
 .smc:hover {
   border-color: var(--bds);
@@ -1788,6 +1791,57 @@ canvas {
 }
 #smbar .dng:hover {
   background: var(--dgw);
+}
+
+/* dragging: the card lifted under the pointer, its place left faint, the bar where it lands */
+.drg {
+  opacity: 0.35;
+}
+.ghost {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  margin: 0;
+  pointer-events: none;
+  box-shadow: var(--sh3);
+  cursor: grabbing;
+}
+.gn {
+  position: absolute;
+  top: var(--s1);
+  inset-inline-start: 50%;
+  min-width: 26px;
+  padding: 0 7px;
+  border-radius: var(--rp);
+  background: var(--ac);
+  color: var(--af);
+  font-size: var(--tSm);
+  font-weight: 700;
+  line-height: 26px;
+  text-align: center;
+  box-shadow: var(--sh2);
+}
+.dropbar {
+  position: fixed;
+  z-index: 61;
+  border-radius: 2px;
+  background: var(--acT);
+  box-shadow: 0 0 0 1px var(--pn);
+  pointer-events: none;
+}
+.sorting,
+.sorting * {
+  cursor: grabbing !important;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ghost {
+    scale: 1.04;
+  }
+  .hold {
+    scale: 0.97;
+    transition: scale var(--mo2) var(--ez);
+  }
 }
 
 #pop {

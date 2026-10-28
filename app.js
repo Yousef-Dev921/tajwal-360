@@ -283,7 +283,7 @@ const I18N = {
     'act.planSmall': 'تصغير المخطط',
     'act.zoomIn': 'تكبير',
     'act.zoomOut': 'تصغير',
-    'hint.reorder': 'اسحب المشهد لتغيير ترتيبه.',
+    'hint.reorder': 'اسحب المشهد لتغيير ترتيبه، وعلى الهاتف المسه لحظة قبل السحب.',
     'hint.nadir': 'صورة تغطّي الحامل الثلاثي في أسفل البانوراما.',
     'hint.audio': 'يبدأ التشغيل بعد أول لمسة من الزائر. الحد الأقصى 8 ميجابايت.',
     'hint.plan': 'ارفع صورة المخطط، ثم حدّد موقع كل مشهد عليه.',
@@ -687,7 +687,7 @@ const I18N = {
     'act.planSmall': 'Shrink plan',
     'act.zoomIn': 'Zoom in',
     'act.zoomOut': 'Zoom out',
-    'hint.reorder': 'Drag a scene to reorder it.',
+    'hint.reorder': 'Drag a scene to reorder it; on a phone, hold it a moment first.',
     'hint.nadir': 'An image that covers the tripod at the bottom of the panorama.',
     'hint.audio': 'Starts playing after the visitor’s first tap. 8 MB maximum.',
     'hint.plan': 'Upload a floor plan, then place each scene on it.',
@@ -2845,7 +2845,7 @@ function renderScenes() {
     L.innerHTML = scenes
       .map(
         (s, i) =>
-          `<button data-i="${i}" draggable="true" class="sth" title="${esc(s.name)}">${sthImg(thumbOf(s))}<span dir="auto">${esc(s.name)}</span></button>`
+          `<button data-i="${i}" data-id="${esc(s.id)}" class="sth" title="${esc(s.name)}">${sthImg(thumbOf(s))}<span dir="auto">${esc(s.name)}</span></button>`
       )
       .join('');
   else
@@ -4584,7 +4584,6 @@ $('expz').onclick = async () => {
   }
   busy(-1);
 };
-let dragFrom = -1;
 function moveScene(a, b) {
   if (a == b || b < 0 || b >= scenes.length) return;
   const id = scenes[current].id,
@@ -4618,23 +4617,11 @@ function moveIds(ids, k) {
   rest.splice(Math.max(0, Math.min(k, rest.length)), 0, ...idsOf(scenes.filter(s => mv.has(s.id))));
   return setOrder(rest);
 }
-$('scenes').ondragstart = e => {
-  const b = e.target.closest('button');
-  if (b) {
-    dragFrom = +b.dataset.i;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', String(dragFrom));
-  }
-};
-$('scenes').ondragover = e => {
-  if (dragFrom >= 0) e.preventDefault();
-};
-$('scenes').ondrop = e => {
-  e.preventDefault();
-  const b = e.target.closest('button');
-  if (b && dragFrom >= 0) moveScene(dragFrom, +b.dataset.i);
-  dragFrom = -1;
-};
+// Where a drop before or after the scene with id `at` puts the moving scenes among the others.
+const dropPlace = (ids, at, after) =>
+  idsOf(scenes)
+    .filter(id => !ids.includes(id))
+    .indexOf(at) + (after ? 1 : 0);
 $('mvb').onclick = () => moveScene(current, current - 1);
 $('mva').onclick = () => moveScene(current, current + 1);
 $('snorth').onclick = () => {
@@ -5301,13 +5288,250 @@ $('sgm').addEventListener('keydown', e => {
   gridFocus(c[k]);
 });
 
+// ───────────── reordering by dragging ─────────────
+// A pointer drag that reorders a list of cards, for a mouse, a pen and a finger alike: HTML5
+// drag and drop never starts on a phone. A mouse drags as soon as it moves; a finger first holds
+// still for HOLD_MS, so a swipe still scrolls the list. The card lifts and follows the pointer, a
+// bar shows where it will land, the list scrolls near its edges, and Escape puts it all back.
+// o.card(el): the card a press on el starts, or null; o.ids(card): the ids that move with it;
+// o.drop(ids, id, after): the move, before or after the card with that id; o.rows(): whether the
+// cards stack in rows, so the bar runs across rather than beside them; o.can(): whether moving is
+// open now; o.long(card): a finger held still for LONG_MS; o.scroller: what scrolls; o.layer:
+// where the lifted card and the bar are drawn, so the card keeps the styles of its list.
+const HOLD_MS = 250,
+  LONG_MS = 500;
+let sortDrag = null,
+  sortDropAt = 0; // when a drag or a long press ended, so the click that follows is let go
+function dragSort(box, o) {
+  const end = (d, drop) => {
+    clearTimeout(d.hold);
+    clearTimeout(d.long);
+    cancelAnimationFrame(d.raf);
+    removeEventListener('pointermove', move);
+    removeEventListener('pointerup', up);
+    removeEventListener('pointercancel', cancel);
+    removeEventListener('keydown', key, true);
+    sortDrag = null;
+    if (d.live || d.longDone) sortDropAt = performance.now();
+    if (!d.live) return d.card.classList.remove('hold');
+    d.ghost.remove();
+    d.bar.remove();
+    box.querySelectorAll('.drg, .hold').forEach(c => c.classList.remove('drg', 'hold'));
+    box.classList.remove('sorting');
+    if (!drop || !d.at || d.ids.includes(d.at.dataset.id)) return;
+    // The cards still on show slide from where they were to their new places.
+    const was = new Map(
+      reduceMotion.matches
+        ? []
+        : [...box.querySelectorAll(o.sel)].map(c => [c, c.getBoundingClientRect()])
+    );
+    o.drop(d.ids, d.at.dataset.id, d.after);
+    const v = o.scroller.getBoundingClientRect();
+    was.forEach((r, c) => {
+      if (!c.isConnected) return;
+      const n = c.getBoundingClientRect(),
+        dx = r.left - n.left,
+        dy = r.top - n.top;
+      if ((dx || dy) && n.bottom > v.top && n.top < v.bottom)
+        c.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], {
+          duration: 200,
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        });
+    });
+  };
+  // The card under the pointer, or the nearest one, and which side of it the drop goes.
+  const aim = d => {
+    let c = document.elementFromPoint(d.x, d.y)?.closest(o.sel);
+    if (!c || !box.contains(c)) {
+      let best = 1 / 0;
+      box.querySelectorAll(o.sel).forEach(x => {
+        if (!x.offsetParent) return;
+        const r = x.getBoundingClientRect(),
+          dx = Math.max(r.left - d.x, 0, d.x - r.right),
+          dy = Math.max(r.top - d.y, 0, d.y - r.bottom),
+          k = dx * dx + dy * dy;
+        if (k < best) {
+          best = k;
+          c = x;
+        }
+      });
+    }
+    d.at = c || null;
+    if (!c || d.ids.includes(c.dataset.id)) {
+      d.bar.hidden = true;
+      return;
+    }
+    const r = c.getBoundingClientRect(),
+      rows = o.rows(),
+      g = 4; // half the gap, so the bar sits between two cards
+    d.after = rows ? d.y > r.top + r.height / 2 : d.x > r.left + r.width / 2 != isRTL();
+    d.bar.hidden = false;
+    const b = d.bar.style;
+    if (rows) {
+      b.left = r.left + 'px';
+      b.width = r.width + 'px';
+      b.top = (d.after ? r.bottom + g : r.top - g) - 1.5 + 'px';
+      b.height = '3px';
+    } else {
+      b.top = r.top + 'px';
+      b.height = r.height + 'px';
+      b.left = (d.after != isRTL() ? r.right + g : r.left - g) - 1.5 + 'px';
+      b.width = '3px';
+    }
+  };
+  // Each frame: the ghost under the pointer, the list scrolled when the pointer is near an edge.
+  const frame = d => {
+    const v = o.scroller.getBoundingClientRect(),
+      edge = Math.min(56, v.height / 4),
+      top = d.y - v.top,
+      bot = v.bottom - d.y;
+    if (top < edge) o.scroller.scrollTop -= Math.ceil(((edge - Math.max(top, 0)) / edge) * 18);
+    else if (bot < edge) o.scroller.scrollTop += Math.ceil(((edge - Math.max(bot, 0)) / edge) * 18);
+    place(d);
+    d.raf = requestAnimationFrame(() => frame(d));
+  };
+  const place = d => {
+    d.ghost.style.transform = `translate(${d.x - d.dx}px, ${d.y - d.dy}px)`;
+    aim(d);
+  };
+  const lift = d => {
+    d.live = true;
+    d.ids = o.ids(d.card);
+    getSelection().removeAllRanges();
+    const r = d.card.getBoundingClientRect(),
+      g = (d.ghost = d.card.cloneNode(true));
+    d.dx = d.x0 - r.left;
+    d.dy = d.y0 - r.top;
+    g.removeAttribute('id');
+    g.querySelectorAll('[id]').forEach(x => x.removeAttribute('id'));
+    g.classList.add('ghost');
+    g.classList.remove('hold');
+    g.setAttribute('aria-hidden', 'true');
+    g.style.width = r.width + 'px';
+    g.style.height = r.height + 'px';
+    if (d.ids.length > 1) {
+      const n = document.createElement('span');
+      n.className = 'gn';
+      n.dir = 'ltr';
+      n.textContent = d.ids.length;
+      g.appendChild(n);
+    }
+    d.bar = document.createElement('div');
+    d.bar.className = 'dropbar';
+    d.bar.hidden = true;
+    (o.layer || document.body).append(g, d.bar);
+    box.classList.add('sorting');
+    box.querySelectorAll(o.sel).forEach(c => {
+      if (d.ids.includes(c.dataset.id)) c.classList.add('drg');
+    });
+    frame(d);
+  };
+  const move = e => {
+    const d = sortDrag;
+    if (!d || e.pointerId != d.pid) return;
+    d.x = e.clientX;
+    d.y = e.clientY;
+    const far = Math.hypot(d.x - d.x0, d.y - d.y0);
+    if (d.live) return place(d);
+    // A finger that moves before it has held still is scrolling.
+    if (!d.armed) {
+      if (far > 8) end(d);
+    } else if (far > 4) lift(d);
+  };
+  const up = e => {
+    const d = sortDrag;
+    if (!d || e.pointerId != d.pid) return;
+    // Aimed where the pointer let go, which a frame may not have caught up with.
+    if (d.live) {
+      d.x = e.clientX;
+      d.y = e.clientY;
+      place(d);
+    }
+    end(d, true);
+  };
+  const cancel = e => {
+    if (sortDrag && e.pointerId == sortDrag.pid) end(sortDrag);
+  };
+  const key = e => {
+    if (e.key != 'Escape' || !sortDrag) return;
+    e.preventDefault();
+    e.stopPropagation();
+    end(sortDrag);
+  };
+  box.addEventListener('pointerdown', e => {
+    if (sortDrag || e.button || (o.can && !o.can())) return;
+    const c = o.card(e.target);
+    if (!c) return;
+    const d = (sortDrag = {
+      stop: () => end(d),
+      card: c,
+      pid: e.pointerId,
+      x0: e.clientX,
+      y0: e.clientY,
+      x: e.clientX,
+      y: e.clientY,
+      armed: e.pointerType == 'mouse',
+      live: false,
+    });
+    if (!d.armed) {
+      d.hold = setTimeout(() => {
+        d.armed = true;
+        c.classList.add('hold');
+      }, HOLD_MS);
+      if (o.long && e.pointerType == 'touch')
+        d.long = setTimeout(() => {
+          if (d.live) return;
+          d.longDone = true;
+          sortDropAt = performance.now() + 1e4; // until the finger lifts
+          o.long(c);
+        }, LONG_MS);
+    }
+    addEventListener('pointermove', move);
+    addEventListener('pointerup', up);
+    addEventListener('pointercancel', cancel);
+    addEventListener('keydown', key, true);
+  });
+  // Once a finger has held still, it moves the card rather than the list.
+  box.addEventListener(
+    'touchmove',
+    e => {
+      if (sortDrag?.armed) e.preventDefault();
+    },
+    { passive: false }
+  );
+  box.addEventListener('contextmenu', e => {
+    if (sortDrag?.armed) e.preventDefault();
+  });
+  // The click that ends a drag or a long press is not a tap.
+  box.addEventListener(
+    'click',
+    e => {
+      if (sortDropAt > performance.now() - 400) {
+        e.preventDefault();
+        e.stopPropagation();
+        sortDropAt = 0;
+      }
+    },
+    true
+  );
+}
+if (!EMBED)
+  dragSort($('scenes'), {
+    sel: '.sth',
+    card: el => el.closest('#scenes .sth'),
+    ids: c => [c.dataset.id],
+    drop: (ids, at, after) => moveIds(ids, dropPlace(ids, at, after)),
+    rows: () => false,
+    scroller: $('panel'),
+  });
+
 // ───────────── scene manager ─────────────
 // Every scene of the tour as a card on a full screen: the panel's list fits a few dozen, and a
 // survey has a hundred and fifty. The view can be searched and sorted without touching the
 // tour's order; "Use this order" makes the sorted view the tour's. Scenes are selected with the
 // pointer (Shift for a range, Ctrl or Cmd for one), a long press on a phone, or Space on a card's
 // checkbox, and the selection is deleted, moved to either end or hidden from the bar together,
-// each as one step of undo.
+// each as one step of undo. In tour order the cards can be dragged into place.
 // Thumbnails load as their cards come near the screen and are let go once they are well past it,
 // so 150 of them are never decoded at once on a phone.
 const SM_DENS = ['l', 's', 'list'];
@@ -5456,6 +5680,7 @@ function smDraw() {
   $('smd')
     .querySelectorAll('button')
     .forEach(b => b.setAttribute('aria-pressed', b.dataset.d == smDens));
+  L.classList.toggle('nodrag', smSort != 'tour');
 }
 function openManager(from) {
   if (EMBED || mode != 'edit' || !scenes.length || smOpen() || !$('libm').hidden) return;
@@ -5482,6 +5707,7 @@ function openManager(from) {
 function closeManager() {
   if (!smOpen()) return;
   if (smEdit) smRenameEnd(false);
+  sortDrag?.stop();
   $('smg').hidden = true;
   smIO.disconnect();
   smIO = null;
@@ -5670,45 +5896,23 @@ if (!EMBED) {
     smDraw();
     smFocus(c);
   };
-  // A finger held still on a card selects it, which starts selecting; the click that follows
-  // when it lifts is not a tap.
-  const LONG_MS = 500;
-  let smPress = null;
-  $('sml').addEventListener('pointerdown', e => {
-    const c =
-      e.pointerType == 'touch' && !e.target.closest('.smk, .smr, .smi') && e.target.closest('.smc');
-    if (!c) return;
-    const p = (smPress = { x: e.clientX, y: e.clientY, id: e.pointerId });
-    p.t = setTimeout(() => {
-      p.done = true;
+  dragSort($('sml'), {
+    sel: '.smc',
+    card: el => !el.closest('.smk, .smr, .smi') && el.closest('#sml .smc'),
+    // A selected card takes the whole selection along, in tour order.
+    ids: c =>
+      smSel.has(c.dataset.id) ? idsOf(scenes.filter(s => smSel.has(s.id))) : [c.dataset.id],
+    drop: (ids, at, after) => moveIds(ids, dropPlace(ids, at, after)),
+    rows: () => smDens == 'list',
+    can: () => smSort == 'tour' && !smEdit,
+    long: c => {
       smPick(c.dataset.id, true);
       smDraw();
       smFocus(c);
-    }, LONG_MS);
-  });
-  $('sml').addEventListener('pointermove', e => {
-    const p = smPress;
-    if (p && e.pointerId == p.id && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 8)
-      clearTimeout(p.t);
-  });
-  const smRelease = e => {
-    if (smPress && e.pointerId == smPress.id) clearTimeout(smPress.t);
-  };
-  $('sml').addEventListener('pointerup', smRelease);
-  $('sml').addEventListener('pointercancel', smRelease);
-  $('sml').addEventListener('contextmenu', e => {
-    if (smPress?.done) e.preventDefault();
-  });
-  $('sml').addEventListener(
-    'click',
-    e => {
-      if (!smPress?.done) return;
-      smPress = null;
-      e.preventDefault();
-      e.stopPropagation();
     },
-    true
-  );
+    scroller: $('sml'),
+    layer: $('smb'),
+  });
   $('smb').addEventListener('keydown', e => {
     const a = document.activeElement,
       f = $('smf'),
