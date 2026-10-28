@@ -1675,7 +1675,8 @@ async function showScene(i, o = {}) {
     }
     busy(-1);
   }
-  if (current != i) return;
+  // A walk begun meanwhile wins: it owns fadeMesh until it lands.
+  if (current != i || walking) return;
   const ms = o.fade && !renderer.xr.isPresenting && sphereMat.map ? o.fade : 0,
     f = camera.fov;
   stopFade();
@@ -2434,7 +2435,6 @@ const autoHeld = () =>
   mode != 'view' ||
   reduceMotion.matches ||
   !!drag ||
-  pointers.size > 0 ||
   gyro ||
   walking ||
   planBig ||
@@ -3543,6 +3543,7 @@ const easeCubic = k => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 
   camQ = new THREE.Quaternion(),
   camE = new THREE.Euler(0, 0, 0, 'YXZ');
 let fading = 0, // the fade in progress, or 0
+  fadeSeq = 0, // numbers fades, so a fade cut short never touches the next
   hsFade = 1;
 // The project's transition between scenes: 'walk', 'fade' or 'none'. A headset never walks
 // or fades, since the motion would fill the visitor's whole field of view.
@@ -3557,13 +3558,14 @@ function stopFade() {
   if (!fading) return;
   fading = 0;
   hsFade = 1;
+  setFov(fov); // a zoom cut short ends where it was heading
   fadeMesh.visible = false;
   fadeMesh.material.map = null;
   fadeMesh.quaternion.identity();
   fadeGroup.quaternion.identity();
 }
 function crossFade(ms, f0) {
-  const id = ++fading,
+  const id = (fading = ++fadeSeq),
     f1 = fov;
   // The camera the next frame will draw with: gyro sets the pitch itself.
   camE.set(gyro && gyroReady ? camera.rotation.x : pitch, yaw, 0);
