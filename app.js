@@ -51,6 +51,9 @@ const I18N = {
     'f.tourDesc': 'وصف الجولة',
     'f.descPh': 'يظهر في شاشة البداية',
     'f.sceneName': 'اسم المشهد',
+    'f.note': 'ملاحظات المشهد',
+    'f.notePh': 'مثال: الإيوان الشرقي، تلف في أخشاب السقف',
+    'hint.note': 'يقرؤها الزوار في الجولة من زر «ملاحظات». نص عادي، حتى \u20662000\u2069 حرف.',
     'f.size': 'الحجم',
     'f.tourUrl': 'رابط الجولة بعد نشرها',
     'f.embedPh': 'أدخل رابط الجولة ليظهر كود التضمين',
@@ -123,13 +126,22 @@ const I18N = {
     'opt.click': 'النقر في أي مكان للانتقال',
     'hint.click':
       'في الجولة، تنقل النقرة التي لا تصيب أي نقطة إلى نقطة الانتقال الأقرب إلى اتجاهها. تكبر تلك النقطة تحت المؤشر قبل النقر، فيرى الزائر إلى أين سيذهب.',
+    'opt.snap': 'السماح للزوار بحفظ المنظر صورة',
+    'hint.snap':
+      'زر «حفظ المنظر صورة» متاح دائماً في المحرر والمعاينة، ولا يظهر في الجولة المصدَّرة إلا عند تفعيل هذا الخيار. تُحفظ الصورة بصيغة JPEG، وضلعها الأطول \u20662400\u2069 بكسل.',
+    'act.noteOpen': 'ملاحظات',
+    'note.scene': 'المشهد \u2066{i}\u2069 من \u2066{n}\u2069',
+    'act.snap': 'حفظ المنظر صورة',
+    'snap.hs': 'مع النقاط التفاعلية',
+    'snap.save': 'حفظ الصورة',
+    'msg.snapSaved': 'حُفظت الصورة «\u2068{name}\u2069».',
     'nav.bar': 'التنقّل بين المشاهد',
     'nav.all': 'كل المشاهد',
     'nav.gridAria': 'كل المشاهد. أنت في المشهد {i} من {n}',
     'nav.prev': 'المشهد السابق',
     'nav.next': 'المشهد التالي',
-    'nav.filterPh': 'ابحث باسم المشهد',
-    'nav.filterAria': 'تصفية المشاهد بالاسم',
+    'nav.filterPh': 'ابحث بالاسم أو الملاحظات',
+    'nav.filterAria': 'تصفية المشاهد بالاسم أو الملاحظات',
     'nav.none': 'لا يوجد مشهد يطابق البحث.',
     'nav.matches': '{n} من {t}',
     'f.targetFind': 'ابحث عن الوجهة',
@@ -322,6 +334,10 @@ const I18N = {
     'f.tourDesc': 'Tour description',
     'f.descPh': 'Shown on the start screen',
     'f.sceneName': 'Scene name',
+    'f.note': 'Scene notes',
+    'f.notePh': 'e.g. East iwan, timber decay in the roof',
+    'hint.note':
+      'Visitors read them in the tour from the Notes button. Plain text, up to 2000 characters.',
     'f.size': 'Size',
     'f.tourUrl': 'Tour URL after publishing',
     'f.embedPh': 'Enter the tour URL to get the embed code',
@@ -394,13 +410,22 @@ const I18N = {
     'opt.click': 'Click anywhere to move',
     'hint.click':
       'In the tour, a click that misses every hotspot takes the link hotspot nearest its direction. That hotspot grows under the pointer first, so visitors see where they will go.',
+    'opt.snap': 'Let visitors save the view as an image',
+    'hint.snap':
+      'The Save view as image button is always there in the editor and Preview; an exported tour shows it only while this is on. Images are saved as JPEG, 2400 px on the long side.',
+    'act.noteOpen': 'Notes',
+    'note.scene': 'Scene {i} of {n}',
+    'act.snap': 'Save view as image',
+    'snap.hs': 'Include hotspots',
+    'snap.save': 'Save image',
+    'msg.snapSaved': 'Saved “\u2068{name}\u2069”.',
     'nav.bar': 'Scene navigation',
     'nav.all': 'All scenes',
     'nav.gridAria': 'All scenes. You are on scene {i} of {n}',
     'nav.prev': 'Previous scene',
     'nav.next': 'Next scene',
-    'nav.filterPh': 'Search by scene name',
-    'nav.filterAria': 'Filter scenes by name',
+    'nav.filterPh': 'Search names and notes',
+    'nav.filterAria': 'Filter scenes by name or notes',
     'nav.none': 'No scene matches.',
     'nav.matches': '{n} of {t}',
     'f.targetFind': 'Find a destination',
@@ -1882,15 +1907,28 @@ const fold = s =>
     .replace(/\u0629/g, '\u0647')
     .replace(/[\u0660-\u0669\u06f0-\u06f9]/g, d => d.charCodeAt(0) % 16)
     .toLowerCase();
+// A scene's notes, folded once for each version of them: a search runs on every keystroke,
+// and 143 notes of up to 2000 characters are too many to fold again each time.
+const foldedNotes = new WeakMap();
+function foldNote(s) {
+  let c = foldedNotes.get(s);
+  if (!c || c[0] !== s.note) foldedNotes.set(s, (c = [s.note, fold(s.note)]));
+  return c[1];
+}
 // A test for search q: every word of it must appear in the scene's name. A number on its own
-// also finds the scene at that place in the tour, as the counter shows it.
-function sceneMatcher(q) {
+// also finds the scene at that place in the tour, as the counter shows it. With notes set, the
+// words may also be found in the name and the notes together. The test returns 2 for a match by
+// name or number, 1 for one that needs the notes and 0 for none, so a list can put names first.
+function sceneMatcher(q, notes) {
   const f = fold(q).trim(),
     w = f.split(/\s+/).filter(Boolean),
     n = /^\d+$/.test(f) ? +f : 0;
   return (s, i) => {
     const nm = fold(s.name);
-    return w.every(x => nm.includes(x)) || i + 1 == n;
+    if (w.every(x => nm.includes(x)) || i + 1 == n) return 2;
+    if (!notes || !s.note) return 0;
+    const all = nm + '\n' + foldNote(s);
+    return w.every(x => all.includes(x)) ? 1 : 0;
   };
 }
 // The editor's list is rebuilt only when its scenes or thumbnails change; a new name is
@@ -1923,7 +1961,7 @@ function renderScenes() {
     many = scenes.length > MANY;
   fq.hidden = !many;
   if (!many) fq.value = '';
-  const m = sceneMatcher(fq.value);
+  const m = sceneMatcher(fq.value, true);
   let hits = 0;
   [...L.children].forEach((b, i) => {
     b.classList.toggle('on', i == current);
@@ -2311,6 +2349,56 @@ function syncMeta() {
         .filter(Boolean)
         .join(' · ');
 }
+// ───────────── scene notes ─────────────
+// A scene's notes, for visitors, in a card at the inline end of the stage (a sheet on a phone).
+// The "i" button opens it, and it stays open from scene to scene, as someone walking a survey
+// reads it room by room. A scene without notes has no button and hides the card, which comes
+// back at the next scene that has some. The editor has the notes in its panel instead.
+let noteOpen = false,
+  noteShown = '';
+function syncNote() {
+  const s = scenes[current],
+    tx = s?.note || '',
+    on = mode == 'view' && !!tx,
+    show = on && noteOpen,
+    card = $('note');
+  $('nbtn').hidden = !on;
+  $('nbtn').setAttribute('aria-expanded', show);
+  if (!show && !card.hidden && card.contains(document.activeElement))
+    glCanvas.focus({ preventScroll: true });
+  card.hidden = !show;
+  if (!show) return;
+  const taken = project.meta && s.taken,
+    k = [LANG, current, scenes.length, s.name, taken, tx].join('\n');
+  if (k == noteShown) return;
+  noteShown = k;
+  $('noten').textContent = t('note.scene', { i: current + 1, n: scenes.length });
+  $('notet').textContent = s.name;
+  $('noted').hidden = !taken;
+  if (taken) $('noted').textContent = t('f.captured') + ' ' + fmtTaken(taken);
+  // A line of its own takes its own direction, so an Arabic line reads right to left in an
+  // English tour, and a Latin reference keeps its order inside Arabic text.
+  $('noteb').innerHTML = tx
+    .split('\n')
+    .map(l => (l.trim() ? `<p dir="auto">${esc(l)}</p>` : '<p class="gap"></p>'))
+    .join('');
+  card.scrollTop = 0;
+}
+function setNote(on) {
+  const had = $('note').contains(document.activeElement);
+  noteOpen = on;
+  syncNote();
+  if (on) $('note').focus({ preventScroll: true });
+  else if (had || document.activeElement == document.body) $('nbtn').focus({ preventScroll: true });
+}
+$('nbtn').onclick = () => setNote(!noteOpen);
+$('notex').onclick = () => setNote(false);
+// The card starts below the title row, which wraps and grows with the capture date or the
+// image options, so the row's bottom is kept in a variable for the stylesheet.
+new ResizeObserver(() => {
+  const r = $('top');
+  $('stage').style.setProperty('--top-b', r.offsetTop + r.offsetHeight + 'px');
+}).observe($('top'));
 function ui() {
   $('root').classList.toggle('view', mode == 'view');
   $('empty').hidden = scenes.length > 0;
@@ -2319,10 +2407,14 @@ function ui() {
   $('back').hidden = !(mode == 'view' && !EMBED);
   if (scenes[current] && document.activeElement != $('sname'))
     $('sname').value = scenes[current].name;
+  if (scenes[current] && document.activeElement != $('snote'))
+    $('snote').value = scenes[current].note || '';
   renderScenes();
   renderHotspotList();
   renderHotspotProps();
   syncMeta();
+  syncNote();
+  syncSnap();
   syncLevel();
   syncExtras();
   setTimeout(resize, 0);
@@ -2391,6 +2483,21 @@ $('metaon').onchange = e => {
 $('sname').oninput = e => {
   scenes[current].name = e.target.value;
   renderScenes();
+  save();
+};
+// Kept trimmed and left out when empty. The field itself keeps what is typed, trailing line
+// break included, until it loses focus.
+$('snote').oninput = e => {
+  const s = scenes[current],
+    v = cleanNote(e.target.value);
+  if (v) s.note = v;
+  else delete s.note;
+  if ($('sfilt').value) renderScenes();
+  save();
+};
+$('snapon').onchange = e => {
+  if (e.target.checked) project.snap = true;
+  else delete project.snap;
   save();
 };
 // The start view is the current one, zoom included. It is stored as the turn and pitch that
@@ -2905,6 +3012,10 @@ const SHAPES = ['arrow', 'spot', 'ring', 'dot', 'pin', 'star', 'info', 'none', '
 const num = (v, fallback) => (Number.isFinite(+v) && v !== null && v !== '' ? +v : fallback);
 const clamp01 = v => Math.min(1, Math.max(0, v));
 const isDataImage = v => typeof v == 'string' && v.startsWith('data:image/');
+// Scene notes are plain text with their line breaks, NOTE_MAX characters at most.
+const NOTE_MAX = 2000;
+const cleanNote = v =>
+  typeof v == 'string' ? v.replace(/\r\n?/g, '\n').trim().slice(0, NOTE_MAX).trim() : '';
 const cleanHotspot = h => {
   const out = {
     id: String(h.id || uid()),
@@ -2946,6 +3057,8 @@ const cleanScene = s => {
   };
   if (isDataImage(s.th)) out.th = s.th;
   if (isDataImage(s.hd)) out.hd = s.hd;
+  const nt = cleanNote(s.note);
+  if (nt) out.note = nt;
   // A clip, as the editor takes it: audio, 8 MB at most, with a delay of up to 30 s.
   const a = s.snd;
   if (a && typeof a.src == 'string' && /^data:audio\//.test(a.src) && a.src.length < 1.1e7) {
@@ -2995,6 +3108,7 @@ $('pfile').onchange = async e => {
       meta: !!raw.meta,
       ...(raw.hd === true && { hd: true }),
       ...(raw.click === true && { click: true }),
+      ...(raw.snap === true && { snap: true }),
       eurl: typeof raw.eurl == 'string' ? raw.eurl : '',
       scenes: (Array.isArray(raw.scenes) ? raw.scenes : [])
         .filter(s => s && isDataImage(s.img))
@@ -3314,12 +3428,19 @@ function pickGrid(i) {
 }
 function filterGrid() {
   const q = $('sgf').value,
-    m = sceneMatcher(q);
+    m = sceneMatcher(q, true),
+    L = $('sgl'),
+    cells = [...L.children].sort((a, b) => a.dataset.i - b.dataset.i),
+    rank = cells.map(b => m(scenes[+b.dataset.i], +b.dataset.i));
   let hits = 0;
-  [...$('sgl').children].forEach((b, i) => {
-    b.hidden = !m(scenes[i], i);
+  cells.forEach((b, k) => {
+    b.hidden = !rank[k];
     hits += !b.hidden;
   });
+  // Matches by name come first and matches in the notes after them, each in tour order. The
+  // cells move in the DOM rather than by CSS order, because the arrow keys follow the DOM.
+  const order = cells.filter((b, k) => rank[k] == 2).concat(cells.filter((b, k) => rank[k] != 2));
+  if (order.some((b, k) => L.children[k] !== b)) L.append(...order);
   $('sge').hidden = hits > 0;
   $('sgn').textContent = q.trim()
     ? t('nav.matches', { n: hits, t: scenes.length })
@@ -3725,8 +3846,12 @@ function closePop() {
   p.hidden = true;
   if (hadFocus) glCanvas.focus({ preventScroll: true });
 }
+// Escape closes the topmost of the hotspot popup, the image options and the notes card.
 addEventListener('keydown', e => {
-  if (e.key == 'Escape') closePop();
+  if (e.key != 'Escape') return;
+  if (!$('pop').hidden) closePop();
+  else if (!$('snapm').hidden) setSnapMenu(false, true);
+  else if (!$('note').hidden && !planBig) setNote(false);
 });
 glCanvas.addEventListener('pointerdown', e => {
   if (walking) return;
@@ -4945,37 +5070,49 @@ $('ecopy').onclick = async () => {
 // panorama squeezed flat.
 const COVER_W = 1280,
   COVER_H = 720;
-async function captureCover() {
-  if (!scenes[current]) return;
-  const pid = projectId,
-    rt = new THREE.WebGLRenderTarget(COVER_W, COVER_H),
+// Renders the current view again, into an off-screen target of w × h, and returns it on a 2D
+// canvas. The camera keeps its field of view, so at the stage's aspect the frame is the one on
+// screen. hs false leaves the hotspots out; true draws them as the last frame laid them out,
+// labels shown on hover hidden unless they are showing. The pixels are read straight into the
+// canvas's own buffer and flipped there, so a 2400 px picture holds two copies, not three.
+function renderView(w, h, hs) {
+  const rt = new THREE.WebGLRenderTarget(w, h),
     cam = camera.clone(),
-    shown = hotspotGroup.visible;
+    shown = hotspotGroup.visible,
+    c = document.createElement('canvas'),
+    ctx = c.getContext('2d'),
+    im = ctx.createImageData(w, h),
+    px = new Uint8Array(im.data.buffer);
   rt.texture.encoding = THREE.sRGBEncoding;
-  cam.aspect = COVER_W / COVER_H;
+  cam.aspect = w / h;
   cam.updateProjectionMatrix();
-  const px = new Uint8Array(COVER_W * COVER_H * 4);
-  hotspotGroup.visible = false;
+  hotspotGroup.visible = shown && hs;
   try {
     renderer.setRenderTarget(rt);
     renderer.render(scene3d, cam);
-    renderer.readRenderTargetPixels(rt, 0, 0, COVER_W, COVER_H, px);
+    renderer.readRenderTargetPixels(rt, 0, 0, w, h, px);
   } finally {
     renderer.setRenderTarget(null);
     hotspotGroup.visible = shown;
     rt.dispose();
   }
   // WebGL reads rows from the bottom up.
-  const c = document.createElement('canvas'),
-    ctx = c.getContext('2d'),
-    im = ctx.createImageData(COVER_W, COVER_H),
-    row = COVER_W * 4;
-  c.width = COVER_W;
-  c.height = COVER_H;
-  for (let y = 0; y < COVER_H; y++)
-    im.data.set(px.subarray((COVER_H - 1 - y) * row, (COVER_H - y) * row), y * row);
+  const row = w * 4,
+    tmp = new Uint8Array(row);
+  for (let y = 0, z = h - 1; y < z; y++, z--) {
+    tmp.set(px.subarray(y * row, (y + 1) * row));
+    px.copyWithin(y * row, z * row, (z + 1) * row);
+    px.set(tmp, z * row);
+  }
+  c.width = w;
+  c.height = h;
   ctx.putImageData(im, 0, 0);
-  const blob = await canvasBlob(c, 'image/jpeg', 0.85);
+  return c;
+}
+async function captureCover() {
+  if (!scenes[current]) return;
+  const pid = projectId,
+    blob = await canvasBlob(renderView(COVER_W, COVER_H, false), 'image/jpeg', 0.85);
   if (!blob) throw new Error('encode');
   // Another project may have been opened while the picture was encoding.
   if (pid != projectId) return false;
@@ -4986,6 +5123,87 @@ async function captureCover() {
   syncCover();
   return true;
 }
+// ───────────── save the view as an image ─────────────
+// A still of what is on screen, for a survey report: the stage's frame, SNAP_PX on its long
+// side, as a JPEG named after the tour, the scene and the day. 2400 px is sharper than most
+// screens and keeps the transient buffers near 40 MB, which an iPhone can spare. The editor
+// and Preview always offer it; an exported tour only when the author turned on root snap.
+const SNAP_PX = 2400;
+let snapping = false;
+// Part of a file name: no characters that Windows or macOS refuse, no control or bidi
+// formatting characters (which can disguise an extension), no dots or spaces at the ends.
+const namePart = (v, max) =>
+  String(v ?? '')
+    .replace(/[\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, ' ')
+    .replace(/[\\/:*?"<>|]+/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max)
+    .replace(/^[.\s]+|[.\s]+$/g, '');
+function snapName(s, i) {
+  const d = new Date(),
+    p = n => String(n).padStart(2, '0');
+  return (
+    [namePart(project.title, 80) || 'tour', namePart(s.name, 80) || String(i + 1)].join(' - ') +
+    ` - ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}.jpg`
+  );
+}
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+async function saveView() {
+  const i = current,
+    s = scenes[i];
+  if (!s || snapping || walking || !textures[s.id]) return;
+  snapping = true;
+  const hs = $('snaphs').checked,
+    sel = mode == 'edit' && selId;
+  try {
+    // The dashed ring round a selected hotspot is the editor's, not part of the place. The
+    // hotspots are rebuilt without it and laid out by two frames of the render loop first.
+    if (hs && sel) {
+      selId = null;
+      buildHotspots();
+      await nextFrame();
+      await nextFrame();
+      if (current != i) return;
+    }
+    const cw = glCanvas.clientWidth || 1,
+      ch = glCanvas.clientHeight || 1,
+      k = Math.min(SNAP_PX, renderer.capabilities.maxTextureSize) / Math.max(cw, ch),
+      c = renderView(Math.round(cw * k), Math.round(ch * k), hs);
+    const blob = await canvasBlob(c, 'image/jpeg', 0.9);
+    c.width = c.height = 0;
+    if (!blob) throw new Error('encode');
+    const name = snapName(s, i);
+    saveFile(name, blob, 'image/jpeg');
+    toast(t('msg.snapSaved', { name }));
+  } catch (x) {
+    toast(t('msg.imgFail'));
+  } finally {
+    if (sel && selId === null && scenes[current] === s) {
+      selId = sel;
+      buildHotspots();
+    }
+    snapping = false;
+  }
+}
+// The options sit in a row of their own under the stage's buttons, and stay open after a
+// save, so a round of stills is turn, save, turn, save.
+function setSnapMenu(on, back) {
+  $('snapm').hidden = !on;
+  $('snap').setAttribute('aria-expanded', on);
+  if (on) $('snapgo').focus({ preventScroll: true });
+  else if (back) $('snap').focus({ preventScroll: true });
+}
+function syncSnap() {
+  const on = !!scenes[current] && (!EMBED || project.snap === true);
+  $('snap').hidden = !on;
+  if (!on && !$('snapm').hidden) setSnapMenu(false);
+  if (!EMBED) $('snapon').checked = !!project.snap;
+}
+$('snaphs').checked = lsGet('vrt.snapHs') != '0';
+$('snaphs').onchange = e => lsSet('vrt.snapHs', e.target.checked ? '1' : '0');
+$('snap').onclick = () => setSnapMenu($('snapm').hidden);
+$('snapgo').onclick = saveView;
 function syncCover() {
   if (EMBED) return;
   const c = project.cover,
