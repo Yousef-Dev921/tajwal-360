@@ -117,6 +117,19 @@ that isn't granted it says once per session that the browser may clear the work.
 - Glyphs on light icon colours, such as white, are drawn dark so they stay visible.
 - 60 steps of undo and redo.
 - Scene thumbnails, drag-to-reorder, rename and delete.
+- Square scene thumbnails that look like the place: a 320 × 320 picture of a real view,
+  without hotspots, for the scene list, the tour's scene grid and the library (for a
+  project without a cover). It is taken from the start view at a fixed 75°, wider than most
+  start views so a room reads, with the level correction applied, and follows the start view
+  and the level a second after they change. "Use the current view" pins it to the view on
+  screen, zoom included, and "From the start view" lets it follow again. It is made when an
+  image is added or replaced, and a project from before it gets its thumbnails while the
+  editor is idle, one scene at a time and never during a walk. Each is rendered off-screen
+  from a 2048 px copy that the browser decodes and scales off the main thread, so it never
+  touches the panoramas on show or their memory budget. Measured on a 60-scene project: about
+  8 ms of main-thread work per thumbnail on a desktop and 12 ms with the CPU slowed fourfold
+  as for a phone, with no task long enough to delay input. The squeezed
+  2:1 thumbnail is kept for older builds and the import queue.
 - Deleting a scene or a hotspot leaves a message with an Undo button for 10 seconds. Undo
   puts a scene back at its place in the tour with its images, clip, thumbnail and every link
   that led to it, at its place in each scene's list, even after autosave has removed its
@@ -149,10 +162,29 @@ that isn't granted it says once per session that the browser may clear the work.
   opens full-stage with wheel, pinch and button zoom, and scenes are placed on the
   enlarged plan.
 - The capture date and GPS position are read from each JPEG's Exif block before the image
-  is re-encoded. The editor shows them in the scene settings; the tour shows them, with a
-  map link, only when "Show capture date and location" is on, and an exported tour leaves
-  them out entirely while it is off. Altitude is not read: camera GPS heights are too rough
-  to put next to survey levels.
+  is re-encoded, and so is the camera: make, model and focal length, as "RICOH THETA Z1,
+  2.6 mm". The editor shows them in the scene settings; the tour shows the date and position,
+  with a map link, only when "Show capture date and location" is on, and an exported tour
+  leaves them out entirely while it is off. The camera is the author's record and never
+  goes into a tour. Altitude is not read: camera GPS heights are too rough to put next to
+  survey levels.
+- Image information in the scene settings, folded to one line ("8192 × 4096 · 3.8 MB ·
+  14 Mar 2025") and opened for the rest: the original file (name, pixel size, size, type),
+  the stored copy and the high-resolution copy (pixel size and size, or none), when and
+  where it was taken, and the camera. A panorama whose original was under 6000 px wide gets
+  a warning that details may look soft when zoomed in, since a condition survey is read up
+  close. Scenes added before files were recorded show "Unknown" for what isn't known.
+- Replace image, for a room photographed or stitched again. The scene keeps its id, name,
+  hotspots, start view, north, level correction, plan position, clip and notes; the new file
+  is prepared exactly as an added image is (same copies, same high-resolution rule, same
+  Exif read), and brings its own capture date, position, camera and file record. An image
+  that isn't 2:1 asks first, inside the scene settings, with the same choices as the import.
+  The new panorama replaces the old one where the camera is, the level guides show for a
+  moment so the photo can be checked against them, and undo brings the old image back.
+  It is also how a scene added before high resolution was turned on gets its 8192 px copy.
+- Download image saves the best copy kept, the 8192 px master when there is one, as a JPEG
+  named after the scene; its button gives the pixel size and the size. The original file
+  isn't kept by the editor, and the button's hint says so.
 - Scene notes: plain text of up to 2000 characters per scene, line breaks kept, such as
   "East iwan, timber decay in the roof, visit of August 2024". Visitors read them in the
   tour (see Viewing).
@@ -303,7 +335,8 @@ scenes/<id>.jpg     one file per panorama
 audio/music.<ext>   background music
 audio/<id>.<ext>    each scene's audio clip
 icons/<id>.png      custom icons, only those in use
-thumbs/<id>.jpg     scene thumbnails for the scene grid, loaded when it opens
+thumbs/<id>-sq.jpg  square scene thumbnails for the scene grid, loaded when it opens
+thumbs/<id>.jpg     the 2:1 thumbnails, for builds that predate the square ones
 plan.<ext>, cover.jpg, nadir.png, logo.<ext>
 ```
 
@@ -347,6 +380,7 @@ IndexedDB database `vrtour`, object store `k`:
 | `pl:<id>` | Floor plan image as a `Blob` |
 | `cv:<id>` | Cover image as a `Blob` |
 | `sa:<id>:<sceneId>` | A scene's audio clip as a `Blob` |
+| `t:<id>:<sceneId>` | A scene's square thumbnail, a 320 × 320 JPEG `Blob` |
 | `last` | Most recently opened project |
 
 Keeping images out of the document is what makes autosave cheap. Autosave runs on
@@ -389,12 +423,15 @@ whichever way the project was opened.
     "note": "East iwan\nTimber decay in the roof",
     "img": "data:image/jpeg;base64,...",
     "th":  "data:image/jpeg;base64,...",
+    "sq":  "data:image/jpeg;base64,...",
+    "sqv": { "y": 0.42, "p": -0.1, "f": 60 },
     "hd":  "data:image/jpeg;base64,...",
     "u0": 0.8, "p0": 0, "n": 0.25, "f0": 60,
     "lq": [0.0262, 0, 0, 0.9997],
     "pp": { "x": 0.4, "y": 0.6 },
     "taken": "2026-10-20T09:14:37",
     "gps": { "lat": 24.7136111, "lon": 46.6752778 },
+    "cam": "RICOH THETA Z1, 2.6 mm",
     "snd": { "src": "data:audio/mpeg;base64,...", "name": "guide.mp3", "loop": true, "delay": 2 },
     "src": { "h": "9f86d0…(64 hex)", "name": "IMG_0042.jpg", "w": 8192, "h0": 4096,
              "bytes": 23514112, "type": "image/jpeg" },
@@ -463,6 +500,18 @@ whichever way the project was opened.
 - `taken` is the camera's local capture time, with no time zone, and `gps` the position in
   decimal degrees. Both are optional. `meta` decides whether the tour shows them; an
   exported tour carries them only when it is `true`.
+- Scene `sq`, optional, is the square thumbnail: in a `.json` file and the single-file tour
+  a `data:image/jpeg` URL of at most 200,000 characters, in a folder tour's `data.js` the
+  path of a file under `thumbs/`. Import keeps only a base64 JPEG within that length, and a
+  scene without one gets a new thumbnail. The name is `sq` (square) rather than `cv`, so it
+  isn't mistaken for the project's cover. Scene `sqv`, optional, is the view the author
+  pinned it to: `y` the turn of the scene from 0 to 1, as `u0`, `p` the pitch in radians
+  (±π/2) and `f` the vertical field of view, 40 to 95. Without it the thumbnail follows the
+  start view. An exported tour leaves `sqv` out.
+- Scene `cam`, optional, is the camera that took the photo: Exif make and model, then the
+  focal length, at most 80 characters. Import keeps it as a trimmed string without control
+  or bidi formatting characters. It is the author's record: an exported tour leaves it out,
+  and a `.json` backup keeps it.
 - Scene `snd`, optional, is the scene's audio clip. `loop: true` repeats it while the
   visitor stays, and `delay` is the wait in whole seconds before it starts, 0 to 30; both
   are left out at their defaults. On import the clip must be a `data:audio/` URL of at most
@@ -544,7 +593,7 @@ auto-rotate off and makes hotspots grow at once (see Viewing).
   When the high-resolution masters would push the file past 300 MB, they are left out of it
   (the editor says so) and stay in the browser; the folder export still carries them.
 - High resolution can't be added to images already in a project, since they were stored at
-  4096 px; add them again with the option on. Safari on iPhone and iPad refuses a canvas of
+  4096 px; replace each image (Replace image in the scene settings) with the option on. Safari on iPhone and iPad refuses a canvas of
   8192 × 4096, so images added there keep the 4096 px copy only.
 - A touch-screen laptop counts as a touch device and gets the 4096 px copies.
 - Autosave does not work in private browsing. The editor says so rather than failing
