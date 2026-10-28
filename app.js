@@ -118,7 +118,15 @@ const I18N = {
     'sec.plan': 'مخطط الموقع',
     'sec.embed': 'كود التضمين',
     'opt.autorotate': 'دوران تلقائي',
-    'opt.walk': 'انتقال سلس بين المشاهد',
+    'f.autoSpeed': 'السرعة',
+    'spd.slow': 'بطيئة',
+    'spd.normal': 'عادية',
+    'spd.fast': 'سريعة',
+    'hint.autoReduced': 'معطّل لأن نظامك يطلب تقليل الحركة.',
+    'opt.tr': 'الانتقال بين المشاهد',
+    'tr.walk': 'مشي',
+    'tr.fade': 'تلاشٍ',
+    'tr.none': 'بلا انتقال',
     'opt.meta': 'إظهار تاريخ التصوير وموقعه',
     'opt.click': 'النقر في أي مكان للانتقال',
     'hint.click':
@@ -389,7 +397,15 @@ const I18N = {
     'sec.plan': 'Floor plan',
     'sec.embed': 'Embed code',
     'opt.autorotate': 'Auto-rotate',
-    'opt.walk': 'Smooth transitions between scenes',
+    'f.autoSpeed': 'Speed',
+    'spd.slow': 'Slow',
+    'spd.normal': 'Normal',
+    'spd.fast': 'Fast',
+    'hint.autoReduced': 'Off because your system asks for reduced motion.',
+    'opt.tr': 'Transition between scenes',
+    'tr.walk': 'Walk',
+    'tr.fade': 'Fade',
+    'tr.none': 'None',
     'opt.meta': 'Show capture date and location',
     'opt.click': 'Click anywhere to move',
     'hint.click':
@@ -1518,10 +1534,10 @@ function hotspotLabel(h, sel) {
 // The objects that show hotspot h: the icon sprite ic, or on the floor the decal dc with an
 // invisible sprite ic over it that catches the pointer (a decal near the horizon is too thin
 // to hit), and the label sprite lb. Sizes are in world units at scale 1; a is the label's
-// opacity.
+// opacity and g the hotspot's growth on hover, eased in the render loop.
 function makeHotspotSprite(h) {
   const sel = mode == 'edit' && selId == h.id,
-    e = { h, a: 1 };
+    e = { h, a: 1, g: h === hovered || h === peek?.h ? 1.2 : 1 };
   if (h.shape != 'none') {
     const tex = canvasTex(hotspotIcon(h, sel, onFloor(h)));
     if (onFloor(h)) {
@@ -1635,7 +1651,10 @@ function buildHotspots() {
   preload();
 }
 // ───────────── scene loading ─────────────
-async function showScene(i) {
+// o.fade cross-fades into the scene once its panorama is ready, over o.fade ms. o.via is the
+// link hotspot taken from scene o.from: the camera then stays as it is and the scene turns to
+// arrivalHeading(), as a walk would, instead of opening at its start view.
+async function showScene(i, o = {}) {
   const s = scenes[i];
   if (!s) return;
   current = i;
@@ -1657,20 +1676,36 @@ async function showScene(i) {
     busy(-1);
   }
   if (current != i) return;
+  const ms = o.fade && !renderer.xr.isPresenting && sphereMat.map ? o.fade : 0,
+    f = camera.fov;
+  stopFade();
+  if (ms) {
+    // The panorama on screen goes on fadeMesh where it is now, and stays there as the view
+    // below it moves to the new scene. Set before useTexture(), which never releases it.
+    fadeMesh.material.map = sphereMat.map;
+    fadeMesh.material.needsUpdate = true;
+    fadeMesh.quaternion.copy(level.quaternion);
+    fadeQ.copy(camera.quaternion).invert().multiply(world.quaternion);
+  }
   useTexture(s.id);
   sphereMat.map = textures[s.id];
   sphereMat.needsUpdate = true;
-  worldTurn = s.u0 || 0;
+  if (o.via) {
+    worldTurn = arrivalHeading(o.from, s, o.via, worldTurn - yaw / (2 * PI)) + yaw / (2 * PI);
+  } else {
+    worldTurn = s.u0 || 0;
+    yaw = 0;
+    pitch = s.p0 || 0;
+  }
   world.rotation.y = 2 * PI * worldTurn + PI / 2;
   level.quaternion.fromArray(s.lq || NO_TILT);
-  yaw = 0;
-  pitch = s.p0 || 0;
   fov = s.f0 || FOV0;
   camera.fov = fov;
   camera.updateProjectionMatrix();
   if (gyro) calibrateGyro();
   buildHotspots();
   ui();
+  if (ms) crossFade(ms, f);
 }
 // ───────────── capture date and position ─────────────
 // Panoramas are re-encoded on the way in, which drops their Exif block, so the capture
@@ -2342,8 +2377,8 @@ $('sb').onclick = ev => {
   if (a == 'grid') openGrid(b);
   else if (a) {
     const k = current + (a == 'next' ? 1 : -1);
-    if (scenes[k]) showScene(k);
-  } else showScene(+b.dataset.i);
+    if (scenes[k]) jumpTo(k);
+  } else jumpTo(+b.dataset.i);
 };
 $('hlist').onclick = e => {
   const b = e.target.closest('button');
@@ -2370,7 +2405,51 @@ $('ptitle').oninput = e => {
 $('auto').onchange = e => {
   project.auto = e.target.checked;
   save();
+  syncAuto();
 };
+// autoSpd multiplies the speed, 0.5 or 2; left out at 1.
+$('asp').onchange = e => {
+  const v = +e.target.value;
+  if (v == 1) delete project.autoSpd;
+  else project.autoSpd = v;
+  save();
+};
+// ── auto-rotate ──
+// It waits AUTO_IDLE ms after the visitor's last input, then eases up to speed over AUTO_RAMP
+// ms. A mouse moving over the panorama counts as input, so a hotspot being aimed at does not
+// slide away. Reduced motion keeps it off on this device, whatever the project says.
+const AUTO_SPEED = 0.08, // radians a second
+  AUTO_IDLE = 4000,
+  AUTO_RAMP = 1000;
+let autoAt = 0;
+const autoStop = () => (autoAt = performance.now());
+['pointerdown', 'keydown', 'wheel'].forEach(k =>
+  addEventListener(k, autoStop, { capture: true, passive: true })
+);
+glCanvas.addEventListener('pointermove', autoStop, { passive: true });
+// Held while anything is open over the panorama (the info popup, the scene grid, the start
+// screen, the enlarged plan) and while a walk or the gyroscope moves the camera.
+const autoHeld = () =>
+  !project.auto ||
+  mode != 'view' ||
+  reduceMotion.matches ||
+  !!drag ||
+  pointers.size > 0 ||
+  gyro ||
+  walking ||
+  planBig ||
+  !$('pop').hidden ||
+  !$('sgm').hidden ||
+  !$('start').hidden;
+function syncAuto() {
+  $('auto').checked = !!project.auto;
+  $('asp').value = String(project.autoSpd || 1);
+  $('aspw').hidden = !project.auto;
+  $('autoh').hidden = !(project.auto && reduceMotion.matches);
+}
+// The system setting is followed live: the render loop and link activation read it each
+// time, and the hint says when it is what keeps auto-rotate off.
+reduceMotion.addEventListener?.('change', syncAuto);
 $('hdon').onchange = e => {
   if (e.target.checked) project.hd = true;
   else delete project.hd;
@@ -2992,6 +3071,8 @@ $('pfile').onchange = async e => {
       desc: String(raw.desc ?? ''),
       auto: !!raw.auto,
       walk: raw.walk !== false,
+      ...(raw.walk !== false && raw.tr === 'fade' && { tr: 'fade' }),
+      ...((raw.autoSpd === 0.5 || raw.autoSpd === 2) && { autoSpd: raw.autoSpd }),
       meta: !!raw.meta,
       ...(raw.hd === true && { hd: true }),
       ...(raw.click === true && { click: true }),
@@ -3096,6 +3177,7 @@ function setProject(id, d) {
   projectId = id;
   project = d;
   scenes = project.scenes;
+  stopFade();
   sphereMat.map = fadeMesh.material.map = null;
   for (const k in textures) dropTexture(k);
   for (const k in texLoads) delete texLoads[k];
@@ -3112,8 +3194,8 @@ function setProject(id, d) {
   storedSnd = new Map(scenes.filter(s => s.snd).map(s => [s.id, s.snd.blob]));
   editCount = 0;
   $('ptitle').value = project.title || '';
-  $('auto').checked = !!project.auto;
-  $('wk').checked = project.walk !== false;
+  syncAuto();
+  $('trn').value = transition();
   $('hdon').checked = !!project.hd;
   $('ca').checked = !!project.click;
   toast('');
@@ -3310,7 +3392,7 @@ function closeGrid() {
 }
 function pickGrid(i) {
   closeGrid();
-  if (i != current && !walking) showScene(i);
+  if (i != current && !walking) jumpTo(i);
 }
 function filterGrid() {
   const q = $('sgf').value,
@@ -3451,6 +3533,55 @@ const animate = (ms, f) =>
       };
     requestAnimationFrame(step);
   });
+// ── cross-fade ──
+// A jump, and a link taken without the walk, swap the scene at once and lay the last panorama
+// over it, turned so that it shows the frame that was on screen, then fade it out. The new
+// scene's hotspots fade in meanwhile (hsFade, applied in the render loop). The zoom eases to
+// the new scene's start zoom, unless reduced motion is asked for or the visitor zooms.
+const easeCubic = k => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2),
+  fadeQ = new THREE.Quaternion(),
+  camQ = new THREE.Quaternion(),
+  camE = new THREE.Euler(0, 0, 0, 'YXZ');
+let fading = 0, // the fade in progress, or 0
+  hsFade = 1;
+// The project's transition between scenes: 'walk', 'fade' or 'none'. A headset never walks
+// or fades, since the motion would fill the visitor's whole field of view.
+const transition = () => (project.walk === false ? 'none' : project.tr == 'fade' ? 'fade' : 'walk');
+// A link's cross-fade lasts 500 ms and a jump's 350, less under reduced motion.
+const fadeMs = jump => (reduceMotion.matches ? (jump ? 150 : 250) : jump ? 350 : 500);
+// A jump, from the scene bar, the grid or the plan, cross-fades in the tour unless the project
+// has no transitions. The editor's scene list stays instant, for speed while authoring.
+const jumpTo = i =>
+  showScene(i, { fade: mode == 'view' && transition() != 'none' && fadeMs(true) });
+function stopFade() {
+  if (!fading) return;
+  fading = 0;
+  hsFade = 1;
+  fadeMesh.visible = false;
+  fadeMesh.material.map = null;
+  fadeMesh.quaternion.identity();
+  fadeGroup.quaternion.identity();
+}
+function crossFade(ms, f0) {
+  const id = ++fading,
+    f1 = fov;
+  // The camera the next frame will draw with: gyro sets the pitch itself.
+  camE.set(gyro && gyroReady ? camera.rotation.x : pitch, yaw, 0);
+  fadeGroup.quaternion.multiplyQuaternions(camQ.setFromEuler(camE), fadeQ);
+  fadeMesh.material.opacity = 1;
+  fadeMesh.visible = true;
+  hsFade = 0;
+  const zoom = !reduceMotion.matches && Math.abs(f1 - f0) > 0.1;
+  if (zoom) setFov(f0);
+  return animate(ms, k => {
+    if (fading != id) return;
+    const e = easeCubic(k);
+    fadeMesh.material.opacity = 1 - e;
+    hsFade = e;
+    if (zoom && fov == f1) setFov(f0 + (f1 - f0) * e);
+    if (k == 1) stopFade();
+  });
+}
 async function ensureTexture(s, urgent) {
   try {
     await loadTexture(s, urgent);
@@ -3478,6 +3609,7 @@ async function walkTo(i, h) {
     from = scenes[current];
   walking = true;
   walkTarget = s.id;
+  stopFade();
   $('pop').hidden = true;
   try {
     if (!(await ensureTexture(s, true))) {
@@ -3538,8 +3670,13 @@ async function walkTo(i, h) {
     walkTarget = null;
   }
 }
-$('wk').onchange = e => {
-  project.walk = e.target.checked;
+// walk stays a boolean, false for no transition, so a build that predates tr still reads it;
+// tr: 'fade' is left out unless chosen.
+$('trn').onchange = e => {
+  const v = e.target.value;
+  project.walk = v != 'none';
+  if (v == 'fade') project.tr = 'fade';
+  else delete project.tr;
   save();
 };
 // ───────────── gyroscope ─────────────
@@ -3704,8 +3841,14 @@ function clickTarget(e, aim = true) {
 function activate(h) {
   if (inert(h)) return;
   if (h.type == 'link') {
-    const k = scenes.findIndex(s => s.id == h.to);
-    if (k >= 0) project.walk !== false && !renderer.xr.isPresenting ? walkTo(k, h) : showScene(k);
+    const k = scenes.findIndex(s => s.id == h.to),
+      tr = renderer.xr.isPresenting ? 'none' : transition();
+    // Reduced motion and the fade both cross-fade without turning, keeping the walk's heading.
+    if (k < 0) return;
+    if (tr == 'none') showScene(k);
+    else if (tr == 'walk' && !reduceMotion.matches) walkTo(k, h);
+    else if (!walking && k != current)
+      showScene(k, { fade: fadeMs(false), via: h, from: scenes[current] });
   } else if (renderer.xr.isPresenting) showVrPanel(h);
   else {
     const p = $('pop');
@@ -3929,7 +4072,13 @@ renderer.setAnimationLoop(time => {
   turnQuat.setFromAxisAngle(UP, world.rotation.y);
   nadirGroup.quaternion.copy(turnQuat).multiply(level.quaternion).multiply(turnQuat.invert());
   if (!xr) {
-    if (project.auto && mode == 'view' && !drag && !gyro) yaw -= dt * 0.08;
+    // Auto-rotate waits AUTO_IDLE ms after the last input or anything that stops it, then
+    // eases up to speed over AUTO_RAMP ms.
+    if (autoHeld()) autoAt = time;
+    else {
+      const r = Math.min(1, Math.max(0, (time - autoAt - AUTO_IDLE) / AUTO_RAMP));
+      yaw -= dt * AUTO_SPEED * (project.autoSpd || 1) * ease(r);
+    }
     if (gyro && gyroReady) {
       const f = gyroDirection();
       yaw = gyroYawOffset + Math.atan2(-f.x, -f.z);
@@ -3970,17 +4119,17 @@ renderer.setAnimationLoop(time => {
   if (peek && time > peek.until) peek = null;
   // The floor's up, in the panorama's frame: the level correction tilts the photo to it.
   const up = floorUp.copy(UP).applyQuaternion(floorQ.copy(level.quaternion).invert()),
-    fade = reduceMotion.matches ? 1 : Math.min(1, dt * 12);
+    fade = reduceMotion.matches ? 1 : Math.min(1, dt * 12),
+    grow = 1 - Math.exp(-dt * 14);
   hsParts.forEach(e => {
     const h = e.h,
       gazed = gazeTarget?.userData.h === h,
       on = gazed || h === hovered || h === peek?.h,
-      k =
-        fit *
-        (h.size || 1) *
-        (h.fix ? keep : 1) *
-        (on ? 1.2 : 1) *
-        (gazed ? 1 + (gazeTime / need) * 0.3 : 1);
+      to = on ? 1.2 : 1;
+    // Grows toward its target with a 70 ms time constant, alike at any frame rate.
+    e.g = reduceMotion.matches ? to : e.g + (to - e.g) * grow;
+    const k =
+      fit * (h.size || 1) * (h.fix ? keep : 1) * e.g * (gazed ? 1 + (gazeTime / need) * 0.3 : 1);
     let vs = 1;
     if (e.dc) {
       vs = layDecal(e, up);
@@ -3988,13 +4137,15 @@ renderer.setAnimationLoop(time => {
       e.dc.scale.set(w, w, 1);
       e.ic.scale.set(w, w * Math.max(vs, 0.35), 1);
     } else if (e.ic) e.ic.scale.set(e.iw * k, e.iw * k, 1);
+    const im = e.dc || e.ic;
+    if (im) im.material.opacity = hsFade;
     if (e.lb) {
       // Always shown in the editor, where the author needs to see what they are placing.
       const show = mode == 'edit' || on || !hoverLabel(h) ? 1 : 0;
       e.a += (show - e.a) * fade;
       if (Math.abs(show - e.a) < 0.01) e.a = show;
-      e.lb.material.opacity = e.a;
-      e.lb.visible = e.a > 0;
+      e.lb.material.opacity = e.a * hsFade;
+      e.lb.visible = e.a * hsFade > 0;
       e.lb.scale.set((e.lW / HS_PX) * k, (e.lH / HS_PX) * k, 1);
       placeLabel(e, vs);
     }
@@ -4724,7 +4875,7 @@ $('pdots').onclick = e => {
   if (!b || planMoved || placingPlan) return;
   e.stopPropagation();
   setPlanBig(false);
-  showScene(+b.dataset.i);
+  if (!walking) jumpTo(+b.dataset.i);
 };
 // Placing a scene works on the enlarged plan, where a marker can be put down precisely.
 // On the small plan a click enlarges it.
@@ -5469,8 +5620,8 @@ if (!EMBED) {
   }
   $('ptitle').value = project.title;
   $('pdesc').value = project.desc || '';
-  $('auto').checked = !!project.auto;
-  $('wk').checked = project.walk !== false;
+  syncAuto();
+  $('trn').value = transition();
   $('hdon').checked = !!project.hd;
   $('ca').checked = !!project.click;
   resetHist();
