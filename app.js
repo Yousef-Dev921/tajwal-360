@@ -2847,7 +2847,7 @@ const sbS = document.createElement('div');
 sbS.id = 'sbs';
 sbS.setAttribute('role', 'group');
 let sbRows = [], // [index, id, thumbnail, label] of each cell as the strip shows it
-  sbAt = -1, // the scene the strip was last centred on, or -1 to centre at once when shown
+  sbAt = '', // the scene the strip was last centred on, and the direction, or '' when hidden
   sbLive = false; // whether sbIO is watching the cells
 const sbFace = (r, j) =>
     r[2]
@@ -2926,7 +2926,7 @@ function renderBar() {
     sbTip(null);
     if (sbLive) sbWatch(false);
     sb.dataset.k = kind;
-    sbAt = -1;
+    sbAt = '';
     sb.innerHTML = !kind
       ? ''
       : kind == 'strip'
@@ -3005,11 +3005,13 @@ function renderStrip(L, k) {
     (on || cells[0]).tabIndex = 0;
   }
   if (sbLive != (mode == 'view')) sbWatch(mode == 'view');
-  // Shown again, it centres at once; a new scene glides into the middle.
-  if (mode != 'view') sbAt = -1;
-  else if (on && sbAt != current) {
-    sbCentre(on, sbAt >= 0);
-    sbAt = current;
+  // Shown again, or turned round by a change of language, it centres at once; a new scene
+  // glides into the middle.
+  const at = current + (isRTL() ? 'r' : 'l');
+  if (mode != 'view') sbAt = '';
+  else if (on && sbAt != at) {
+    sbCentre(on, sbAt.slice(-1) == at.slice(-1));
+    sbAt = at;
   }
 }
 // Arrows move along the strip, in the reading direction; Enter and Space open the scene.
