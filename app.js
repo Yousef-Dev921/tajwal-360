@@ -1240,7 +1240,8 @@ function toDoc(Q) {
     scenes: (Q.scenes || []).map(({ img, blob, hd, hdBlob, sq, sqBlob, ...r }) => {
       // The scene's clip is stored under its own key too; the document keeps its options.
       if (r.snd) r.snd = sndOpts(r.snd);
-      if (sqBlob) r.sq = 1;
+      // What the thumbnail was made for, so one saved just before a change is made again.
+      if (sqBlob) r.sq = sqMade.get(sqBlob)?.key || 1;
       return hdBlob ? { ...r, hd: 1 } : r;
     }),
   };
@@ -1269,12 +1270,23 @@ async function flush() {
     gone = hdGone;
   try {
     for (const sid of [...dirtyScenes]) {
-      const s = Q.scenes.find(x => x.id == sid);
-      if (s && s.blob) await dbOp('put', 'b:' + id + ':' + sid, s.blob);
-      if (s && s.hdBlob) await dbOp('put', 'h:' + id + ':' + sid, s.hdBlob);
-      else if (s && gone.has(sid)) await dbOp('del', 'h:' + id + ':' + sid).catch(() => {});
-      gone.delete(sid);
+      // The images and marks are taken before the writes: a replace undone while they run
+      // marks the scene again, and the next save writes what it put back.
+      const s = Q.scenes.find(x => x.id == sid),
+        b = s?.blob,
+        hb = s?.hdBlob,
+        drop = !!s && !hb && gone.has(sid);
       dirtyScenes.delete(sid);
+      gone.delete(sid);
+      try {
+        if (b) await dbOp('put', 'b:' + id + ':' + sid, b);
+        if (hb) await dbOp('put', 'h:' + id + ':' + sid, hb);
+        else if (drop) await dbOp('del', 'h:' + id + ':' + sid).catch(() => {});
+      } catch (x) {
+        dirtyScenes.add(sid);
+        if (drop) gone.add(sid);
+        throw x;
+      }
     }
     // Taken now rather than cleared after the write: opening another project during the
     // await sets the flags for that project, and clearing them afterwards would lose them.
@@ -1445,8 +1457,9 @@ async function loadProject(id) {
       const b = s.img && (await dbOp('get', 't:' + id + ':' + s.id).catch(() => null));
       if (b instanceof Blob) {
         s.sqBlob = b;
+        // Made for the view it records, or (sq: 1) for the scene as it was saved.
+        sqMade.set(b, { img: s.blob, key: typeof s.sq == 'string' ? s.sq : sqKey(s) });
         s.sq = objURL(b);
-        sqMade.set(b, { img: s.blob, key: sqKey(s) }); // as it was saved
       } else delete s.sq; // made again while the editor is idle
     }
     if (!Array.isArray(s.hs)) s.hs = [];
@@ -3419,6 +3432,11 @@ async function swapPano(id) {
   } catch (e) {}
   busy(-1);
   if (n != w.n) return; // a newer change is loading its own
+  // Left meanwhile: the new texture waits in the cache, or goes with a deleted scene.
+  if (scenes[current]?.id != id) {
+    if (!scenes.some(x => x.id == id)) dropTexture(id);
+    return done();
+  }
   if (sphereMat.map === old) {
     sphereMat.map = tex;
     sphereMat.needsUpdate = true;
@@ -4008,6 +4026,10 @@ function relink() {
 // may be between reading the scene list and deleting the files.
 function undeleteScene(pid, at, s) {
   if (pid != projectId || scenes.some(x => x.id == s.id)) return;
+  // A replace or a new thumbnail may have released URLs it shares with a copy undo brought back.
+  s.img = liveURL(s.img, s.blob);
+  if (s.hdBlob) s.hd = liveURL(s.hd, s.hdBlob);
+  if (s.sqBlob) s.sq = liveURL(s.sq, s.sqBlob);
   const k = ghostPlace(idsOf(scenes), sceneWas, s.id),
     i = k < 0 ? Math.min(at, scenes.length) : k,
     dead = h => h.type == 'link' && !scenes.some(x => x.id == h.to);
@@ -6873,7 +6895,7 @@ function renderSq(s, pano) {
 }
 // Gives scene id a new thumbnail rendered from pano, if the scene still shows the same image
 // from the same view once it is encoded; otherwise a newer request is on its way. Returns
-// whether it was taken.
+// whether it was taken; throws when no JPEG could be made.
 async function sqFrom(id, pano) {
   const pid = projectId,
     s = scenes.find(x => x.id == id);
@@ -6883,7 +6905,8 @@ async function sqFrom(id, pano) {
   }
   const b = await renderSq(s, pano),
     x = scenes.find(y => y.id == id);
-  if (!b || pid != projectId || !x || !sqFits(b, x)) return false;
+  if (!b) throw new Error('encode');
+  if (pid != projectId || !x || !sqFits(b, x)) return false;
   const old = x.sq;
   x.sq = objURL(b);
   x.sqBlob = b;
@@ -6932,15 +6955,19 @@ function sqFill() {
   if (EMBED || sqFilling) return;
   sqFilling = 1;
   whenIdle(async () => {
-    const s = scenes.find(x => x.blob && !x.sqBlob && !sqFailed.has(x.blob));
+    // Missing, or no longer fitting its scene (one saved just before its view changed).
+    const s = scenes.find(
+      x => x.blob && !sqFailed.has(x.blob) && !(x.sqBlob && sqFits(x.sqBlob, x))
+    );
     if (!s) return (sqFilling = 0);
-    if (walking || fading || iqBusy() || repBusy || document.hidden) {
+    if (walking || fading || iqBusy() || repBusy || document.hidden || renderer.xr.isPresenting) {
       sqFilling = 0;
       return setTimeout(sqFill, 1000);
     }
     const b = s.blob;
+    // Only a render that fails is given up on; one overtaken by a change is tried again.
     try {
-      if (!(await sqRedo(s.id)) && scenes.includes(s) && s.blob === b && !s.sqBlob) sqFailed.add(b);
+      await sqRedo(s.id);
     } catch (e) {
       sqFailed.add(b);
     }
@@ -7574,6 +7601,7 @@ if (!EMBED) {
           applyMigration(d);
           storedSceneIds = new Set(scenes.map(s => s.id));
           storedSnd = new Map(scenes.filter(s => s.snd).map(s => [s.id, s.snd.blob]));
+          storedSq = new Map(scenes.filter(s => s.sqBlob).map(s => [s.id, s.sqBlob]));
         }
       }
       if (!projectId) {
@@ -7621,4 +7649,5 @@ if (!EMBED) {
       $('sgo').disabled = false;
       $('sgo').textContent = t('view.start');
     });
+  sqFill(); // scenes from before square thumbnails, or whose thumbnail no longer fits
 })();
