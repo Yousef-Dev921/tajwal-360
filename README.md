@@ -102,6 +102,15 @@ that isn't granted it says once per session that the browser may clear the work.
 - Glyphs on light icon colours, such as white, are drawn dark so they stay visible.
 - 60 steps of undo and redo.
 - Scene thumbnails, drag-to-reorder, rename and delete.
+- Deleting a scene or a hotspot leaves a message with an Undo button for 10 seconds. Undo
+  puts a scene back at its place in the tour with its images, clip, thumbnail and every link
+  that led to it, at its place in each scene's list, even after autosave has removed its
+  files from storage; a hotspot comes back at its place in its scene, selected.
+- Messages stack, up to three at a time with the newest at the bottom, each with a close
+  button. They wait while the pointer is over them or focus is in them, sit over the
+  panorama clear of the scene bar (on a phone, clear of the bottom sheet too), and are read
+  to screen readers once each, without their buttons. Progress of an export or import stays
+  one message that updates in place.
 - Tours of more than 12 scenes get a search field over the scene list and over a link's
   list of destinations. Search ignores case, accents and Arabic diacritics, treats the alef
   forms (أ إ آ ا) as one, and finds a scene by its number in the tour as well as by name.
