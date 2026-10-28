@@ -33,9 +33,30 @@ that isn't granted it says once per session that the browser may clear the work.
 ## Features
 
 ### Editing
-- Load several panoramas at once, by file picker or drag-and-drop. Anything wider than
-  4096px is downscaled; anything that is not roughly 2:1 is placed as a flat panel
-  instead of being stretched across the sphere.
+- Load several panoramas at once, by file picker or by dropping them on the panorama, which
+  shows where they will land. Anything wider than 4096px is downscaled.
+- Images are added one at a time through an import queue above the scene list (floating at
+  the foot of the panorama on a phone). Each file has a row that shows where it is: waiting,
+  reading, preparing the stored copies, added (with its thumbnail), or failed, which stays
+  until the queue is closed. The header counts the files ("Adding images 3 of 12"), and so
+  does the browser tab's title, so a long import can be watched from another tab. The first
+  scene opens as soon as it is ready, Stop (or Escape) finishes the file in hand and drops
+  the rest, and the whole import is one step of undo (undo waits while files are being
+  read). Files are read one at a time, taking
+  turns with the panoramas being shown, so a phone holds one decoded original at once.
+- A file already in the project is caught before it becomes a second scene: the row offers
+  Skip, already focused, or Add anyway, and with two or more there is Skip all duplicates.
+  Files are compared by a SHA-256 hash of their first 4 MB and their size, so a renamed
+  copy is caught too. Where the browser has no `crypto.subtle` (a page that is neither
+  https nor localhost), the same name and byte size count as the same file. Scenes added
+  before this change have no hash; for them a file with the scene's name whose stored copy
+  would be the same size is flagged as possibly a duplicate.
+- An image that is not roughly 2:1 is not placed until you choose: as a flat photo on a
+  dark panorama, or skipped. Between 1.7:1 and 2.4:1, the ratio of a cropped panorama, it
+  can also be stretched to fill the sphere, and that is the default. The other files keep
+  going meanwhile.
+- An exported tour, and the editor's Preview, refuse dropped files with a no-drop pointer,
+  so a stray drop can't replace the tour with the image.
 - High-resolution panoramas, a project option under Viewing options. While it is on, a
   panorama wider than 4096 px also keeps a master of up to 8192 px, and the 4096 px copy is
   drawn from that master. Desktops show the master; phones, tablets and any GPU that can't
@@ -296,6 +317,8 @@ whichever way the project was opened.
     "taken": "2026-10-20T09:14:37",
     "gps": { "lat": 24.7136111, "lon": 46.6752778 },
     "snd": { "src": "data:audio/mpeg;base64,...", "name": "guide.mp3", "loop": true, "delay": 2 },
+    "src": { "h": "9f86d0…(64 hex)", "name": "IMG_0042.jpg", "w": 8192, "h0": 4096,
+             "bytes": 23514112, "type": "image/jpeg" },
     "hs": [{
       "id": "x1", "type": "link", "to": "<sceneId>",
       "label": "", "text": "", "shape": "arrow",
@@ -344,6 +367,12 @@ whichever way the project was opened.
   visitor stays, and `delay` is the wait in whole seconds before it starts, 0 to 30; both
   are left out at their defaults. On import the clip must be a `data:audio/` URL of at most
   8 MB.
+- Scene `src`, optional, describes the file the scene was made from: `h` the SHA-256 hash
+  of its first 4 MB and its size (64 lowercase hex digits, used to find duplicates), `name`
+  the file name (at most 120 characters), `w` and `h0` its pixel size before any scaling
+  (1 to 65535), `bytes` its size and `type` its MIME type (at most 40 characters). Each part
+  is checked on import and left out if it doesn't fit. An exported tour leaves out `h`; a
+  `.json` backup keeps it, so duplicates are still found after the backup is imported.
 - `logo.pos` is a physical corner (`tl`, `tr`, `bl` or `br`), so the logo stays put when
   the language changes. `size` runs from 5 to 40 and scales the logo's area against the
   screen, `op` is its opacity, and `ar` its width-to-height ratio.

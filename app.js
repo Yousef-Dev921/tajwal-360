@@ -1823,8 +1823,11 @@ const IQ_STEP = { wait: 0, read: 0.33, scale: 0.66, dup: 0.33, flat: 0.33, done:
   IQ_END = { done: 1, fail: 1, skip: 1 },
   iqMq = matchMedia('(max-width: 760px)');
 // The open queue: Q, the project it adds to; rows, one per file of this batch; run, while
-// a file is being read; stop, once Stop is pressed; added, scenes added so far.
+// a file is being read; stop, once Stop is pressed; added, scenes added so far. iqRuns counts
+// the queues reading a file, and iqLast settles when the latest of them is done.
 let iq = null,
+  iqRuns = 0,
+  iqLast = Promise.resolve(),
   iqUiAt = 0,
   iqUiT;
 function addFiles(files) {
@@ -1842,8 +1845,13 @@ function addFiles(files) {
   iqRun();
 }
 const iqBusy = () => iq && (iq.run || iq.rows.some(r => !IQ_END[r.st]));
-function iqClear() {
-  if (iq) iq.stop = true;
+// Closes the panel. drop also gives up the file in hand, for a project that is being closed:
+// one added while it is saved for the last time would be lost with an "Added" beside it.
+function iqClear(drop) {
+  if (iq) {
+    iq.stop = true;
+    if (drop) iq.Q = null;
+  }
   iq = null;
   const p = $('iq');
   if (!p) return;
@@ -1859,9 +1867,11 @@ function iqFocusOut() {
 // Small screens show the panel as a sheet under the stage; the queue floats at the bottom
 // of the stage there, where it stays in sight while the sheet is scrolled.
 function iqPlace() {
-  const p = $('iq');
+  const p = $('iq'),
+    a = p.contains(document.activeElement) && document.activeElement;
   if (iqMq.matches) $('stage').appendChild(p);
   else $('sfilt').before(p);
+  if (a) a.focus(); // moving a node blurs what has focus inside it
 }
 // The first 4 MB and the size tell files apart well enough, at 10–30 ms a file. crypto.subtle
 // exists only in a secure context (https, localhost); elsewhere there is no hash, and a
@@ -1895,11 +1905,15 @@ async function jpegSize(b) {
 }
 // A scene made from the same file: the same hash, or the same name and byte size where
 // either side has no hash.
-const iqDupOf = r =>
-  scenes.find(
-    s =>
-      s.src && (r.h && s.src.h ? s.src.h == r.h : s.src.name == r.f.name && s.src.bytes == r.f.size)
-  );
+const srcName = n => n.trim().slice(0, 120), // as cleanSrc keeps it
+  iqDupOf = r =>
+    scenes.find(
+      s =>
+        s.src &&
+        (r.h && s.src.h
+          ? s.src.h == r.h
+          : s.src.name == srcName(r.f.name) && s.src.bytes == r.f.size)
+    );
 // Scenes added before scenes recorded their file can only be guessed at: the same name, and
 // a stored copy of the size this image would make. Only the first decode tells that size.
 async function iqMaybeDup(r, w, h, flat) {
@@ -1917,21 +1931,31 @@ async function iqRun() {
   const q = iq;
   if (!q || q.run) return;
   q.run = true;
+  iqRuns++;
   busy(1);
-  let r;
+  syncUndoButtons();
+  // A queue stopped a moment ago may still be finishing its file; this one waits for it.
+  const prev = iqLast,
+    a0 = q.added;
+  let r, done;
+  iqLast = new Promise(res => (done = res));
   try {
+    await prev;
     while (!q.stop && q.Q === project && (r = q.rows.find(x => x.st == 'wait'))) await iqOne(q, r);
   } finally {
     q.run = false;
+    iqRuns--;
     busy(-1);
+    done();
+    syncUndoButtons();
   }
   if (q.Q !== project) return;
-  if (q.added) {
-    // The list was redrawn at most every 250 ms; now it shows them all, and the import is one
-    // step of undo.
+  if (q.added > a0) {
+    // The list was redrawn at most every 250 ms; now it shows them all, and the files this
+    // run added are one step of undo.
     clearTimeout(iqUiT);
+    iqList();
     save();
-    ui();
   }
   if (q.stop) toast(t('iq.stopped', { n: q.added }));
   if (iq === q) {
@@ -1952,7 +1976,7 @@ async function iqOne(q, r) {
     if (f.type && !f.type.startsWith('image/')) throw new Error('type');
     if (r.h === undefined) r.h = await fileHash(f);
     const d = !r.force && iqDupOf(r);
-    if (d) return iqAsk(r, 'dup', { name: d.name });
+    if (d) return iqAsk(q, r, 'dup', { name: d.name });
     const cap = await readCapture(f);
     await decodeTurn('iq');
     try {
@@ -1964,7 +1988,7 @@ async function iqOne(q, r) {
     iqSet(r, 'fail');
     return;
   }
-  if (ask) return iqAsk(r, ask[0], ask[1]);
+  if (ask) return iqAsk(q, r, ask[0], ask[1]);
   // Opening another project meanwhile drops the file; Stop lets it finish.
   if (q.Q !== project) {
     freeURL(s.img);
@@ -1987,22 +2011,23 @@ async function iqOne(q, r) {
 }
 // Decodes the file and makes the scene, or says what to ask first.
 async function iqMake(r, cap) {
-  const f = r.f,
-    im = await createImageBitmap(f);
+  const im = await createImageBitmap(r.f);
+  try {
+    return await iqDraw(r, cap, im);
+  } finally {
+    im.close();
+  }
+}
+async function iqDraw(r, cap, im) {
+  const f = r.f;
   iqSet(r, 'scale');
   const ratio = im.width / im.height;
   let flat = Math.abs(ratio - 2) > 0.15;
   if (!r.force) {
     const d = await iqMaybeDup(r, im.width, im.height, flat);
-    if (d) {
-      im.close();
-      return [null, ['dup', { name: d.name, maybe: 1 }]];
-    }
+    if (d) return [null, ['dup', { name: d.name, maybe: 1 }]];
   }
-  if (flat && !r.mode) {
-    im.close();
-    return [null, ['flat', { ratio }]];
-  }
+  if (flat && !r.mode) return [null, ['flat', { ratio }]];
   // Stretched, a near-panorama is drawn at 2:1 and fills the sphere.
   if (r.mode == 'stretch') flat = false;
   const ar = r.mode == 'stretch' ? 2 : ratio,
@@ -2048,7 +2073,7 @@ async function iqMake(r, cap) {
   }
   const w = im.width,
     h = im.height;
-  im.close();
+  im.close(); // closed again by iqMake, which does nothing
   const blob = await canvasBlob(canvas, 'image/jpeg', 0.86),
     th = sceneThumb(canvas);
   canvas.width = canvas.height = 0; // and the 32 MB copy, before the next file
@@ -2067,7 +2092,7 @@ async function iqMake(r, cap) {
       // The original file, as it was before the copies were made.
       src: {
         ...(r.h && { h: r.h }),
-        name: f.name.slice(0, 120),
+        name: srcName(f.name),
         w,
         h0: h,
         bytes: f.size,
@@ -2078,15 +2103,20 @@ async function iqMake(r, cap) {
   ];
 }
 // Each added scene redraws the scene list, at most every 250 ms: with 150 scenes it carries
-// a few hundred KB of thumbnails.
+// a few hundred KB of thumbnails. Only the list: the rest of the panel, a hotspot's fields
+// say, may be in use while the files come in.
 function iqUi() {
   clearTimeout(iqUiT);
   const w = 250 - (performance.now() - iqUiAt);
   if (w > 0) iqUiT = setTimeout(iqUi, w);
   else {
     iqUiAt = performance.now();
-    ui();
+    iqList();
   }
+}
+function iqList() {
+  $('empty').hidden = scenes.length > 0;
+  renderScenes();
 }
 function iqRow(r) {
   const li = document.createElement('li');
@@ -2099,7 +2129,9 @@ function iqRow(r) {
   $('iql').appendChild(li);
   iqSet(r, r.st);
 }
-function iqAsk(r, st, o) {
+function iqAsk(q, r, st, o) {
+  // Stopped while this file was being read: nothing more is asked.
+  if (q.stop) return iqSet(r, 'skip');
   Object.assign(r, o);
   iqSet(r, st);
   // The choice that fits takes focus, unless the author is busy elsewhere in the editor.
@@ -2135,13 +2167,19 @@ function iqPaint(r) {
           : '';
   bar.firstChild.style.width = (IQ_STEP[st] || 0) * 100 + '%';
   if (r.th && !tb.firstChild) tb.innerHTML = `<img src="${esc(r.th)}" alt="">`;
-  let ch = [];
-  if (st == 'dup') ch = ['skip', 'add'];
-  else if (st == 'flat')
-    // Stretching suits a near-panorama, 1.7 to 2.4; a wider image is part of a panorama,
-    // which stretched across the whole sphere would be distorted beyond use.
-    ch = r.ratio > 2.4 ? ['flat', 'skip'] : ['stretch', 'flat', 'skip'];
-  const def = st == 'dup' ? 'skip' : r.ratio >= 1.7 && r.ratio <= 2.4 ? 'stretch' : 'flat',
+  // Stretching suits a near-panorama, 1.7 to 2.4, such as a cropped one. A wider image is part
+  // of a panorama, and a narrower one an ordinary photo: stretched around the whole sphere,
+  // either would be distorted beyond use.
+  const near = r.ratio >= 1.7 && r.ratio <= 2.4,
+    ch =
+      st == 'dup'
+        ? ['skip', 'add']
+        : st != 'flat'
+          ? []
+          : near
+            ? ['stretch', 'flat', 'skip']
+            : ['flat', 'skip'],
+    def = st == 'dup' ? 'skip' : near ? 'stretch' : 'flat',
     had = act.contains(document.activeElement) && document.activeElement.dataset.a;
   act.innerHTML = ch
     .map(
@@ -2193,13 +2231,15 @@ function iqStop() {
   const q = iq;
   if (!q) return;
   if (!iqBusy()) return iqClear();
+  // Skipping a row takes away its buttons, and the focus with them.
+  const had = $('iq').contains(document.activeElement) || document.activeElement == document.body;
   q.stop = true;
   q.rows.forEach(r => {
     if (r.st == 'wait' || r.st == 'dup' || r.st == 'flat') iqSet(r, 'skip');
   });
   if (!q.run) toast(t('iq.stopped', { n: q.added }));
   iqHead();
-  if ($('iq').contains(document.activeElement)) iqFocus();
+  if (had && iq) iqFocus();
 }
 if (!EMBED) {
   iqPlace();
@@ -3489,6 +3529,7 @@ $('pfile').onchange = async e => {
       d.cover.img = objURL(d.cover.blob);
     }
     d.title = d.title || t('def.imported');
+    iqClear(true);
     await flush();
     const nid = uid() + uid();
     setProject(nid, d);
@@ -3518,6 +3559,7 @@ function closeLib() {
   $('lib').focus();
 }
 function setProject(id, d) {
+  iqClear(true);
   if (project !== d) revokeProject(project);
   projectId = id;
   project = d;
@@ -3553,6 +3595,7 @@ function setProject(id, d) {
 }
 async function openProject(id) {
   if (id == projectId) return;
+  iqClear(true);
   await flush();
   try {
     const d = await loadProject(id);
@@ -3565,6 +3608,7 @@ async function openProject(id) {
   }
 }
 async function newProject() {
+  iqClear(true);
   await flush();
   setProject(uid() + uid(), { v: SCHEMA, title: t('def.newProj'), scenes: [] });
   await flush();
@@ -4580,8 +4624,10 @@ const cloneScene = s => ({
 function syncUndoButtons() {
   const u = $('undo'),
     r = $('redo');
-  if (u) u.disabled = undoPos <= 0;
-  if (r) r.disabled = undoPos >= undoStack.length - 1;
+  // Not while an import is adding scenes: undo would take back the ones added so far, and the
+  // rest would still come in.
+  if (u) u.disabled = undoPos <= 0 || iqRuns > 0;
+  if (r) r.disabled = undoPos >= undoStack.length - 1 || iqRuns > 0;
 }
 function snapshotNow() {
   clearTimeout(snapTimer);
@@ -4637,10 +4683,12 @@ function restoreSnapshot(i) {
   }
 }
 const undo = () => {
+    if (iqRuns) return;
     snapshotNow();
     restoreSnapshot(undoPos - 1);
   },
   redo = () => {
+    if (iqRuns) return;
     snapshotNow();
     restoreSnapshot(undoPos + 1);
   };
