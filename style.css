@@ -1160,6 +1160,151 @@ canvas {
     min-width: 44px;
   }
 }
+/* folded, the strip's toggle points up: it brings the thumbnails back */
+#sb .sbf.up .ic {
+  transform: rotate(180deg);
+}
+
+/* the thumbnail strip: one band of a solid tint rather than glass, since a blur under a
+   scrolling row of thumbnails would be redrawn on every frame. It shrinks to its cells in a
+   short tour and scrolls in a long one. */
+#sb[data-k='strip'] {
+  --sbc: 64px;
+  inset-inline: var(--s3);
+  width: fit-content;
+  max-width: calc(100% - 2 * var(--s3));
+  margin-inline: auto;
+  gap: 2px;
+  padding: var(--s1);
+  overflow: hidden;
+  background: var(--gl);
+  border-radius: var(--r3);
+  box-shadow: var(--sh2);
+}
+#sb[data-k='strip']::before,
+#sb[data-k='strip']::after {
+  display: none;
+}
+/* the grid button with its counter, and the toggle that folds the strip */
+#sb[data-k='strip'] > button {
+  flex: none;
+  align-self: center;
+  height: var(--sbc);
+  min-height: 0;
+  margin: 3px;
+  border-radius: var(--r2);
+  background: rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+#sb[data-k='strip'] > button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+#sb[data-k='strip'] > .sbg {
+  position: static;
+  min-width: var(--sbc);
+  padding: 0 var(--s1);
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  font-size: var(--tXs);
+}
+#sb[data-k='strip'] > .sbf {
+  min-width: var(--ctl);
+}
+#sbs {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  padding: 3px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  scroll-padding-inline: var(--s2);
+}
+#sbs::-webkit-scrollbar {
+  display: none;
+}
+#sbs > button {
+  position: relative;
+  flex: none;
+  width: var(--sbc);
+  height: var(--sbc);
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--r2);
+  background: rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+#sbs img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+#sbs .ph {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: var(--tSm);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+/* a hairline round every cell, brighter under the pointer; the current scene gets a white ring,
+   with a dark edge inside it so it shows on a bright photo too */
+#sbs > button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: inherit;
+  pointer-events: none;
+}
+#sbs > button:hover::after {
+  border-color: rgba(255, 255, 255, 0.75);
+}
+#sbs > button[aria-current]::after {
+  border: 3px solid #fff;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+#sb[data-k='strip'] :focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+  border-radius: var(--r2);
+}
+@media (pointer: coarse) {
+  #sb[data-k='strip'] {
+    --sbc: 52px;
+    padding: 3px 0;
+  }
+}
+/* a thumbnail's scene name, above it */
+#sbt {
+  position: absolute;
+  z-index: 6;
+  max-width: min(240px, calc(100% - 16px));
+  padding: var(--s1) var(--s2);
+  transform: translateX(-50%);
+  border-radius: var(--r2);
+  background: rgba(10, 10, 17, 0.86);
+  color: #fff;
+  box-shadow: var(--sh2);
+  font-size: var(--tSm);
+  font-weight: 600;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
 
 /* ───────────────────────── scene grid ───────────────────────── */
 #sgm {
@@ -2002,7 +2147,10 @@ canvas {
 #plan {
   position: absolute;
   inset-inline-start: var(--s3);
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 64px);
+  /* clear of the scene bar, whichever form it takes */
+  bottom: calc(
+    env(safe-area-inset-bottom, 0px) + max(64px, var(--s4) + var(--sb-h, 0px) + var(--s3))
+  );
   z-index: 5;
   width: min(46vw, 300px);
   background: var(--pn);
