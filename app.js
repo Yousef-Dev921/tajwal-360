@@ -86,6 +86,8 @@ const I18N = {
     'look.tour': 'كل نقاط الانتقال في الجولة',
     'look.sceneInfo': 'كل نقاط المعلومات في هذا المشهد',
     'look.tourInfo': 'كل نقاط المعلومات في الجولة',
+    'look.sceneNote': 'كل النصوص في هذا المشهد',
+    'look.tourNote': 'كل النصوص في الجولة',
     'look.sameIcon': 'النقاط ذات الأيقونة نفسها',
     'hint.look':
       'يُنسخ الشكل واللون والحجم وإعدادات العنوان، ولا يتغير العنوان ولا النص ولا الوجهة ولا الموضع ولا الاتجاه.',
@@ -265,7 +267,14 @@ const I18N = {
     'bar.none': 'مخفي',
     'hint.bar':
       'في الجولة والمعاينة. تُظهر الأسماء كل مشهد باسمه حتى \u206612\u2069 مشهداً، وزرّي السابق والتالي لما يزيد. عند الإخفاء لا يتنقّل الزائر إلا عبر النقاط التفاعلية والمخطط.',
-    'f.targetFind': 'ابحث عن الوجهة',
+    'dest.title': 'اختر وجهة الانتقال',
+    'dest.back': 'أضف رابط عودة في المشهد المختار',
+    'dest.change': 'تغيير الوجهة',
+    'dest.hasBack': 'فيه رابط عودة إلى هذا المشهد.',
+    'dest.addBack': 'أضف رابط عودة',
+    'msg.backAdded': 'أُضيف رابط عودة في «\u2068{name}\u2069». تأكّد من مكانه.',
+    'msg.backExists': 'في «\u2068{name}\u2069» رابط عودة إلى هذا المشهد من قبل.',
+    'act.goThere': 'اذهب إليه',
     'hint.meta':
       'يُقرأ التاريخ والموقع من بيانات الكاميرا داخل الصورة، ولا تتضمّنهما الجولة المصدَّرة إلا عند تفعيل هذا الخيار.',
     'opt.hd': 'الاحتفاظ بنسخة عالية الدقة (\u20668192\u2069 بكسل)',
@@ -317,6 +326,38 @@ const I18N = {
     'hint.dragHs': 'اسحب النقطة داخل البانوراما لتغيير مكانها.',
     'hs.link': 'انتقال',
     'hs.info': 'معلومات',
+    'hs.note': 'نص',
+    'f.noteText': 'النص الذي يظهر عند الإشارة إليه',
+    'f.notePhTxt': 'مثال: شرخ إنشائي بعرض 3 مم',
+    'act.hideNote': 'إخفاء النص',
+    'act.showNote': 'إظهار النص',
+    'msg.noteHidden': 'أُخفي النص. تجده في شاشة «النصوص».',
+    'txt.open': 'النصوص',
+    'txt.title': 'نصوص الجولة',
+    'txt.count': {
+      zero: 'لا نصوص',
+      one: 'نص واحد',
+      two: 'نصّان',
+      few: '{n} نصوص',
+      many: '{n} نصاً',
+      other: '{n} نص',
+    },
+    'txt.hiddenN': {
+      one: 'نص مخفي',
+      two: 'نصّان مخفيّان',
+      few: '{n} نصوص مخفية',
+      many: '{n} نصاً مخفياً',
+      other: '{n} نص مخفي',
+    },
+    'txt.all': 'الكل',
+    'txt.hidden': 'المخفية',
+    'txt.showAll': 'إظهار كل المخفية',
+    'txt.none': 'لا توجد نصوص بعد. اضغط «نص» ثم انقر على البانوراما لإضافة واحد.',
+    'txt.noneHidden': 'لا توجد نصوص مخفية.',
+    'txt.empty': 'نص فارغ',
+    'txt.isHidden': 'مخفي',
+    'txt.filter': 'عرض',
+    'txt.search': 'ابحث في النصوص أو أسماء المشاهد',
     'shape.arrow': 'سهم',
     'shape.ring': 'حلقة',
     'shape.dot': 'نقطة',
@@ -324,6 +365,7 @@ const I18N = {
     'shape.star': 'نجمة',
     'shape.info': 'معلومات',
     'shape.none': 'نص فقط',
+    'shape.txt': 'علامة نص',
     'shape.spot': 'بقعة أرضية',
     'shape.img': 'أيقونة',
     'act.upIcon': 'رفع أيقونة خاصة',
@@ -530,6 +572,8 @@ const I18N = {
     'look.tour': 'All link hotspots in the tour',
     'look.sceneInfo': 'All info hotspots in this scene',
     'look.tourInfo': 'All info hotspots in the tour',
+    'look.sceneNote': 'All texts in this scene',
+    'look.tourNote': 'All texts in the tour',
     'look.sameIcon': 'Hotspots with the same icon',
     'hint.look':
       'Copies the shape, colour, size and label settings. Labels, text, destinations, positions and directions stay as they are.',
@@ -683,7 +727,14 @@ const I18N = {
     'bar.none': 'Hidden',
     'hint.bar':
       'In the tour and Preview. Names lists every scene by name up to 12 scenes, and previous and next beyond that. When hidden, visitors move only through hotspots and the floor plan.',
-    'f.targetFind': 'Find a destination',
+    'dest.title': 'Choose where this link goes',
+    'dest.back': 'Add a link back in the chosen scene',
+    'dest.change': 'Change destination',
+    'dest.hasBack': 'It links back to this scene.',
+    'dest.addBack': 'Add a link back',
+    'msg.backAdded': 'Added a link back in “\u2068{name}\u2069”. Check where it sits.',
+    'msg.backExists': '“\u2068{name}\u2069” already links back to this scene.',
+    'act.goThere': 'Go there',
     'hint.meta':
       'Both are read from the camera data in each photo. An exported tour includes them only while this is on.',
     'opt.hd': 'Keep high-resolution panoramas (8192 px)',
@@ -735,6 +786,25 @@ const I18N = {
     'hint.dragHs': 'Drag the hotspot in the panorama to move it.',
     'hs.link': 'Link',
     'hs.info': 'Info',
+    'hs.note': 'Text',
+    'f.noteText': 'Text shown when pointed at',
+    'f.notePhTxt': 'e.g. Structural crack, 3 mm wide',
+    'act.hideNote': 'Hide text',
+    'act.showNote': 'Show text',
+    'msg.noteHidden': 'Text hidden. You’ll find it in the Texts screen.',
+    'txt.open': 'Texts',
+    'txt.title': 'Texts in this tour',
+    'txt.count': { one: '1 text', other: '{n} texts' },
+    'txt.hiddenN': { one: '1 hidden', other: '{n} hidden' },
+    'txt.all': 'All',
+    'txt.hidden': 'Hidden',
+    'txt.showAll': 'Show all hidden',
+    'txt.none': 'No texts yet. Press “Text”, then click the panorama to add one.',
+    'txt.noneHidden': 'No hidden texts.',
+    'txt.empty': 'Empty text',
+    'txt.isHidden': 'Hidden',
+    'txt.filter': 'Show',
+    'txt.search': 'Search texts or scene names',
     'shape.arrow': 'Arrow',
     'shape.ring': 'Ring',
     'shape.dot': 'Dot',
@@ -742,6 +812,7 @@ const I18N = {
     'shape.star': 'Star',
     'shape.info': 'Info',
     'shape.none': 'Text only',
+    'shape.txt': 'Text marker',
     'shape.spot': 'Floor spot',
     'shape.img': 'Icon',
     'act.upIcon': 'Upload your own icon',
@@ -933,6 +1004,7 @@ function setLang(l) {
   document.documentElement.lang = l;
   document.documentElement.dir = isRTL() ? 'rtl' : 'ltr';
   applyI18N();
+  if (!$('sgm').hidden) $('sgt').textContent = t(gridPick ? 'dest.title' : 'nav.all');
   delConfirm = 0;
   syncToggles();
   glCanvas.setAttribute('aria-label', t('aria.canvas'));
@@ -1790,6 +1862,20 @@ function drawIcon(ctx, shape, color, flat) {
     ctx.lineWidth = 6;
     ctx.strokeStyle = ink;
     ctx.stroke();
+  } else if (shape == 'txt') {
+    // A text note's marker: a small tag with a T, so it reads as writing left on the scene.
+    if (ctx.roundRect) ctx.roundRect(-58, -58, 116, 116, 26);
+    else ctx.rect(-58, -58, 116, 116);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 14;
+    ctx.beginPath();
+    ctx.moveTo(-26, -24);
+    ctx.lineTo(26, -24);
+    ctx.moveTo(0, -24);
+    ctx.lineTo(0, 30);
+    ctx.stroke();
   } else if (shape == 'star') {
     for (let i = 0; i < 10; i++) {
       const r = i % 2 ? 32 : 72,
@@ -1933,7 +2019,9 @@ const layClamp = (h, lq = scenes[current]?.lq, dry) => {
 // What to say when layClamp() moved h.
 const clampNote = h => t(onWall(h) ? 'msg.wallClamp' : 'msg.floorClamp');
 // A text-only hotspot is its own label, so it is always shown.
-const hoverLabel = h => !!h.hov && h.shape != 'none';
+// A text note is a marker whose text shows when pointed at, so its label always waits for that.
+const isNote = h => !!h && h.type == 'info' && h.shape == 'txt';
+const hoverLabel = h => (!!h.hov || isNote(h)) && h.shape != 'none';
 const canvasTex = c => {
   const tex = new THREE.CanvasTexture(c);
   tex.encoding = THREE.sRGBEncoding;
@@ -2127,17 +2215,20 @@ function buildHotspots() {
   // peeked one peeked; a new scene starts with neither, and the editor has no peek.
   if (!scenes[current]?.hs.includes(hovered)) hovered = null;
   if (mode != 'view' || !scenes[current]?.hs.includes(peek?.h)) peek = null;
-  hsParts = (scenes[current]?.hs || []).map(h => {
-    const e = makeHotspotSprite(h);
-    [e.dc, e.ic, e.lb].forEach(o => {
-      if (!o) return;
-      o.userData.h = h;
-      o.userData.e = e;
-      hotspotGroup.add(o);
+  // A hidden note is left off the panorama; the hotspot list and the Texts screen still show it.
+  hsParts = (scenes[current]?.hs || [])
+    .filter(h => !h.off)
+    .map(h => {
+      const e = makeHotspotSprite(h);
+      [e.dc, e.ic, e.lb].forEach(o => {
+        if (!o) return;
+        o.userData.h = h;
+        o.userData.e = e;
+        hotspotGroup.add(o);
+      });
+      placeHotspot(e);
+      return e;
     });
-    placeHotspot(e);
-    return e;
-  });
   preload();
 }
 // ───────────── scene loading ─────────────
@@ -2147,6 +2238,8 @@ function buildHotspots() {
 async function showScene(i, o = {}) {
   const s = scenes[i];
   if (!s) return;
+  // A link's destination is chosen for the scene it sits in, so leaving that scene ends it.
+  if (gridPick) closeGrid();
   current = i;
   selId = null;
   placing = null;
@@ -3193,49 +3286,65 @@ new ResizeObserver(() => {
   if (on && sbW && sbS.clientWidth != sbW && mode == 'view') sbCentre(on);
   sbW = sbS.clientWidth;
 }).observe($('sb'));
+// A hidden note stays in the list, dimmed and marked, so it can be selected and shown again.
 function renderHotspotList() {
   $('hlist').innerHTML = (scenes[current]?.hs || [])
-    .map(
-      h =>
-        `<button data-id="${esc(h.id)}" class="${h.id == selId ? 'on' : ''}">${h.type == 'link' ? '<svg class="ic flip"><use href="#i-link"/></svg>' : '<svg class="ic"><use href="#i-info"/></svg>'}<span dir="auto">${esc(oneLine(h.label) || t(h.type == 'link' ? 'hs.link' : 'hs.info'))}</span></button>`
-    )
+    .map(h => {
+      const k = isNote(h) ? 'note' : h.type;
+      return `<button data-id="${esc(h.id)}" class="${h.id == selId ? 'on' : ''}${h.off ? ' off' : ''}"><svg class="ic${k == 'link' ? ' flip' : ''}"><use href="#i-${k == 'note' ? 'text' : k}"/></svg><span dir="auto">${esc(oneLine(h.label) || t('hs.' + k))}</span>${h.off ? `<svg class="ic" role="img" aria-label="${esc(t('txt.isHidden'))}"><use href="#i-eyeoff"/></svg>` : ''}</button>`;
+    })
     .join('');
+}
+// Hides a text note from the panorama, or shows it again. A note can be hidden from any
+// scene through the Texts screen, so it is found by its scene here, not by the selection.
+function setNoteOff(s, h, off) {
+  if (!isNote(h) || !s?.hs.includes(h) || !!h.off == off) return;
+  if (off) h.off = true;
+  else delete h.off;
+  if (s === scenes[current]) buildHotspots();
+  ui();
+  save();
+  if (!$('txm').hidden) renderTexts();
+}
+function toggleNote(h) {
+  const s = scenes[current],
+    pid = projectId;
+  setNoteOff(s, h, !h.off);
+  if (h.off)
+    toast(t('msg.noteHidden'), {
+      action: { label: t('act.showNote'), fn: () => pid == projectId && setNoteOff(s, h, false) },
+    });
 }
 // A hotspot's look: everything about how it is drawn, but not what it says, where it leads,
 // where it sits or which way it points. The project keeps the look of the last link and the
 // last info hotspot the author styled, as look.link and look.info; a new hotspot of the same
 // kind starts from it, so a tour of many scenes needs its arrows styled only once.
 const LOOK = ['shape', 'icon', 'color', 'size', 'ts', 'box', 'fix', 'lp', 'hov', 'fl', 'wl'];
+// The kind a look belongs to: links, info hotspots, and text notes, which are info hotspots
+// with their own marker and keep a look of their own.
+const lookKind = h => (isNote(h) ? 'note' : h.type);
 const lookOf = h => Object.fromEntries(LOOK.filter(k => h[k] !== undefined).map(k => [k, h[k]]));
 const sameLook = (a, b) => LOOK.every(k => a[k] === b[k]);
 const updateHotspot = o => {
   const h = selHotspot();
   Object.assign(h, o);
-  project.look = { ...project.look, [h.type]: lookOf(h) };
+  project.look = { ...project.look, [lookKind(h)]: lookOf(h) };
   buildHotspots();
   renderHotspotList();
   save();
+  if (txOpen()) renderTexts();
 };
 const bind = (id, ev, f) => {
   const e = $(id);
   if (e) e.addEventListener(ev, f);
 };
-// A link's destinations: every other scene, in tour order. In a tour of more than MANY scenes
-// a search field narrows them; the current destination stays in the list so it still shows.
-let pickQ = '',
-  pickFor = null;
-function targetOptions(h) {
-  const m = sceneMatcher(scenes.length > MANY ? pickQ : ''),
-    here = scenes[current].id;
-  let hits = 0;
-  const o = scenes
-    .map((s, i) => {
-      if (s.id == here || (s.id != h.to && !m(s, i))) return '';
-      hits += s.id != h.to;
-      return `<option value="${esc(s.id)}" ${s.id == h.to ? 'selected' : ''}>${esc(s.name)}</option>`;
-    })
-    .join('');
-  return hits ? o : o + `<option disabled>${esc(t('nav.none'))}</option>`;
+// A link's destination, as its scene's thumbnail and name, with a way to change it in the
+// scene grid, and to add a link back from there when it has none.
+function destCard(h) {
+  const to = scenes.find(s => s.id == h.to),
+    back = to?.hs.some(x => x.type == 'link' && x.to == scenes[current].id),
+    th = to && thumbOf(to);
+  return `<div class="fld" id="pdst"><span class="lb" id="pdsl">${t('f.target')}</span><div class="dst">${th ? `<img src="${esc(th)}" alt="">` : '<span class="ph"></span>'}<span class="nm" dir="auto">${esc(to?.name || '')}</span></div><button id="ptc" aria-haspopup="dialog" aria-describedby="pdsl">${t('dest.change')}</button>${to ? (back ? `<p class="hint">${t('dest.hasBack')}</p>` : `<button id="ptb">${t('dest.addBack')}</button>`) : ''}</div>`;
 }
 function renderHotspotProps() {
   const h = selHotspot(),
@@ -3245,18 +3354,20 @@ function renderHotspotProps() {
     p.innerHTML = '';
     return;
   }
-  if (pickFor != h.id) {
-    pickFor = h.id;
-    pickQ = '';
-  }
   const rng = (id, key, min, max, step, v, out) =>
     `<label id="${id}w"><span class="lrow"><span>${t(key)}</span><output id="${id}v" dir="ltr">${out}</output></span><input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${esc(v)}"></label>`;
+  // A text note is its text and a marker: it has no popup text, shape, side or hover choice.
+  const note = isNote(h);
   p.innerHTML =
-    `<label>${t('f.label')}<textarea id="pl" rows="2" dir="auto" placeholder="${esc(t('f.labelPh'))}">${esc(h.label)}</textarea></label>` +
+    (note
+      ? `<label>${t('f.noteText')}<textarea id="pl" rows="3" dir="auto" placeholder="${esc(t('f.notePhTxt'))}">${esc(h.label)}</textarea></label><button id="poff"><svg class="ic"><use href="#i-${h.off ? 'eye' : 'eyeoff'}"/></svg><span>${t(h.off ? 'act.showNote' : 'act.hideNote')}</span></button>`
+      : `<label>${t('f.label')}<textarea id="pl" rows="2" dir="auto" placeholder="${esc(t('f.labelPh'))}">${esc(h.label)}</textarea></label>`) +
     (h.type == 'link'
-      ? `<div class="fld"><label for="pt">${t('f.target')}</label>${scenes.length > MANY ? `<input id="ptq" type="search" dir="auto" autocomplete="off" value="${esc(pickQ)}" placeholder="${esc(t('f.targetFind'))}" aria-label="${esc(t('f.targetFind'))}">` : ''}<select id="pt">${targetOptions(h)}</select></div>`
-      : `<label>${t('f.text')}<textarea id="px" rows="3" dir="auto">${esc(h.text)}</textarea></label>`) +
-    `<label>${t('f.shape')}<select id="ps">${SHAPES.filter(k => k != 'img')
+      ? destCard(h)
+      : note
+        ? ''
+        : `<label>${t('f.text')}<textarea id="px" rows="3" dir="auto">${esc(h.text)}</textarea></label>`) +
+    `<label id="psw">${t('f.shape')}<select id="ps">${SHAPES.filter(k => k != 'img' && k != 'txt')
       .map(
         k =>
           `<option value="${k}" ${k == h.shape ? 'selected' : ''}>${esc(t('shape.' + k))}</option>`
@@ -3267,7 +3378,7 @@ function renderHotspotProps() {
           `<option value="img:${esc(ic.id)}" ${h.shape == 'img' && h.icon == ic.id ? 'selected' : ''} dir="auto">${esc(ic.name || t('shape.img'))}</option>`
       )
       .join('')}</select></label>
-  <label class="btn" for="pif"><svg class="ic"><use href="#i-image"/></svg><span>${t('act.upIcon')}</span></label><input id="pif" type="file" accept="image/png,image/webp,image/svg+xml,image/gif,image/jpeg" hidden>
+  <label class="btn" id="pifw" for="pif"><svg class="ic"><use href="#i-image"/></svg><span>${t('act.upIcon')}</span></label><input id="pif" type="file" accept="image/png,image/webp,image/svg+xml,image/gif,image/jpeg" hidden>
   <label class="opt" id="pflw"><input type="checkbox" id="pfl" ${h.fl ? 'checked' : ''}><span>${t('f.floor')}</span></label>
   <label class="opt" id="pwlw"><input type="checkbox" id="pwl" ${onWall(h) ? 'checked' : ''}><span>${t('f.wall')}</span></label>
   ${rng('pr', 'f.rotation', -180, 180, 5, h.rot || 0, (h.rot || 0) + '°')}
@@ -3299,33 +3410,26 @@ function renderHotspotProps() {
   const fit = () => {
     const h = selHotspot(),
       s = h?.shape,
-      none = s == 'none';
+      none = s == 'none',
+      note = s == 'txt';
     $('prw').hidden = !TURNS.includes(s);
     $('pcw').hidden = none || s == 'img';
-    $('pfw').hidden = $('pflw').hidden = $('pwlw').hidden = $('plpw').hidden = none;
-    $('phvw').hidden = none;
-    $('phvh').hidden = none || !h?.hov;
+    $('pfw').hidden = $('plpw').hidden = none;
+    $('pflw').hidden = $('pwlw').hidden = $('phvw').hidden = none || note;
+    $('phvh').hidden = none || note || !h?.hov;
+    $('psw').hidden = $('pifw').hidden = note;
     $('pfl').checked = !!h?.fl;
     $('pwl').checked = !!h && onWall(h);
   };
   fit();
   bind('pl', 'input', e => updateHotspot({ label: e.target.value }));
-  bind('pt', 'change', e => updateHotspot({ to: e.target.value }));
-  bind('ptq', 'input', e => {
-    pickQ = e.target.value;
-    $('pt').innerHTML = targetOptions(selHotspot());
+  bind('ptc', 'click', () => chooseDest(selHotspot(), false));
+  bind('ptb', 'click', () => {
+    const h = selHotspot(),
+      to = scenes.find(s => s.id == h.to);
+    if (to && addReturnLink(scenes[current], h, to)) renderHotspotProps();
   });
-  // Enter takes the first match.
-  bind('ptq', 'keydown', e => {
-    if (e.key != 'Enter') return;
-    e.preventDefault();
-    const m = sceneMatcher(pickQ),
-      o = scenes.find((s, i) => s.id != scenes[current].id && m(s, i));
-    if (o && o.id != selHotspot().to) {
-      updateHotspot({ to: o.id });
-      $('pt').innerHTML = targetOptions(selHotspot());
-    }
-  });
+  bind('poff', 'click', () => toggleNote(selHotspot()));
   bind('px', 'input', e => updateHotspot({ text: e.target.value }));
   bind('ps', 'change', e => {
     const v = e.target.value,
@@ -3432,7 +3536,9 @@ function lookScopes(h) {
   return ['scene', 'tour', ...(h.shape == 'img' ? ['icon'] : [])];
 }
 function lookLabel(h, k) {
-  return k == 'icon' ? 'look.sameIcon' : 'look.' + k + (h.type == 'info' ? 'Info' : '');
+  return k == 'icon'
+    ? 'look.sameIcon'
+    : 'look.' + k + { link: '', info: 'Info', note: 'Note' }[lookKind(h)];
 }
 // The hotspots, as [scene, hotspot], that choice k reaches from h, h aside.
 function lookTargets(h, k) {
@@ -3440,7 +3546,10 @@ function lookTargets(h, k) {
   scenes.forEach((s, i) => {
     if (k == 'scene' && i != current) return;
     for (const x of s.hs)
-      if (x !== h && (k == 'icon' ? x.shape == 'img' && x.icon == h.icon : x.type == h.type))
+      if (
+        x !== h &&
+        (k == 'icon' ? x.shape == 'img' && x.icon == h.icon : lookKind(x) == lookKind(h))
+      )
         out.push([s, x]);
   });
   return out;
@@ -3474,7 +3583,7 @@ function applyLook(h, k) {
     });
   }
   if (!done.length) return;
-  project.look = { ...project.look, [h.type]: l };
+  project.look = { ...project.look, [lookKind(h)]: l };
   buildHotspots();
   ui();
   save();
@@ -3634,6 +3743,74 @@ function addHotspotCopy(h, from, p, icon) {
   ui();
   save();
   if (moved) toast(clampNote(n));
+}
+// ── a link's destination and its way back ──
+// Placing a link opens the scene grid to choose where it leads, as Kuula asks for a post; a
+// link closed without a choice right after it was placed is taken away again. With "Add a
+// link back" ticked, the chosen scene gets a link to this one too.
+function chooseDest(h, fresh) {
+  const from = scenes[current];
+  openGrid(fresh ? glCanvas : $('ptc'), {
+    to: fresh ? null : h.to,
+    fn: (to, back) => {
+      if (to === from || scenes[current] !== from || !from.hs.includes(h)) return;
+      selId = h.id;
+      updateHotspot({ to: to.id });
+      if (back) addReturnLink(from, h, to);
+      renderHotspotProps();
+    },
+    cancel: fresh
+      ? () => {
+          if (!from.hs.includes(h)) return;
+          from.hs = from.hs.filter(x => x !== h);
+          if (selId == h.id) selId = null;
+          buildHotspots();
+          ui();
+          save();
+        }
+      : null,
+  });
+}
+// Adds to scene to a link back to scene from, for link h, unless one is there already. It
+// points the way the visitor came: exactly opposite h when both scenes have a north, or else
+// behind the view the visitor lands on, which is where the walk puts the way back as well
+// (see arrivalHeading). It takes h's look and height, and its label, when h has one, names the
+// scene it leads back to.
+function addReturnLink(from, h, to) {
+  if (to.hs.some(x => x.type == 'link' && x.to == from.id)) {
+    toast(t('msg.backExists', { name: to.name }));
+    return null;
+  }
+  const u = from.n != null && to.n != null ? h.u - from.n + to.n + 0.5 : (to.u0 || 0) + 0.5,
+    b = {
+      ...JSON.parse(JSON.stringify(h)),
+      id: uid(),
+      to: from.id,
+      u: ((u % 1) + 1) % 1,
+      label: h.label.trim() ? from.name : '',
+    };
+  layClamp(b, to.lq || NO_TILT);
+  to.hs = [...to.hs, b];
+  save();
+  const pid = projectId;
+  toast(t('msg.backAdded', { name: to.name }), {
+    action: { label: t('act.goThere'), fn: () => pid == projectId && goToHotspot(to.id, b.id) },
+  });
+  return b;
+}
+// Opens the scene a hotspot is in, turns the view to it and selects it.
+async function goToHotspot(sid, hid) {
+  const i = scenes.findIndex(s => s.id == sid);
+  if (i < 0) return;
+  if (i != current) await showScene(i);
+  const h = scenes[current]?.id == sid && scenes[current].hs.find(x => x.id == hid);
+  if (!h) return;
+  const d = sphereToVec(h.u, h.v, 1).applyQuaternion(sceneQuat());
+  yaw = Math.atan2(-d.x, -d.z);
+  pitch = Math.max(-1.5, Math.min(1.5, Math.asin(d.y)));
+  selId = hid;
+  buildHotspots();
+  ui();
 }
 const pasteHotspot = () => hsClip && addHotspotCopy(hsClip.h, hsClip.from, viewUV(), hsClip.icon);
 // The duplicate lands a little to one side, so it doesn't hide the original.
@@ -4053,6 +4230,7 @@ function ui() {
   $('cmp').hidden = scenes[current]?.n == null;
   $('back').hidden = !(mode == 'view' && !EMBED);
   if (!EMBED && mode != 'view' && !$('start').hidden) setStart(false);
+  if (gridPick && mode != 'edit') closeGrid(); // a link's destination is chosen in the editor
   syncFs();
   if (scenes[current] && document.activeElement != $('sname'))
     $('sname').value = scenes[current].name;
@@ -4066,6 +4244,7 @@ function ui() {
   syncNote();
   syncSnap();
   syncLevel();
+  syncTexts();
   syncExtras();
   setTimeout(resize, 0);
 }
@@ -4515,6 +4694,13 @@ $('addi').onclick = () => {
   renderHotspotList();
   renderHotspotProps();
 };
+$('addt').onclick = () => {
+  placing = 'note';
+  selId = null;
+  buildHotspots();
+  renderHotspotList();
+  renderHotspotProps();
+};
 // Preview opens on the start screen, as the tour does; Shift skips it.
 $('prev').onclick = e => {
   mode = 'view';
@@ -4594,6 +4780,7 @@ async function toPortable(Q, forTour, put) {
       r.src = o;
     }
     if (forTour) delete r.cam; // the author's record, not the visitor's
+    if (forTour) r.hs = (r.hs || []).filter(h => !h.off); // hidden notes stay with the author
     if (forTour) delete r.sqv; // only the editor makes thumbnails
     // The square thumbnail: a data: URL, or a file beside the 2:1 one in the folder tour.
     if (sqBlob) r.sq = await put(sqBlob, 'thumbs/' + s.id + '-sq');
@@ -4942,7 +5129,7 @@ $('psave').onclick = async () => {
 };
 // An imported file is untrusted. Keep only well-formed fields with the expected types,
 // so nothing unexpected reaches the markup or an exported tour.
-const SHAPES = ['arrow', 'spot', 'ring', 'dot', 'pin', 'star', 'info', 'none', 'img'];
+const SHAPES = ['arrow', 'spot', 'ring', 'dot', 'pin', 'star', 'info', 'none', 'img', 'txt'];
 const num = (v, fallback) => (Number.isFinite(+v) && v !== null && v !== '' ? +v : fallback);
 const clamp01 = v => Math.min(1, Math.max(0, v));
 const isDataImage = v => typeof v == 'string' && v.startsWith('data:image/');
@@ -4972,6 +5159,8 @@ const cleanHotspot = h => {
   if (h.fix === true) out.fix = true;
   if (h.lp == 't' || h.lp == 'l' || h.lp == 'r') out.lp = h.lp;
   if (h.hov === true) out.hov = true;
+  // Only a text note can be hidden; it stays in the project but not on the panorama.
+  if (h.off === true && out.shape == 'txt') out.off = true;
   // Kept off the horizon, or near it on a wall, by cleanScene; the floor wins over the wall.
   if (h.fl === true && out.shape != 'none') out.fl = true;
   else if (h.wl === true && out.shape != 'none') out.wl = true;
@@ -4980,26 +5169,30 @@ const cleanHotspot = h => {
     if (typeof h.icon == 'string' && h.icon) out.icon = h.icon;
     else out.shape = 'arrow';
   }
+  if (out.shape == 'txt' && out.type != 'info') out.shape = 'arrow'; // a note is an info hotspot
   return out;
 };
-// The project's last looks, look.link and look.info, each with the fields cleanHotspot()
-// would keep on a hotspot of that type. Only the fields the file gives are kept, and a
+// The project's last looks, look.link, look.info and look.note, each with the fields
+// cleanHotspot() would keep on a hotspot of that type. Only the fields the file gives are kept, and a
 // shape, icon, colour or label side that cleanHotspot() would replace is dropped, so a new
 // hotspot still takes its type's defaults for those; numbers are brought into range.
 function cleanLook(o) {
   if (!o || typeof o != 'object' || Array.isArray(o)) return null;
   const out = {};
-  for (const type of ['link', 'info']) {
-    const v = o[type];
+  for (const kind of ['link', 'info', 'note']) {
+    const v = o[kind],
+      type = kind == 'note' ? 'info' : kind;
     if (!v || typeof v != 'object' || Array.isArray(v)) continue;
-    const c = cleanHotspot({ ...v, type }),
+    // A note's look is always a note's: its marker can't be traded for another shape.
+    const c = cleanHotspot({ ...v, type, ...(kind == 'note' && { shape: 'txt' }) }),
       l = Object.fromEntries(
         LOOK.filter(
           k =>
             v[k] !== undefined && c[k] !== undefined && (typeof c[k] != 'string' || c[k] === v[k])
         ).map(k => [k, c[k]])
       );
-    if (Object.keys(l).length) out[type] = l;
+    if (kind == 'note') ['shape', 'icon', 'hov', 'fl', 'wl'].forEach(k => delete l[k]);
+    if (Object.keys(l).length) out[kind] = l;
   }
   return Object.keys(out).length ? out : null;
 }
@@ -5229,6 +5422,9 @@ function closeLib() {
   $('lib').focus();
 }
 function setProject(id, d) {
+  // Choices left open belong to the project being closed.
+  closeGrid();
+  closeTexts();
   iqClear(true);
   if (project !== d) revokeProject(project);
   projectId = id;
@@ -5433,16 +5629,28 @@ if (!EMBED) {
 // finds one scene among 150, and with previous and next in the bar it is how a keyboard
 // reaches every scene, since the hotspots on the panorama can't take focus. The grid is one
 // tab stop that the arrow keys move through. Choosing a scene jumps there without a walk.
-let gridFrom = null;
+let gridFrom = null,
+  // In the editor the grid also picks a link's destination: then it lists every other scene,
+  // hidden ones too, and hands the choice to gridPick.fn instead of going there.
+  gridPick = null;
 const gridCells = () => [...$('sgl').children].filter(b => !b.hidden);
-function openGrid(from) {
+function openGrid(from, pick) {
+  // While the grid is open the panel still works; asking again leaves the open one as it is.
+  if (!$('sgm').hidden) return;
   const L = $('sgl');
   gridFrom = from;
+  gridPick = pick || null;
+  $('sgt').textContent = t(pick ? 'dest.title' : 'nav.all');
+  $('sgr').hidden = !pick;
+  if (pick) $('sgrc').checked = lsGet('vrt.back') != '0';
   // Each cell keeps its scene's place in the tour, and shows its place in the bar's count.
-  L.innerHTML = navScenes()
+  L.innerHTML = (pick ? scenes.filter((s, i) => i != current) : navScenes())
     .map((s, n) => {
-      const i = scenes.indexOf(s);
-      return `<button data-i="${i}" data-n="${n}" tabindex="-1"${i == current ? ' class="on" aria-current="true"' : ''}><span class="no" dir="ltr">${n + 1}</span>${thumbOf(s) ? `<img src="${esc(thumbOf(s))}" alt="" loading="lazy" draggable="false">` : '<span class="ph"></span>'}<span class="nm" dir="auto">${esc(s.name)}</span></button>`;
+      // Picking, a cell counts the scene's place in the tour and marks the link's destination.
+      const i = scenes.indexOf(s),
+        k = pick ? i : n,
+        on = pick ? s.id == pick.to : i == current;
+      return `<button data-i="${i}" data-n="${k}" data-id="${esc(s.id)}" tabindex="-1"${on ? ' class="on" aria-current="true"' : ''}><span class="no" dir="ltr">${k + 1}</span>${thumbOf(s) ? `<img src="${esc(thumbOf(s))}" alt="" loading="lazy" draggable="false">` : '<span class="ph"></span>'}<span class="nm" dir="auto">${esc(s.name)}</span></button>`;
     })
     .join('');
   $('sgf').value = '';
@@ -5450,16 +5658,29 @@ function openGrid(from) {
   $('sgm').hidden = false;
   gridFocus(L.querySelector('.on') || L.firstElementChild, true);
 }
+// Closing without a choice tells a pick so: a link placed a moment ago then goes again.
 function closeGrid() {
   if ($('sgm').hidden) return;
+  const p = gridPick;
+  gridPick = null;
   $('sgm').hidden = true;
   $('sgl').innerHTML = '';
+  p?.cancel?.();
   // The bar may have been redrawn meanwhile; its grid button stands in for the one pressed.
   const f = gridFrom?.isConnected ? gridFrom : $('sb').querySelector('[data-a="grid"]');
   gridFrom = null;
   f?.focus({ preventScroll: true });
 }
-function pickGrid(i) {
+// A pick hands over the scene itself, found by id: the list may have been reordered under it.
+function pickGrid(i, id) {
+  const p = gridPick;
+  if (p) {
+    gridPick = null;
+    lsSet('vrt.back', $('sgrc').checked ? '1' : '0');
+    closeGrid();
+    const to = scenes.find(s => s.id == id);
+    return to ? p.fn(to, $('sgrc').checked) : p.cancel?.();
+  }
   closeGrid();
   if (i != current && !walking) jumpTo(i);
 }
@@ -5510,7 +5731,7 @@ $('sgf').oninput = filterGrid;
 $('sgx').onclick = closeGrid;
 $('sgl').onclick = e => {
   const b = e.target.closest('button');
-  if (b) pickGrid(+b.dataset.i);
+  if (b) pickGrid(+b.dataset.i, b.dataset.id);
 };
 $('sgm').onclick = e => {
   if (e.target == $('sgm')) closeGrid();
@@ -5532,7 +5753,7 @@ $('sgm').addEventListener('keydown', e => {
   }
   // Focus stays in the dialog: close, search, then the grid.
   if (e.key == 'Tab') {
-    const ring = [$('sgx'), f, stop].filter(Boolean),
+    const ring = [$('sgx'), f, gridPick && $('sgrc'), stop].filter(Boolean),
       k = ring.indexOf(a);
     e.preventDefault();
     ring[k < 0 ? 0 : (k + (e.shiftKey ? ring.length - 1 : 1)) % ring.length].focus();
@@ -6319,6 +6540,138 @@ if (!EMBED) {
   });
 }
 
+// ───────────── texts screen ─────────────
+// Every text note in the tour, scene by scene: to find one, hide or show it, or go to it. A
+// hidden note is off the panorama and out of the exported tour, so this is where it is kept.
+let txFrom = null,
+  txF = 'all'; // 'all' or 'off', the hidden ones
+const txOpen = () => !EMBED && !$('txm').hidden;
+const tourNotes = () => scenes.flatMap((s, i) => s.hs.filter(isNote).map(h => ({ s, i, h })));
+// The Texts button shows only once there is a note, with the count of hidden ones.
+function syncTexts() {
+  if (EMBED) return;
+  if (mode == 'view') closeTexts();
+  const all = tourNotes(),
+    off = all.filter(x => x.h.off).length;
+  $('txo').hidden = !all.length;
+  $('txob').hidden = !off;
+  $('txob').textContent = off ? t('txt.hiddenN', { n: off }) : '';
+  if (txOpen()) renderTexts();
+}
+function openTexts(from) {
+  if (txOpen() || mode != 'edit') return;
+  txFrom = from;
+  txF = 'all';
+  $('txf').value = '';
+  $('txm').hidden = false;
+  renderTexts();
+  $('txf').focus({ preventScroll: true });
+}
+function closeTexts() {
+  if (!txOpen()) return;
+  $('txm').hidden = true;
+  $('txl').innerHTML = '';
+  const f = txFrom?.isConnected && !txFrom.hidden ? txFrom : $('txo');
+  txFrom = null;
+  f.focus({ preventScroll: true });
+}
+// Search matches every word in the note or in its scene's name, as the scene search does.
+function renderTexts() {
+  const all = tourNotes(),
+    off = all.filter(x => x.h.off).length,
+    w = fold($('txf').value).split(/\s+/).filter(Boolean),
+    hits = all.filter(
+      x =>
+        (txF != 'off' || x.h.off) &&
+        w.every(v => fold(x.h.label).includes(v) || fold(x.s.name).includes(v))
+    ),
+    keep = document.activeElement?.closest?.('#txl li') && document.activeElement;
+  const was = keep && [keep.closest('li').dataset.h, keep.dataset.a];
+  $('txn').textContent =
+    t('txt.count', { n: all.length }) + (off ? ' · ' + t('txt.hiddenN', { n: off }) : '');
+  $('txs')
+    .querySelectorAll('button')
+    .forEach(b => b.setAttribute('aria-pressed', b.dataset.f == txF));
+  $('txa').hidden = !off;
+  $('txl').innerHTML = hits
+    .map(({ s, i, h }) => {
+      const th = thumbOf(s);
+      return `<li data-s="${esc(s.id)}" data-h="${esc(h.id)}"${h.off ? ' class="off"' : ''}>${th ? `<img src="${esc(th)}" alt="" loading="lazy" draggable="false">` : '<span class="ph"></span>'}<div class="tb"><span class="sn" dir="auto"><bdi dir="ltr">${i + 1}</bdi> · ${esc(s.name)}${h.off ? ` · <b>${esc(t('txt.isHidden'))}</b>` : ''}</span><p dir="auto">${h.label.trim() ? esc(h.label) : `<i>${esc(t('txt.empty'))}</i>`}</p></div><div class="ta"><button data-a="vis"><svg class="ic"><use href="#i-${h.off ? 'eye' : 'eyeoff'}"/></svg><span>${esc(t(h.off ? 'act.showNote' : 'act.hideNote'))}</span></button><button data-a="go">${esc(t('act.goThere'))}</button></div></li>`;
+    })
+    .join('');
+  $('txe').hidden = hits.length > 0;
+  $('txe').textContent = !all.length
+    ? t('txt.none')
+    : txF == 'off' && !off
+      ? t('txt.noneHidden')
+      : t('nav.none');
+  // A redraw keeps the focus on the same button of the same note, or on the list's first.
+  if (was) {
+    const b =
+      $('txl').querySelector(`li[data-h="${CSS.escape(was[0])}"] [data-a="${was[1]}"]`) ||
+      $('txl').querySelector('button');
+    (b || $('txf')).focus({ preventScroll: true });
+  }
+}
+if (!EMBED) {
+  $('txo').onclick = e => openTexts(e.currentTarget);
+  $('txx').onclick = closeTexts;
+  $('txf').oninput = renderTexts;
+  $('txm').onclick = e => {
+    if (e.target == $('txm')) closeTexts();
+  };
+  $('txs').onclick = e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    txF = b.dataset.f;
+    renderTexts();
+  };
+  // Show all hidden: one step of undo.
+  $('txa').onclick = () => {
+    const off = tourNotes().filter(x => x.h.off);
+    if (!off.length) return;
+    snapshotNow();
+    off.forEach(x => delete x.h.off);
+    buildHotspots();
+    ui();
+    save();
+    renderTexts();
+    $('txf').focus({ preventScroll: true });
+  };
+  $('txl').onclick = e => {
+    const b = e.target.closest('button'),
+      li = b?.closest('li'),
+      s = li && scenes.find(x => x.id == li.dataset.s),
+      h = s?.hs.find(x => x.id == li.dataset.h);
+    if (!h) return;
+    if (b.dataset.a == 'vis') setNoteOff(s, h, !h.off);
+    else {
+      closeTexts();
+      goToHotspot(s.id, h.id);
+    }
+  };
+  // Escape clears the search first, then closes; Tab stays inside the dialog.
+  $('txm').addEventListener('keydown', e => {
+    if (e.key == 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (document.activeElement == $('txf') && $('txf').value) {
+        $('txf').value = '';
+        renderTexts();
+      } else closeTexts();
+      return;
+    }
+    if (e.key != 'Tab') return;
+    const f = [...$('txb').querySelectorAll('button, input')].filter(
+        x => !x.hidden && x.offsetParent
+      ),
+      k = f.indexOf(document.activeElement);
+    if (!f.length) return;
+    e.preventDefault();
+    f[k < 0 ? 0 : (k + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus();
+  });
+}
+
 // ───────────── walkthrough transition ─────────────
 let worldTurn = 0,
   walking = false;
@@ -6660,6 +7013,11 @@ function clickTarget(e, aim = true) {
 }
 function activate(h) {
   if (inert(h)) return;
+  // A text note opens nothing: a click shows its text for a while, as a first tap does.
+  if (isNote(h)) {
+    peek = { h, until: performance.now() + PEEK_MS };
+    return;
+  }
   if (h.type == 'link') {
     const k = scenes.findIndex(s => s.id == h.to),
       tr = renderer.xr.isPresenting ? 'none' : transition();
@@ -6813,32 +7171,45 @@ glCanvas.addEventListener('pointerup', e => {
       const h = Object.assign(selHotspot(), p);
       moved = layClamp(h) && h;
     } else {
-      const o = scenes.find(s => s.id != scenes[current].id),
-        look = { ...project.look?.[placing] };
+      const kind = placing,
+        o = scenes.find(s => s.id != scenes[current].id),
+        look = { ...project.look?.[kind] };
       // The last look may name an icon of a project that is no longer open.
       if (look.shape == 'img' && !projectIcon(look.icon)) delete look.shape;
       if (look.shape != 'img') delete look.icon;
       const n = {
         id: uid(),
-        type: placing,
+        type: kind == 'link' ? 'link' : 'info',
         label: '',
         text: '',
-        to: placing == 'link' ? o?.id : undefined,
-        shape: placing == 'info' ? 'info' : 'arrow',
+        to: kind == 'link' ? o?.id : undefined,
+        shape: kind == 'info' ? 'info' : 'arrow',
         color: '#f59e0b',
         size: 1,
         ...look,
+        ...(kind == 'note' && { shape: 'txt', size: look.size || 0.8 }),
         ...p,
       };
       moved = layClamp(n) && n;
       scenes[current].hs.push(n);
       selId = n.id;
+      placing = null;
+      // A new link asks where it goes, as soon as it is placed. It is saved, and becomes a
+      // step of undo, once it has a destination; closed without one, it was never there.
+      if (kind == 'link') {
+        buildHotspots();
+        ui();
+        if (moved) toast(clampNote(moved));
+        return chooseDest(n, true);
+      }
     }
     placing = null;
     buildHotspots();
     ui();
     save();
     if (moved) toast(clampNote(moved));
+    // A new note is all text: its field is ready to type in.
+    if (isNote(selHotspot()) && !selHotspot().label) $('pl')?.focus();
     return;
   }
   selId = h ? h.id : null;
@@ -7295,7 +7666,8 @@ const undo = () => {
 $('undo').onclick = undo;
 $('redo').onclick = redo;
 addEventListener('keydown', e => {
-  if (EMBED || mode != 'edit' || !$('libm').hidden || smOpen() || !(e.ctrlKey || e.metaKey)) return;
+  if (EMBED || mode != 'edit' || !$('libm').hidden || smOpen() || txOpen()) return;
+  if (!(e.ctrlKey || e.metaKey)) return;
   const tg = e.target.tagName;
   if (tg == 'INPUT' || tg == 'TEXTAREA' || tg == 'SELECT') return;
   const k = e.key.toLowerCase();
@@ -7320,7 +7692,7 @@ addEventListener('keydown', e => {
 // Delete or Backspace removes the selected hotspot, from the panorama or the hotspot list
 // but not from a text field. Undo brings it back.
 addEventListener('keydown', e => {
-  if (EMBED || mode != 'edit' || !$('libm').hidden || smOpen()) return;
+  if (EMBED || mode != 'edit' || !$('libm').hidden || smOpen() || txOpen()) return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key != 'Delete' && e.key != 'Backspace') return;
   const tg = e.target;
