@@ -34,6 +34,10 @@ buildings, and heritage condition surveys in particular.
 ### Hotspots
 
 - Links between scenes, info points with popup text, and plain text notes on the panorama.
+- A new link opens the scene grid to choose its destination, and can add the link back in
+  that scene, pointing the way the visitor came.
+- Text notes: a small marker whose text shows when pointed at. Hide one, and bring it back
+  from the Texts screen, which lists every note in the tour.
 - Seven shapes, text only, or your own icons (PNG, WebP, GIF, JPEG or SVG); any colour,
   size and direction.
 - Lay a hotspot on the floor or hang it on a wall, drawn in perspective.

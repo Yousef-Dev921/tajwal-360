@@ -868,6 +868,52 @@ label.pri {
   color: var(--fg);
   font-weight: 650;
 }
+/* a hidden text note: still listed, dimmed, with its eye-off mark at the end */
+#hlist button.off > span {
+  color: var(--mu);
+}
+#hlist button.off > svg:last-child {
+  margin-inline-start: auto;
+  color: var(--mu);
+}
+/* the Texts button, with the count of hidden notes */
+#txo .badge {
+  margin-inline-start: auto;
+  padding: 0 var(--s2);
+  border-radius: var(--rp);
+  background: var(--pn3);
+  color: var(--fg);
+  font-size: var(--tXs);
+  font-weight: 650;
+  line-height: 20px;
+}
+/* a link's destination: the scene's square thumbnail and its name */
+#pdst .dst {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r2);
+  background: var(--pn);
+}
+#pdst .dst img,
+#pdst .dst .ph {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: var(--r1);
+  background: var(--pn3);
+}
+#pdst .nm {
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+#pdst .hint {
+  margin: 0;
+}
 
 /* a field whose label sits apart from its control: the destination and its search */
 .fld {
@@ -1302,7 +1348,8 @@ canvas {
 }
 
 /* ───────────────────────── scene grid ───────────────────────── */
-#sgm {
+#sgm,
+#txm {
   position: absolute;
   inset: 0;
   z-index: 12;
@@ -1314,7 +1361,8 @@ canvas {
   backdrop-filter: blur(5px);
   animation: fade var(--mo2) var(--ez);
 }
-#sgb {
+#sgb,
+#txb {
   flex: 1;
   min-width: 0;
   max-width: 1100px;
@@ -1330,10 +1378,12 @@ canvas {
   animation: rise var(--mo3) var(--ez);
 }
 /* it takes focus only so a click on its title or margins keeps the keyboard in the dialog */
-#sgb:focus {
+#sgb:focus,
+#txb:focus {
   outline: none;
 }
-#sgb header {
+#sgb header,
+#txb header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1341,23 +1391,32 @@ canvas {
   padding: var(--s3) var(--s4);
   border-bottom: 1px solid var(--bd);
 }
-#sgt {
+#sgt,
+#txh {
   font-size: var(--tLg);
   letter-spacing: -0.01em;
 }
-#sgn {
+#sgn,
+#txn {
   color: var(--mu);
   font-size: var(--tSm);
   font-variant-numeric: tabular-nums;
 }
-#sgx {
+#sgx,
+#txx {
   margin-inline-start: auto;
   min-width: var(--ctl);
   padding: 0;
   border-radius: var(--rp);
 }
-#sgf {
+#sgf,
+#txf {
   flex-basis: 100%;
+}
+/* picking a link's destination: the way back is offered under the search */
+#sgr {
+  flex-basis: 100%;
+  min-height: 0;
 }
 #sgl {
   position: relative; /* the cells' offsetTop is measured from here */
@@ -1433,11 +1492,99 @@ canvas {
   background: var(--ac);
   color: var(--af);
 }
-#sge {
+#sge,
+#txe {
   margin: 0;
   padding: var(--s6) var(--s4);
   text-align: center;
   color: var(--mu);
+}
+
+/* ───────────────────────── texts screen ───────────────────────── */
+#txs {
+  display: flex;
+  gap: var(--s1);
+}
+#txs button[aria-pressed='true'] {
+  background: var(--ac);
+  color: var(--af);
+  border-color: var(--ac);
+}
+#txa {
+  margin-inline-start: auto;
+}
+#txl {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+#txl li {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2);
+  border: 1px solid var(--bd);
+  border-radius: var(--r2);
+  background: var(--pn2);
+}
+#txl li.off {
+  border-style: dashed;
+}
+#txl li.off p {
+  color: var(--mu);
+}
+#txl img,
+#txl .ph {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--r1);
+  background: var(--pn3);
+}
+#txl .tb {
+  flex: 1;
+  min-width: 0;
+}
+#txl .sn {
+  display: block;
+  color: var(--mu);
+  font-size: var(--tSm);
+}
+#txl p {
+  margin: 2px 0 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+#txl i {
+  color: var(--mu);
+}
+#txl .ta {
+  flex: none;
+  display: flex;
+  gap: var(--s1);
+}
+@media (max-width: 560px) {
+  #txl li {
+    flex-wrap: wrap;
+  }
+  #txl .ta {
+    flex-basis: 100%;
+  }
+  #txl .ta button {
+    flex: 1;
+  }
 }
 
 /* ───────────────────────── scene manager ───────────────────────── */

@@ -116,7 +116,7 @@ Exported tours leave out `taken` and `gps` unless `meta` is `true`.
 | `to` | string | | Destination scene id, for a link. |
 | `label` | string | `""` | May contain line breaks. |
 | `text` | string | `""` | Popup text, for an info hotspot. |
-| `shape` | string | `arrow` | `arrow`, `spot`, `ring`, `dot`, `pin`, `star`, `info`, `none` (text only) or `img`. |
+| `shape` | string | `arrow` | `arrow`, `spot`, `ring`, `dot`, `pin`, `star`, `info`, `none` (text only), `img` or `txt` (text note). |
 | `icon` | string | | Icon id, with `shape: "img"`. A hotspot whose icon is missing becomes an arrow. |
 | `color` | string | `#f59e0b` | `#rrggbb`. |
 | `size` | number | `1` | 0.5 to 2.5. |
@@ -129,8 +129,11 @@ Exported tours leave out `taken` and `gps` unless `meta` is `true`.
 | `hov` | `true` | | Show the label only on hover. |
 | `fl` | `true` | | Lie flat on the floor. Kept at least 5° below the levelled horizon. |
 | `wl` | `true` | | Hang flat on a wall. Kept within 60° of the levelled horizon. |
+| `off` | `true` | | Hide a text note from the panorama. Only on `shape: "txt"`; hidden notes are left out of exported tours. |
 
-`fl` and `wl` are dropped from a text-only hotspot, and `fl` wins when both are set. Import
+A text note is an info hotspot with `shape: "txt"`: a small marker whose `label` shows when
+pointed at, with no popup. `fl` and `wl` are dropped from a text-only hotspot, and `fl` wins
+when both are set. Import
 moves a floor or wall hotspot outside its range straight back to the limit.
 
 ## Source file
@@ -169,9 +172,10 @@ Only icons that a hotspot uses are written. Import keeps at most 200.
 
 ## Look
 
-`look.link` and `look.info` hold the look a new hotspot of that type starts from. Each may
-carry `shape`, `icon`, `color`, `size`, `ts`, `box`, `fix`, `lp`, `hov`, `fl` and `wl`,
-checked as on a hotspot. A field that fails, or an icon the file doesn't carry, is dropped.
+`look.link`, `look.info` and `look.note` hold the look a new link, info hotspot or text note
+starts from. Each may carry `shape`, `icon`, `color`, `size`, `ts`, `box`, `fix`, `lp`, `hov`,
+`fl` and `wl`, checked as on a hotspot; `look.note` keeps only `color`, `size`, `ts`, `box`,
+`fix` and `lp`. A field that fails, or an icon the file doesn't carry, is dropped.
 
 ## Folder tours
 
